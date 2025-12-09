@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Target, User, Store, AlertCircle, Maximize2, Minimize2, Sun, Moon, ZoomIn, Move, UserCircle, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getStreetById } from "@/lib/streets";
+import { useStreetBySlug } from "@/hooks/useStreets";
 import CityScene, { CameraView } from "@/components/3d/CityScene";
 
 const PanelBox = ({ 
@@ -31,7 +31,7 @@ const PanelBox = ({
 
 const StreetView = () => {
   const { streetId } = useParams<{ streetId: string }>();
-  const street = getStreetById(streetId || "");
+  const { data: street, isLoading } = useStreetBySlug(streetId || "");
   const [isMaximized, setIsMaximized] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
@@ -86,7 +86,15 @@ const StreetView = () => {
     };
   }, [isMaximized]);
 
-  if (!street || !street.isActive) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-24 pb-12 px-4 flex items-center justify-center">
+        <div className="animate-pulse text-primary">Loading street...</div>
+      </div>
+    );
+  }
+
+  if (!street || !street.is_active) {
     return (
       <div className="min-h-screen pt-24 pb-12 px-4">
         <div className="container mx-auto max-w-6xl">
