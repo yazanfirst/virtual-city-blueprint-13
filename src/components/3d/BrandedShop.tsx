@@ -69,7 +69,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
       onPointerOver={(e) => {
         e.stopPropagation();
         setHovered(true);
-        document.body.style.cursor = hasShop ? 'pointer' : 'default';
+        document.body.style.cursor = 'pointer';
       }}
       onPointerOut={() => {
         setHovered(false);
