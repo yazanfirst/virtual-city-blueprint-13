@@ -1,0 +1,111 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Tables } from '@/integrations/supabase/types';
+
+export type ShopSpot = Tables<'shop_spots'>;
+export type Shop = Tables<'shops'>;
+
+export interface SpotWithActiveShop extends ShopSpot {
+  shop: Shop | null;
+}
+
+// Hook to fetch all spots with their active shops for 3D rendering
+export function useAllSpotsForStreet(streetSlug: string) {
+  return useQuery({
+    queryKey: ['all-spots-for-street-3d', streetSlug],
+    queryFn: async () => {
+      // First get the street by slug
+      const { data: street, error: streetError } = await supabase
+        .from('streets')
+        .select('id')
+        .eq('slug', streetSlug)
+        .maybeSingle();
+
+      if (streetError) throw streetError;
+      if (!street) return [];
+
+      // Get all spots for this street
+      const { data: spots, error: spotsError } = await supabase
+        .from('shop_spots')
+        .select('*')
+        .eq('street_id', street.id)
+        .order('sort_order');
+
+      if (spotsError) throw spotsError;
+
+      // Get all active shops for these spots
+      const spotIds = spots.map(s => s.id);
+      const { data: shops, error: shopsError } = await supabase
+        .from('shops')
+        .select('*')
+        .in('spot_id', spotIds)
+        .eq('status', 'active');
+
+      if (shopsError) throw shopsError;
+
+      // Combine spots with their shops
+      const spotsWithShops: SpotWithActiveShop[] = spots.map(spot => ({
+        ...spot,
+        shop: shops?.find(shop => shop.spot_id === spot.id) || null,
+      }));
+
+      return spotsWithShops;
+    },
+    enabled: !!streetSlug,
+    staleTime: 30000, // Cache for 30 seconds
+  });
+}
+
+// Types for 3D positioning
+export interface Position3D {
+  x: number;
+  z: number;
+  rotation: number;
+}
+
+// Helper to parse position_3d from the database
+export function parsePosition3D(position3d: any): Position3D {
+  if (typeof position3d === 'string') {
+    return JSON.parse(position3d);
+  }
+  return position3d as Position3D;
+}
+
+// Get shop branding data for 3D rendering
+export interface ShopBranding {
+  spotLabel: string;
+  position: Position3D;
+  hasShop: boolean;
+  shopName?: string;
+  primaryColor?: string;
+  accentColor?: string;
+  facadeTemplate?: string;
+  logoUrl?: string | null;
+  externalLink?: string | null;
+}
+
+export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): ShopBranding[] {
+  return spotsWithShops.map(spot => {
+    const position = parsePosition3D(spot.position_3d);
+    
+    if (spot.shop) {
+      return {
+        spotLabel: spot.spot_label,
+        position,
+        hasShop: true,
+        shopName: spot.shop.name,
+        primaryColor: spot.shop.primary_color || '#3B82F6',
+        accentColor: spot.shop.accent_color || '#10B981',
+        facadeTemplate: spot.shop.facade_template || 'modern_neon',
+        logoUrl: spot.shop.logo_url,
+        externalLink: spot.shop.external_link,
+      };
+    }
+
+    return {
+      spotLabel: spot.spot_label,
+      position,
+      hasShop: false,
+    };
+  });
+}

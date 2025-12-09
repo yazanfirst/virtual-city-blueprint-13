@@ -1,13 +1,28 @@
-import { Link, useLocation } from "react-router-dom";
-import { Building2, Map, User } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Building2, Map, User, LogOut, Shield, LayoutDashboard } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut, isMerchant, isAdmin, loading } = useAuth();
 
-  const navLinks = [
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  const publicNavLinks = [
     { href: "/city-map", label: "City Map", icon: Map },
-    { href: "/merchant/login", label: "Merchant Login", icon: User },
   ];
 
   return (
@@ -26,9 +41,8 @@ const Navbar = () => {
         </Link>
 
         <div className="flex items-center gap-2">
-          {navLinks.map((link) => {
-            const isActive = location.pathname === link.href || 
-                            location.pathname.startsWith(link.href.replace('/login', ''));
+          {publicNavLinks.map((link) => {
+            const isActive = location.pathname === link.href;
             const Icon = link.icon;
 
             return (
@@ -47,6 +61,57 @@ const Navbar = () => {
               </Link>
             );
           })}
+
+          {!loading && (
+            <>
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 border border-primary/30">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="hidden sm:inline text-sm">
+                        {user.email?.split('@')[0]}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    {isMerchant && (
+                      <DropdownMenuItem onClick={() => navigate('/merchant/dashboard')}>
+                        <LayoutDashboard className="h-4 w-4 mr-2" />
+                        Merchant Dashboard
+                      </DropdownMenuItem>
+                    )}
+                    {isAdmin && (
+                      <DropdownMenuItem onClick={() => navigate('/admin/dashboard')}>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Admin Dashboard
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Link
+                  to="/auth"
+                  className={cn(
+                    "flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all duration-300",
+                    location.pathname === "/auth"
+                      ? "bg-primary/10 text-primary border border-primary/30"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                >
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline">Sign In</span>
+                </Link>
+              )}
+            </>
+          )}
         </div>
       </div>
     </nav>
