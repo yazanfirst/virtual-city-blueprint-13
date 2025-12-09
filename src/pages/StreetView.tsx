@@ -186,24 +186,24 @@ const StreetView = () => {
             />
           )}
           
-          {/* Top Controls Bar */}
-          <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-none">
-            <div className="flex items-center gap-3 pointer-events-auto">
-              <Button variant="ghost" size="icon" asChild className="bg-background/80 backdrop-blur-md">
+          {/* Top Controls Bar - Compact for mobile */}
+          <div className="absolute top-2 md:top-4 left-2 md:left-4 right-2 md:right-4 flex items-center justify-between pointer-events-none" style={{ zIndex: 150 }}>
+            <div className="flex items-center gap-1 md:gap-3 pointer-events-auto">
+              <Button variant="ghost" size="icon" asChild className="bg-background/80 backdrop-blur-md h-8 w-8 md:h-10 md:w-10">
                 <Link to="/city-map">
-                  <ArrowLeft className="h-5 w-5" />
+                  <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
                 </Link>
               </Button>
-              <div className="bg-background/80 backdrop-blur-md rounded-lg px-4 py-2">
-                <h1 className="font-display text-lg font-bold text-foreground">
+              <div className="bg-background/80 backdrop-blur-md rounded-lg px-2 py-1 md:px-4 md:py-2 hidden sm:block">
+                <h1 className="font-display text-sm md:text-lg font-bold text-foreground">
                   {street.name}
                 </h1>
               </div>
             </div>
             
-            <div className="flex items-center gap-2 pointer-events-auto">
-              {/* Camera View - Only third person on mobile */}
-              <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 flex gap-1 hidden md:flex">
+            <div className="flex items-center gap-1 md:gap-2 pointer-events-auto">
+              {/* Camera View - Only desktop */}
+              <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 gap-1 hidden lg:flex">
                 <Button
                   variant={cameraView === "thirdPerson" ? "default" : "ghost"}
                   size="sm"
@@ -224,43 +224,53 @@ const StreetView = () => {
                 </Button>
               </div>
 
-              {/* Day/Night Toggle */}
-              <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 flex gap-1">
+              {/* Day/Night Toggle - Compact on mobile */}
+              <div className="bg-background/80 backdrop-blur-md rounded-lg p-0.5 md:p-1 flex gap-0.5 md:gap-1">
                 <Button
                   variant={timeOfDay === "day" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setTimeOfDay("day")}
-                  className="h-8 px-3"
+                  className="h-6 w-6 md:h-8 md:w-8 p-0 md:px-3"
                 >
-                  <Sun className="h-4 w-4 mr-1" />
-                  Day
+                  <Sun className="h-3 w-3 md:h-4 md:w-4" />
                 </Button>
                 <Button
                   variant={timeOfDay === "night" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setTimeOfDay("night")}
-                  className="h-8 px-3"
+                  className="h-6 w-6 md:h-8 md:w-8 p-0 md:px-3"
                 >
-                  <Moon className="h-4 w-4 mr-1" />
-                  Night
+                  <Moon className="h-3 w-3 md:h-4 md:w-4" />
                 </Button>
               </div>
+              
+              {/* Map Toggle - Mobile friendly */}
+              <Button
+                variant={show2DMap ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShow2DMap(!show2DMap)}
+                className="bg-background/80 backdrop-blur-md h-6 w-6 md:h-8 md:w-auto p-0 md:px-3"
+                style={{ zIndex: 160 }}
+              >
+                <Map className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                <span className="hidden md:inline">{show2DMap ? "Hide" : "Map"}</span>
+              </Button>
               
               {/* Exit Game Mode */}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsMaximized(false)}
-                className="bg-background/80 backdrop-blur-md"
+                className="bg-background/80 backdrop-blur-md h-6 md:h-8 px-2 md:px-3"
               >
-                <Minimize2 className="h-4 w-4 mr-2" />
-                Exit Game Mode
+                <Minimize2 className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                <span className="hidden md:inline">Exit</span>
               </Button>
             </div>
           </div>
           
-          {/* Overlay Panels */}
-          <div className="absolute top-20 left-4 pointer-events-auto flex flex-col gap-2">
+          {/* Desktop only - Side Panels */}
+          <div className="hidden lg:flex absolute top-16 left-4 pointer-events-auto flex-col gap-2" style={{ zIndex: 150 }}>
             <OverlayPanel title="Missions" icon={Target} className="w-48">
               <ul className="space-y-1">
                 <li className="flex items-center gap-2">
@@ -273,36 +283,28 @@ const StreetView = () => {
                 </li>
               </ul>
             </OverlayPanel>
-            
-            {/* 2D Map Toggle */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShow2DMap(!show2DMap)}
-              className="bg-background/80 backdrop-blur-md pointer-events-auto"
-            >
-              <Map className="h-4 w-4 mr-2" />
-              {show2DMap ? "Hide Map" : "Show Map"}
-            </Button>
           </div>
           
-          {/* 2D Map Overlay */}
+          {/* 2D Map Overlay - Responsive positioning */}
           {show2DMap && spotsWithShops && (
-            <div className="absolute top-20 left-56 pointer-events-auto">
-              <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-lg p-4 shadow-lg max-w-md">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
-                    <Map className="h-4 w-4 text-primary" />
+            <div 
+              className="absolute top-12 md:top-16 left-2 md:left-4 right-2 md:right-auto pointer-events-auto"
+              style={{ zIndex: 180 }}
+            >
+              <div className="bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-2 md:p-4 shadow-lg max-w-[calc(100vw-1rem)] md:max-w-md">
+                <div className="flex items-center justify-between mb-2 md:mb-3">
+                  <h3 className="font-display text-xs md:text-sm font-bold text-foreground flex items-center gap-2">
+                    <Map className="h-3 w-3 md:h-4 md:w-4 text-primary" />
                     Street Map
                   </h3>
                   <button 
                     onClick={() => setShow2DMap(false)}
-                    className="text-muted-foreground hover:text-foreground"
+                    className="text-muted-foreground hover:text-foreground text-lg leading-none"
                   >
                     ×
                   </button>
                 </div>
-                <div className="transform scale-75 origin-top-left">
+                <div className="transform scale-50 md:scale-75 origin-top-left -mb-24 md:-mb-16">
                   <SpotSelectionMap
                     spots={spotsWithShops}
                     selectedSpotId=""
@@ -314,7 +316,8 @@ const StreetView = () => {
             </div>
           )}
           
-          <div className="absolute bottom-4 right-4 pointer-events-auto flex flex-col gap-2">
+          {/* Desktop only - Right side panels */}
+          <div className="hidden lg:flex absolute bottom-4 right-4 pointer-events-auto flex-col gap-2" style={{ zIndex: 150 }}>
             <OverlayPanel title="Player" icon={User} className="w-40">
               <div className="space-y-1">
                 <div className="flex justify-between">

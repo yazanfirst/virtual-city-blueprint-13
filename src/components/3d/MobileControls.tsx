@@ -123,28 +123,43 @@ const MobileControls = ({ onJoystickMove, onCameraMove }: MobileControlsProps) =
   return (
     <div 
       ref={containerRef}
-      className="absolute inset-x-0 bottom-0 h-1/2" 
-      style={{ zIndex: 100, touchAction: 'none' }}
+      className="absolute inset-0" 
+      style={{ zIndex: 200, touchAction: 'none', pointerEvents: 'none' }}
     >
-      {/* Left side - Joystick visual */}
+      {/* Touch areas - invisible but captures touches */}
+      <div 
+        className="absolute left-0 top-0 bottom-0 w-1/2"
+        style={{ pointerEvents: 'auto' }}
+      />
+      <div 
+        className="absolute right-0 top-0 bottom-0 w-1/2"
+        style={{ pointerEvents: 'auto' }}
+      />
+      
+      {/* Left side - Joystick visual - positioned lower left, avoiding top controls */}
       <div
         ref={joystickRef}
-        className="absolute bottom-24 left-6 w-28 h-28 rounded-full bg-black/40 border-2 border-white/50"
+        className="absolute bottom-4 left-4 w-24 h-24 rounded-full bg-black/50 border-2 border-white/40"
+        style={{ pointerEvents: 'none' }}
       >
         <div
           ref={knobRef}
-          className="absolute w-12 h-12 rounded-full bg-white/70 border-2 border-white/90 shadow-lg"
+          className="absolute w-10 h-10 rounded-full bg-white/60 border-2 border-white/80 shadow-lg"
           style={{
             left: '50%',
             top: '50%',
             transform: `translate(calc(-50% + ${joystickPos.x}px), calc(-50% + ${joystickPos.y}px))`,
+            pointerEvents: 'none',
           }}
         />
       </div>
 
-      {/* Right side - Camera hint */}
-      <div className="absolute bottom-24 right-6 bg-black/30 rounded-lg px-3 py-2 text-white/60 text-xs">
-        Drag right side to look
+      {/* Right side - Camera hint - positioned lower right */}
+      <div 
+        className="absolute bottom-4 right-4 bg-black/40 rounded-lg px-2 py-1 text-white/50 text-[10px]"
+        style={{ pointerEvents: 'none' }}
+      >
+        Drag to look
       </div>
     </div>
   );
