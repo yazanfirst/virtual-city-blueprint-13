@@ -683,14 +683,28 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {mainBoulevardShops.map((shop, i) => {
         const branding = getBrandingAtPosition(shop.x, shop.z);
         if (branding) {
-          return <BrandedShop key={`main-${i}`} branding={branding} isNight={isNight} />;
+          return (
+            <BrandedShop 
+              key={`main-${i}`} 
+              branding={branding} 
+              isNight={isNight} 
+              onClick={() => onShopClick?.(branding)}
+            />
+          );
         }
         return <Shop key={`main-${i}`} position={[shop.x, 0, shop.z]} color={shop.color} rotation={shop.rotation} isNight={isNight} />;
       })}
       {crossStreetShops.map((shop, i) => {
         const branding = getBrandingAtPosition(shop.x, shop.z);
         if (branding) {
-          return <BrandedShop key={`cross-${i}`} branding={branding} isNight={isNight} />;
+          return (
+            <BrandedShop 
+              key={`cross-${i}`} 
+              branding={branding} 
+              isNight={isNight} 
+              onClick={() => onShopClick?.(branding)}
+            />
+          );
         }
         return <Shop key={`cross-${i}`} position={[shop.x, 0, shop.z]} color={shop.color} rotation={shop.rotation} isNight={isNight} />;
       })}

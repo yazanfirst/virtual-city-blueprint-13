@@ -1,26 +1,42 @@
-import React, { useMemo } from "react";
-import { Text } from "@react-three/drei";
+import React, { useMemo, useState } from "react";
+import { Text, Html } from "@react-three/drei";
 import * as THREE from "three";
 import { ShopBranding } from "@/hooks/use3DShops";
 
 interface BrandedShopProps {
   branding: ShopBranding;
   isNight: boolean;
+  onClick?: () => void;
 }
 
-// Template-specific colors
+// Template-specific colors - now with more professional options
 const templateColors = {
-  modern_neon: { bg: "#1A1A2A", roof: "#0A0A1A", window: "#6A9ACC" },
-  minimal_white: { bg: "#F5F5F5", roof: "#E8E8E8", window: "#87CEEB" },
-  classic_brick: { bg: "#8B4513", roof: "#654321", window: "#87CEEB" },
-  cyber_tech: { bg: "#1A0030", roof: "#0A0020", window: "#9966FF" },
+  modern_neon: { bg: "#1A1A2A", roof: "#0A0A1A", window: "#6A9ACC", accent: "#FF00FF" },
+  minimal_white: { bg: "#F5F5F5", roof: "#E8E8E8", window: "#87CEEB", accent: "#333333" },
+  classic_brick: { bg: "#8B4513", roof: "#654321", window: "#87CEEB", accent: "#D4A574" },
+  cyber_tech: { bg: "#1A0030", roof: "#0A0020", window: "#9966FF", accent: "#00FFFF" },
+  luxury_gold: { bg: "#1A1A1A", roof: "#0D0D0D", window: "#D4AF37", accent: "#FFD700" },
+  urban_industrial: { bg: "#3D3D3D", roof: "#2A2A2A", window: "#708090", accent: "#FF6B35" },
+  retro_vintage: { bg: "#F4E4C1", roof: "#C9B896", window: "#87CEEB", accent: "#E85D04" },
+  nature_organic: { bg: "#2D5016", roof: "#1E3A0F", window: "#90EE90", accent: "#FFB347" },
 };
 
-const BrandedShop = ({ branding, isNight }: BrandedShopProps) => {
-  const { position, hasShop, shopName, primaryColor, accentColor, facadeTemplate } = branding;
+// Font styles for signage
+const fontStyles = {
+  classic: { letterSpacing: 0.02, fontWeight: 400 },
+  bold: { letterSpacing: 0.01, fontWeight: 700 },
+  elegant: { letterSpacing: 0.05, fontWeight: 300 },
+  modern: { letterSpacing: 0, fontWeight: 500 },
+  playful: { letterSpacing: 0.03, fontWeight: 600 },
+};
+
+const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
+  const { position, hasShop, shopName, primaryColor, accentColor, facadeTemplate, logoUrl, signageFont } = branding;
+  const [hovered, setHovered] = useState(false);
   
   const template = (facadeTemplate as keyof typeof templateColors) || 'modern_neon';
-  const colors = templateColors[template];
+  const colors = templateColors[template] || templateColors.modern_neon;
+  const font = fontStyles[(signageFont as keyof typeof fontStyles) || 'classic'];
   
   const primaryHex = primaryColor || '#3B82F6';
   const accentHex = accentColor || '#10B981';
@@ -34,8 +50,32 @@ const BrandedShop = ({ branding, isNight }: BrandedShopProps) => {
   const buildingColor = hasShop ? primaryHex : colors.bg;
   const roofColor = hasShop ? darker : colors.roof;
 
+  // Calculate text size based on name length
+  const textSize = useMemo(() => {
+    if (!shopName) return 0.4;
+    if (shopName.length > 15) return 0.25;
+    if (shopName.length > 10) return 0.3;
+    return 0.35;
+  }, [shopName]);
+
   return (
-    <group position={[position.x, 0, position.z]} rotation={[0, position.rotation, 0]}>
+    <group 
+      position={[position.x, 0, position.z]} 
+      rotation={[0, position.rotation, 0]}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        setHovered(true);
+        document.body.style.cursor = hasShop ? 'pointer' : 'default';
+      }}
+      onPointerOut={() => {
+        setHovered(false);
+        document.body.style.cursor = 'default';
+      }}
+    >
       {/* Main body */}
       <mesh position={[0, 3, 0]}>
         <boxGeometry args={[8, 6, 8]} />
@@ -102,20 +142,57 @@ const BrandedShop = ({ branding, isNight }: BrandedShopProps) => {
           <meshBasicMaterial color={hasShop ? accentHex : (isNight ? "#00FFFF" : "#006666")} />
         </mesh>
         
-        {/* Text */}
+        {/* Logo if available - positioned on the left of the sign */}
+        {hasShop && logoUrl && (
+          <Html
+            position={[-1.5, 0, 0.16]}
+            transform
+            occlude
+            style={{
+              width: '40px',
+              height: '40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <img 
+              src={logoUrl} 
+              alt="Shop logo"
+              style={{
+                maxWidth: '40px',
+                maxHeight: '40px',
+                objectFit: 'contain',
+                borderRadius: '4px',
+              }}
+            />
+          </Html>
+        )}
+        
+        {/* Text - shifted right if logo exists */}
         <Text 
-          position={[0, 0, 0.15]} 
-          fontSize={hasShop ? 0.32 : 0.4} 
+          position={[hasShop && logoUrl ? 0.4 : 0, 0, 0.15]} 
+          fontSize={hasShop ? textSize : 0.4}
+          letterSpacing={font.letterSpacing}
           color={hasShop ? "#FFFFFF" : (isNight ? "#FFFF00" : "#FFDD00")}
           anchorX="center" 
           anchorY="middle"
           outlineWidth={0.02}
           outlineColor={hasShop ? primaryHex : (isNight ? "#FF1493" : "#886600")}
-          maxWidth={4}
+          maxWidth={hasShop && logoUrl ? 2.5 : 4}
         >
           {hasShop ? (shopName || "SHOP") : "FOR RENT"}
         </Text>
       </group>
+
+      {/* Hover effect - glow outline */}
+      {hovered && hasShop && (
+        <mesh position={[0, 3, 4.1]}>
+          <boxGeometry args={[8.2, 6.2, 0.1]} />
+          <meshBasicMaterial color={primaryHex} transparent opacity={0.3} />
+        </mesh>
+      )}
       
       {/* Template-specific decorations */}
       {hasShop && template === 'cyber_tech' && (
@@ -142,6 +219,34 @@ const BrandedShop = ({ branding, isNight }: BrandedShopProps) => {
           <mesh position={[0, 0.1, 4.2]}>
             <boxGeometry args={[8, 0.1, 0.1]} />
             <meshBasicMaterial color={accentHex} />
+          </mesh>
+        </>
+      )}
+
+      {hasShop && template === 'luxury_gold' && (
+        <>
+          {/* Gold trim */}
+          <mesh position={[0, 6.0, 4.1]}>
+            <boxGeometry args={[7.5, 0.15, 0.15]} />
+            <meshBasicMaterial color="#D4AF37" />
+          </mesh>
+          <mesh position={[0, 0.2, 4.1]}>
+            <boxGeometry args={[7.5, 0.15, 0.15]} />
+            <meshBasicMaterial color="#D4AF37" />
+          </mesh>
+        </>
+      )}
+
+      {hasShop && template === 'urban_industrial' && (
+        <>
+          {/* Industrial pipes */}
+          <mesh position={[3.9, 2, 4.05]}>
+            <cylinderGeometry args={[0.1, 0.1, 4, 6]} />
+            <meshLambertMaterial color="#555555" />
+          </mesh>
+          <mesh position={[-3.9, 2, 4.05]}>
+            <cylinderGeometry args={[0.1, 0.1, 4, 6]} />
+            <meshLambertMaterial color="#555555" />
           </mesh>
         </>
       )}

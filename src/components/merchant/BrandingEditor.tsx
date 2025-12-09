@@ -6,18 +6,21 @@ import { Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech";
+type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic";
+type SignageFont = "classic" | "bold" | "elegant" | "modern" | "playful";
 
 interface BrandingEditorProps {
   primaryColor: string;
   accentColor: string;
   facadeTemplate: FacadeTemplate;
   logoUrl: string;
+  signageFont: SignageFont;
   onUpdate: (updates: Partial<{
     primaryColor: string;
     accentColor: string;
     facadeTemplate: FacadeTemplate;
     logoUrl: string;
+    signageFont: SignageFont;
   }>) => void;
 }
 
@@ -26,6 +29,18 @@ const facadeTemplates: { id: FacadeTemplate; name: string; description: string }
   { id: "minimal_white", name: "Minimal White", description: "Clean, modern, minimalist" },
   { id: "classic_brick", name: "Classic Brick", description: "Traditional storefront style" },
   { id: "cyber_tech", name: "Cyber Tech", description: "Futuristic, geometric patterns" },
+  { id: "luxury_gold", name: "Luxury Gold", description: "Premium gold accents, elegant" },
+  { id: "urban_industrial", name: "Urban Industrial", description: "Raw, warehouse style" },
+  { id: "retro_vintage", name: "Retro Vintage", description: "Classic 50s-60s aesthetic" },
+  { id: "nature_organic", name: "Nature Organic", description: "Green, natural, eco-friendly" },
+];
+
+const signageFonts: { id: SignageFont; name: string; preview: string }[] = [
+  { id: "classic", name: "Classic", preview: "Aa" },
+  { id: "bold", name: "Bold", preview: "Aa" },
+  { id: "elegant", name: "Elegant", preview: "Aa" },
+  { id: "modern", name: "Modern", preview: "Aa" },
+  { id: "playful", name: "Playful", preview: "Aa" },
 ];
 
 const BrandingEditor = ({
@@ -33,6 +48,7 @@ const BrandingEditor = ({
   accentColor,
   facadeTemplate,
   logoUrl,
+  signageFont,
   onUpdate,
 }: BrandingEditorProps) => {
   const [uploading, setUploading] = useState(false);
@@ -205,6 +221,32 @@ const BrandingEditor = ({
             >
               <span className="font-medium text-sm">{template.name}</span>
               <p className="text-xs text-muted-foreground mt-0.5">{template.description}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Signage Font */}
+      <div className="space-y-3">
+        <h3 className="font-display font-bold">Signage Font Style</h3>
+        
+        <div className="flex flex-wrap gap-2">
+          {signageFonts.map((font) => (
+            <button
+              key={font.id}
+              onClick={() => onUpdate({ signageFont: font.id })}
+              className={`px-4 py-2 rounded-lg border transition-all ${
+                signageFont === font.id
+                  ? "border-primary bg-primary/10"
+                  : "border-border hover:border-primary/50"
+              }`}
+            >
+              <span className={`font-medium text-sm ${
+                font.id === 'bold' ? 'font-bold' : 
+                font.id === 'elegant' ? 'font-light tracking-wider' : 
+                font.id === 'modern' ? 'font-medium' :
+                font.id === 'playful' ? 'font-semibold' : ''
+              }`}>{font.name}</span>
             </button>
           ))}
         </div>
