@@ -6,8 +6,10 @@ import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import PlayerController from "./PlayerController";
 import MobileControls from "./MobileControls";
+import BrandedShop from "./BrandedShop";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
+import { ShopBranding } from "@/hooks/use3DShops";
 
 export type CameraView = "thirdPerson" | "firstPerson";
 
@@ -15,6 +17,8 @@ type CitySceneProps = {
   streetId: string;
   timeOfDay?: "day" | "night";
   cameraView?: CameraView;
+  shopBrandings?: ShopBranding[];
+  onShopClick?: (branding: ShopBranding) => void;
 };
 
 type InnerProps = {
@@ -22,6 +26,8 @@ type InnerProps = {
   cameraView: CameraView;
   joystickInput: { x: number; y: number };
   cameraRotation: { azimuth: number; polar: number };
+  shopBrandings: ShopBranding[];
+  onShopClick?: (branding: ShopBranding) => void;
 };
 
 // Pastel color palette
@@ -166,6 +172,8 @@ export default function CityScene({
   streetId,
   timeOfDay = "day",
   cameraView = "thirdPerson",
+  shopBrandings = [],
+  onShopClick,
 }: CitySceneProps) {
   const deviceType = useDeviceType();
   const isMobile = deviceType === 'mobile';
@@ -241,6 +249,8 @@ export default function CityScene({
             cameraView={cameraView}
             joystickInput={joystickInput}
             cameraRotation={cameraRotation}
+            shopBrandings={shopBrandings}
+            onShopClick={onShopClick}
           />
         </Suspense>
       </Canvas>
@@ -586,13 +596,28 @@ function LaneMarking({ position, rotation = 0 }: { position: [number, number, nu
   );
 }
 
-function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation }: InnerProps) {
+function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
 
   useEffect(() => {
     scene.background = null;
   }, [scene]);
+
+  // Create a map for quick lookup of shop brandings by position
+  const brandingsByPosition = useMemo(() => {
+    const map = new Map<string, ShopBranding>();
+    shopBrandings.forEach(b => {
+      const key = `${b.position.x},${b.position.z}`;
+      map.set(key, b);
+    });
+    return map;
+  }, [shopBrandings]);
+
+  // Helper to check if there's branding data at a position
+  const getBrandingAtPosition = (x: number, z: number): ShopBranding | undefined => {
+    return brandingsByPosition.get(`${x},${z}`);
+  };
 
   return (
     <>
@@ -654,13 +679,21 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation }: In
       {/* === ROUNDABOUT === */}
       <Roundabout isNight={isNight} />
 
-      {/* === SHOPS === */}
-      {mainBoulevardShops.map((shop, i) => (
-        <Shop key={`main-${i}`} position={[shop.x, 0, shop.z]} color={shop.color} rotation={shop.rotation} isNight={isNight} />
-      ))}
-      {crossStreetShops.map((shop, i) => (
-        <Shop key={`cross-${i}`} position={[shop.x, 0, shop.z]} color={shop.color} rotation={shop.rotation} isNight={isNight} />
-      ))}
+      {/* === SHOPS - Render BrandedShop if branding data exists, otherwise regular Shop === */}
+      {mainBoulevardShops.map((shop, i) => {
+        const branding = getBrandingAtPosition(shop.x, shop.z);
+        if (branding) {
+          return <BrandedShop key={`main-${i}`} branding={branding} isNight={isNight} />;
+        }
+        return <Shop key={`main-${i}`} position={[shop.x, 0, shop.z]} color={shop.color} rotation={shop.rotation} isNight={isNight} />;
+      })}
+      {crossStreetShops.map((shop, i) => {
+        const branding = getBrandingAtPosition(shop.x, shop.z);
+        if (branding) {
+          return <BrandedShop key={`cross-${i}`} branding={branding} isNight={isNight} />;
+        }
+        return <Shop key={`cross-${i}`} position={[shop.x, 0, shop.z]} color={shop.color} rotation={shop.rotation} isNight={isNight} />;
+      })}
 
       {/* === TALL BUILDINGS === */}
       {tallBuildings.map((b, i) => <TallBuilding key={`tall-${i}`} position={[b.x, 0, b.z]} height={b.height} color={b.color} isNight={isNight} />)}
