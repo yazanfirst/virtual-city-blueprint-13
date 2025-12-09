@@ -241,7 +241,21 @@ export default function CityScene({
       <Canvas
         className="h-full w-full"
         camera={{ position: [0, 10, 50], fov: 50 }}
-        gl={{ antialias: false, powerPreference: "high-performance" }}
+        gl={{ 
+          antialias: false, 
+          powerPreference: "high-performance",
+          failIfMajorPerformanceCaveat: false,
+        }}
+        onCreated={({ gl }) => {
+          // Handle WebGL context loss/restore
+          gl.domElement.addEventListener('webglcontextlost', (e) => {
+            e.preventDefault();
+            console.warn('WebGL context lost - will attempt to restore');
+          });
+          gl.domElement.addEventListener('webglcontextrestored', () => {
+            console.info('WebGL context restored');
+          });
+        }}
       >
         <Suspense fallback={null}>
           <SceneInner 
