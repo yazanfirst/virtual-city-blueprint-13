@@ -21,13 +21,13 @@ const templateColors = {
   nature_organic: { bg: "#2D5016", roof: "#1E3A0F", window: "#90EE90", accent: "#FFB347" },
 };
 
-// Font styles for signage
+// Font styles for signage - using letter spacing and outline to differentiate styles
 const fontStyles = {
-  classic: { letterSpacing: 0.02, fontWeight: 400 },
-  bold: { letterSpacing: 0.01, fontWeight: 700 },
-  elegant: { letterSpacing: 0.05, fontWeight: 300 },
-  modern: { letterSpacing: 0, fontWeight: 500 },
-  playful: { letterSpacing: 0.03, fontWeight: 600 },
+  classic: { letterSpacing: 0.02, outlineWidth: 0.02, fontSize: 1 },
+  bold: { letterSpacing: 0.01, outlineWidth: 0.04, fontSize: 1.15 },
+  elegant: { letterSpacing: 0.08, outlineWidth: 0.01, fontSize: 0.95 },
+  modern: { letterSpacing: 0, outlineWidth: 0.025, fontSize: 1.05 },
+  playful: { letterSpacing: 0.04, outlineWidth: 0.03, fontSize: 1.1 },
 };
 
 const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
@@ -170,15 +170,15 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
           </Html>
         )}
         
-        {/* Text - shifted right if logo exists */}
+        {/* Text - shifted right if logo exists, with font style applied */}
         <Text 
           position={[hasShop && logoUrl ? 0.4 : 0, 0, 0.15]} 
-          fontSize={hasShop ? textSize : 0.4}
+          fontSize={hasShop ? textSize * font.fontSize : 0.4}
           letterSpacing={font.letterSpacing}
           color={hasShop ? "#FFFFFF" : (isNight ? "#FFFF00" : "#FFDD00")}
           anchorX="center" 
           anchorY="middle"
-          outlineWidth={0.02}
+          outlineWidth={font.outlineWidth}
           outlineColor={hasShop ? primaryHex : (isNight ? "#FF1493" : "#886600")}
           maxWidth={hasShop && logoUrl ? 2.5 : 4}
         >
