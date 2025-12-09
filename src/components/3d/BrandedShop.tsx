@@ -21,13 +21,13 @@ const templateColors = {
   nature_organic: { bg: "#2D5016", roof: "#1E3A0F", window: "#90EE90", accent: "#FFB347" },
 };
 
-// Font styles for signage - using letter spacing and outline to differentiate styles
+// Font styles for signage - using actual font families
 const fontStyles = {
-  classic: { letterSpacing: 0.02, outlineWidth: 0.02, fontSize: 1 },
-  bold: { letterSpacing: 0.01, outlineWidth: 0.04, fontSize: 1.15 },
-  elegant: { letterSpacing: 0.08, outlineWidth: 0.01, fontSize: 0.95 },
-  modern: { letterSpacing: 0, outlineWidth: 0.025, fontSize: 1.05 },
-  playful: { letterSpacing: 0.04, outlineWidth: 0.03, fontSize: 1.1 },
+  classic: { fontFamily: "'Times New Roman', serif", fontWeight: 400 },
+  bold: { fontFamily: "'Impact', sans-serif", fontWeight: 700 },
+  elegant: { fontFamily: "'Playfair Display', serif", fontWeight: 400 },
+  modern: { fontFamily: "'Orbitron', sans-serif", fontWeight: 500 },
+  playful: { fontFamily: "'Pacifico', cursive", fontWeight: 400 },
 };
 
 const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
@@ -170,20 +170,47 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
           </Html>
         )}
         
-        {/* Text - shifted right if logo exists, with font style applied */}
-        <Text 
-          position={[hasShop && logoUrl ? 0.4 : 0, 0, 0.15]} 
-          fontSize={hasShop ? textSize * font.fontSize : 0.4}
-          letterSpacing={font.letterSpacing}
-          color={hasShop ? "#FFFFFF" : (isNight ? "#FFFF00" : "#FFDD00")}
-          anchorX="center" 
-          anchorY="middle"
-          outlineWidth={font.outlineWidth}
-          outlineColor={hasShop ? primaryHex : (isNight ? "#FF1493" : "#886600")}
-          maxWidth={hasShop && logoUrl ? 2.5 : 4}
-        >
-          {hasShop ? (shopName || "SHOP") : "FOR RENT"}
-        </Text>
+        {/* Text - using Html for custom fonts */}
+        {hasShop ? (
+          <Html
+            position={[logoUrl ? 0.4 : 0, 0, 0.15]}
+            transform
+            occlude
+            style={{
+              width: logoUrl ? '100px' : '160px',
+              textAlign: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <div
+              style={{
+                fontFamily: font.fontFamily,
+                fontWeight: font.fontWeight,
+                fontSize: shopName && shopName.length > 15 ? '10px' : shopName && shopName.length > 10 ? '12px' : '14px',
+                color: '#FFFFFF',
+                textShadow: `0 0 4px ${primaryHex}, 0 0 8px ${primaryHex}`,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                letterSpacing: '1px',
+              }}
+            >
+              {shopName || "SHOP"}
+            </div>
+          </Html>
+        ) : (
+          <Text 
+            position={[0, 0, 0.15]} 
+            fontSize={0.4}
+            color={isNight ? "#FFFF00" : "#FFDD00"}
+            anchorX="center" 
+            anchorY="middle"
+            outlineWidth={0.02}
+            outlineColor={isNight ? "#FF1493" : "#886600"}
+          >
+            FOR RENT
+          </Text>
+        )}
       </group>
 
       {/* Hover effect - glow outline */}
