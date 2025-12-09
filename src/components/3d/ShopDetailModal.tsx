@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, ExternalLink, Store, MapPin, Palette, ShoppingBag } from "lucide-react";
+import { X, ExternalLink, Store, MapPin, Palette, ShoppingBag, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ShopBranding } from "@/hooks/use3DShops";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 interface ShopDetailModalProps {
   shop: ShopBranding | null;
@@ -141,6 +142,14 @@ const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
         <div className="p-6">
           {shop.hasShop ? (
             <>
+              {/* Suspended Badge */}
+              {shop.isSuspended && (
+                <div className="flex items-center justify-center gap-2 mb-4 p-3 rounded-lg bg-orange-500/20 border border-orange-500/50">
+                  <AlertTriangle className="h-5 w-5 text-orange-400" />
+                  <span className="text-orange-400 font-medium">This shop is temporarily closed</span>
+                </div>
+              )}
+              
               {/* Shop Name */}
               <h2 className="text-2xl font-display font-bold text-foreground text-center mb-2">
                 {shop.shopName}
@@ -199,8 +208,8 @@ const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
                 </div>
               </div>
               
-              {/* Visit Store Button */}
-              {shop.externalLink && (
+              {/* Visit Store Button - disabled for suspended shops */}
+              {shop.externalLink && !shop.isSuspended && (
                 <Button 
                   className="w-full"
                   style={{
@@ -219,6 +228,13 @@ const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
                     <ExternalLink className="h-4 w-4 ml-2" />
                   </a>
                 </Button>
+              )}
+              
+              {/* Message for suspended shops */}
+              {shop.isSuspended && (
+                <p className="text-center text-muted-foreground text-sm">
+                  This shop is currently suspended. Check back later!
+                </p>
               )}
             </>
           ) : (

@@ -33,13 +33,13 @@ export function useAllSpotsForStreet(streetSlug: string) {
 
       if (spotsError) throw spotsError;
 
-      // Get all active shops for these spots
+      // Get all active AND suspended shops for these spots (suspended shows as closed)
       const spotIds = spots.map(s => s.id);
       const { data: shops, error: shopsError } = await supabase
         .from('shops')
         .select('*')
         .in('spot_id', spotIds)
-        .eq('status', 'active');
+        .in('status', ['active', 'suspended']);
 
       if (shopsError) throw shopsError;
 
@@ -77,6 +77,7 @@ export interface ShopBranding {
   spotLabel: string;
   position: Position3D;
   hasShop: boolean;
+  isSuspended?: boolean;
   shopName?: string;
   category?: string | null;
   primaryColor?: string;
@@ -98,6 +99,7 @@ export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): S
         spotLabel: spot.spot_label,
         position,
         hasShop: true,
+        isSuspended: spot.shop.status === 'suspended',
         shopName: spot.shop.name,
         category: spot.shop.category,
         primaryColor: spot.shop.primary_color || '#3B82F6',

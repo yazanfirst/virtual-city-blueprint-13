@@ -31,7 +31,7 @@ const fontStyles = {
 };
 
 const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
-  const { position, hasShop, shopName, primaryColor, accentColor, facadeTemplate, logoUrl, signageFont } = branding;
+  const { position, hasShop, isSuspended, shopName, primaryColor, accentColor, facadeTemplate, logoUrl, signageFont } = branding;
   const [hovered, setHovered] = useState(false);
   
   const template = (facadeTemplate as keyof typeof templateColors) || 'modern_neon';
@@ -187,8 +187,10 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
                 fontFamily: font.fontFamily,
                 fontWeight: font.fontWeight,
                 fontSize: shopName && shopName.length > 15 ? '12px' : shopName && shopName.length > 10 ? '14px' : '16px',
-                color: '#FFFFFF',
-                textShadow: `0 0 4px ${primaryHex}, 0 0 8px ${primaryHex}, 1px 1px 2px rgba(0,0,0,0.9)`,
+                color: isSuspended ? '#888888' : '#FFFFFF',
+                textShadow: isSuspended 
+                  ? '1px 1px 2px rgba(0,0,0,0.9)' 
+                  : `0 0 4px ${primaryHex}, 0 0 8px ${primaryHex}, 1px 1px 2px rgba(0,0,0,0.9)`,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -210,6 +212,35 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
           >
             FOR RENT
           </Text>
+        )}
+        
+        {/* CLOSED sign for suspended shops */}
+        {hasShop && isSuspended && (
+          <Html
+            position={[0, -0.8, 0.18]}
+            transform
+            occlude
+            style={{
+              pointerEvents: 'none',
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: '#EF4444',
+                color: '#FFFFFF',
+                padding: '4px 12px',
+                borderRadius: '4px',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                fontFamily: 'Arial, sans-serif',
+                textTransform: 'uppercase',
+                letterSpacing: '2px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+              }}
+            >
+              CLOSED
+            </div>
+          </Html>
         )}
       </group>
 
