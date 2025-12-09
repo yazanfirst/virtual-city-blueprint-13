@@ -178,8 +178,7 @@ export default function CityScene({
   const deviceType = useDeviceType();
   const isMobile = deviceType === 'mobile';
   const [joystickInput, setJoystickInput] = useState({ x: 0, y: 0 });
-  const [contextLost, setContextLost] = useState(false);
-  const [canvasKey, setCanvasKey] = useState(0);
+  const [isReady, setIsReady] = useState(false);
   
   // Use store for camera rotation to persist across game mode changes
   const { cameraRotation, setCameraRotation } = usePlayerStore();
@@ -187,18 +186,10 @@ export default function CityScene({
   const isMouseDownRef = useRef(false);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
 
-  // Handle context loss recovery
-  const handleContextLost = useCallback((e: Event) => {
-    e.preventDefault();
-    console.warn('WebGL context lost - will attempt to restore');
-    setContextLost(true);
-  }, []);
-
-  const handleContextRestored = useCallback(() => {
-    console.info('WebGL context restored');
-    setContextLost(false);
-    // Force re-mount the canvas
-    setCanvasKey(prev => prev + 1);
+  // Delay rendering to prevent immediate context loss
+  useEffect(() => {
+    const timer = setTimeout(() => setIsReady(true), 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleJoystickMove = useCallback((x: number, y: number) => {
@@ -252,22 +243,13 @@ export default function CityScene({
     };
   }, [isMobile, handleCameraMove]);
 
-  // Show loading indicator if context is lost
-  if (contextLost) {
+  // Show loading until ready
+  if (!isReady) {
     return (
       <div className="relative h-full w-full flex items-center justify-center bg-background">
         <div className="text-center">
           <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-muted-foreground">Restoring 3D scene...</p>
-          <button 
-            onClick={() => {
-              setContextLost(false);
-              setCanvasKey(prev => prev + 1);
-            }}
-            className="mt-4 text-primary hover:underline text-sm"
-          >
-            Click to reload
-          </button>
+          <p className="text-muted-foreground">Initializing 3D scene...</p>
         </div>
       </div>
     );
@@ -276,17 +258,12 @@ export default function CityScene({
   return (
     <div className="relative h-full w-full">
       <Canvas
-        key={canvasKey}
         className="h-full w-full"
         camera={{ position: [0, 10, 50], fov: 50 }}
         gl={{ 
           antialias: false, 
-          powerPreference: "high-performance",
-          failIfMajorPerformanceCaveat: false,
-        }}
-        onCreated={({ gl }) => {
-          gl.domElement.addEventListener('webglcontextlost', handleContextLost);
-          gl.domElement.addEventListener('webglcontextrestored', handleContextRestored);
+          powerPreference: "default",
+          preserveDrawingBuffer: true,
         }}
       >
         <Suspense fallback={null}>
