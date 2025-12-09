@@ -1,8 +1,10 @@
 import { Map } from "lucide-react";
 import StreetCard from "@/components/StreetCard";
-import { streets } from "@/lib/streets";
+import { useStreets } from "@/hooks/useStreets";
 
 const CityMap = () => {
+  const { data: streets, isLoading } = useStreets();
+
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
       <div className="container mx-auto max-w-6xl">
@@ -20,17 +22,23 @@ const CityMap = () => {
         </div>
 
         {/* Streets Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {streets.map((street) => (
-            <StreetCard
-              key={street.id}
-              id={street.id}
-              name={street.name}
-              category={street.category}
-              isActive={street.isActive}
-            />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground animate-pulse">Loading streets...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {streets?.map((street) => (
+              <StreetCard
+                key={street.id}
+                id={street.slug}
+                name={street.name}
+                category={street.category}
+                isActive={street.is_active ?? false}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
