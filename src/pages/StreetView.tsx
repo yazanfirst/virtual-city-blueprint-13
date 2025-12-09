@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Target, User, Store, AlertCircle, Maximize2, Minimize2, Sun, Moon, ZoomIn, Move, UserCircle, Eye, ExternalLink } from "lucide-react";
+import { ArrowLeft, Target, User, Store, AlertCircle, Maximize2, Minimize2, Sun, Moon, ZoomIn, Move, UserCircle, Eye, ExternalLink, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useStreetBySlug } from "@/hooks/useStreets";
+import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
 import CityScene, { CameraView } from "@/components/3d/CityScene";
 import ShopDetailModal from "@/components/3d/ShopDetailModal";
+import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 
 const PanelBox = ({ 
   title,
@@ -35,11 +36,16 @@ const StreetView = () => {
   const { streetId } = useParams<{ streetId: string }>();
   const { data: street, isLoading } = useStreetBySlug(streetId || "");
   const { data: spotsData } = useAllSpotsForStreet(streetId || "");
+  const { data: spotsWithShops } = useSpotsWithShops(street?.id || "");
   const [isMaximized, setIsMaximized] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
   const [selectedShop, setSelectedShop] = useState<ShopBranding | null>(null);
   const [showShopModal, setShowShopModal] = useState(false);
+  const [show2DMap, setShow2DMap] = useState(false);
+
+  // Find the spot ID for the selected shop (to highlight in 2D map)
+  const selectedSpotId = selectedShop?.spotId || "";
 
   const handleShopClick = (shop: ShopBranding) => {
     setSelectedShop(shop);
@@ -254,7 +260,7 @@ const StreetView = () => {
           </div>
           
           {/* Overlay Panels */}
-          <div className="absolute top-20 left-4 pointer-events-auto">
+          <div className="absolute top-20 left-4 pointer-events-auto flex flex-col gap-2">
             <OverlayPanel title="Missions" icon={Target} className="w-48">
               <ul className="space-y-1">
                 <li className="flex items-center gap-2">
@@ -267,7 +273,46 @@ const StreetView = () => {
                 </li>
               </ul>
             </OverlayPanel>
+            
+            {/* 2D Map Toggle */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShow2DMap(!show2DMap)}
+              className="bg-background/80 backdrop-blur-md pointer-events-auto"
+            >
+              <Map className="h-4 w-4 mr-2" />
+              {show2DMap ? "Hide Map" : "Show Map"}
+            </Button>
           </div>
+          
+          {/* 2D Map Overlay */}
+          {show2DMap && spotsWithShops && (
+            <div className="absolute top-20 left-56 pointer-events-auto">
+              <div className="bg-background/90 backdrop-blur-md border border-border/50 rounded-lg p-4 shadow-lg max-w-md">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
+                    <Map className="h-4 w-4 text-primary" />
+                    Street Map
+                  </h3>
+                  <button 
+                    onClick={() => setShow2DMap(false)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="transform scale-75 origin-top-left">
+                  <SpotSelectionMap
+                    spots={spotsWithShops}
+                    selectedSpotId=""
+                    onSelectSpot={() => {}}
+                    highlightedSpotId={selectedSpotId}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
           
           <div className="absolute bottom-4 right-4 pointer-events-auto flex flex-col gap-2">
             <OverlayPanel title="Player" icon={User} className="w-40">
