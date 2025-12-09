@@ -269,57 +269,60 @@ const StreetView = () => {
             </div>
           </div>
           
-          {/* Desktop only - Side Panels */}
-          <div className="hidden lg:flex absolute top-16 left-4 pointer-events-auto flex-col gap-2" style={{ zIndex: 150 }}>
-            <OverlayPanel title="Missions" icon={Target} className="w-48">
+          {/* Left side - Missions Panel (all screens) */}
+          <div className="absolute top-10 md:top-16 left-2 md:left-4 pointer-events-auto" style={{ zIndex: 150 }}>
+            <OverlayPanel title="Missions" icon={Target} className="w-32 md:w-48">
               <ul className="space-y-1">
                 <li className="flex items-center gap-2">
                   <span className="h-1 w-1 rounded-full bg-primary" />
-                  Visit 3 shops
+                  <span className="text-[10px] md:text-xs">Visit 3 shops</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1 w-1 rounded-full bg-muted-foreground" />
-                  Find hidden item
+                  <span className="text-[10px] md:text-xs">Find hidden item</span>
                 </li>
               </ul>
             </OverlayPanel>
           </div>
           
-          {/* 2D Map Overlay - Responsive positioning */}
+          {/* 2D Map Overlay - Full screen on mobile, positioned on desktop */}
           {show2DMap && spotsWithShops && (
             <div 
-              className="absolute top-12 md:top-16 left-2 md:left-4 right-2 md:right-auto pointer-events-auto"
-              style={{ zIndex: 180 }}
+              className="absolute inset-0 md:inset-auto md:top-16 md:left-4 flex items-center justify-center md:block pointer-events-auto"
+              style={{ zIndex: 200 }}
             >
-              <div className="bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-2 md:p-4 shadow-lg max-w-[calc(100vw-1rem)] md:max-w-md">
-                <div className="flex items-center justify-between mb-2 md:mb-3">
-                  <h3 className="font-display text-xs md:text-sm font-bold text-foreground flex items-center gap-2">
-                    <Map className="h-3 w-3 md:h-4 md:w-4 text-primary" />
+              {/* Mobile: centered modal, Desktop: side panel */}
+              <div className="bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-3 md:p-4 shadow-lg w-[90vw] max-w-sm md:max-w-md max-h-[80vh] overflow-auto">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
+                    <Map className="h-4 w-4 text-primary" />
                     Street Map
                   </h3>
                   <button 
                     onClick={() => setShow2DMap(false)}
-                    className="text-muted-foreground hover:text-foreground text-lg leading-none"
+                    className="text-muted-foreground hover:text-foreground text-xl leading-none p-1"
                   >
                     ×
                   </button>
                 </div>
-                <div className="transform scale-50 md:scale-75 origin-top-left -mb-24 md:-mb-16">
-                  <SpotSelectionMap
-                    spots={spotsWithShops}
-                    selectedSpotId=""
-                    onSelectSpot={() => {}}
-                    highlightedSpotId={selectedSpotId}
-                  />
+                <div className="overflow-auto">
+                  <div className="transform scale-[0.6] md:scale-75 origin-top-left w-[166%] md:w-[133%]">
+                    <SpotSelectionMap
+                      spots={spotsWithShops}
+                      selectedSpotId=""
+                      onSelectSpot={() => {}}
+                      highlightedSpotId={selectedSpotId}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           )}
           
-          {/* Desktop only - Right side panels */}
-          <div className="hidden lg:flex absolute bottom-4 right-4 pointer-events-auto flex-col gap-2" style={{ zIndex: 150 }}>
-            <OverlayPanel title="Player" icon={User} className="w-40">
-              <div className="space-y-1">
+          {/* Right side - Player & Shop panels (all screens) */}
+          <div className="absolute top-10 md:top-auto md:bottom-4 right-2 md:right-4 pointer-events-auto flex flex-col gap-1 md:gap-2" style={{ zIndex: 150 }}>
+            <OverlayPanel title="Player" icon={User} className="w-28 md:w-40">
+              <div className="space-y-0.5 md:space-y-1 text-[10px] md:text-xs">
                 <div className="flex justify-between">
                   <span>Level</span>
                   <span className="text-foreground">1</span>
@@ -331,24 +334,24 @@ const StreetView = () => {
               </div>
             </OverlayPanel>
             
-            <OverlayPanel title="Shop" icon={Store} className="w-48">
+            <OverlayPanel title="Shop" icon={Store} className="w-28 md:w-48">
               {selectedShop?.hasShop ? (
-                <div className="space-y-2">
-                  <p className="text-foreground font-medium">{selectedShop.shopName}</p>
-                  {selectedShop.category && <p className="text-xs">{selectedShop.category}</p>}
+                <div className="space-y-1 text-[10px] md:text-xs">
+                  <p className="text-foreground font-medium truncate">{selectedShop.shopName}</p>
+                  {selectedShop.category && <p className="truncate">{selectedShop.category}</p>}
                   {selectedShop.externalLink && (
                     <a 
                       href={selectedShop.externalLink} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-primary hover:underline text-xs"
+                      className="flex items-center gap-1 text-primary hover:underline"
                     >
-                      Visit Store <ExternalLink className="h-3 w-3" />
+                      Visit <ExternalLink className="h-2 w-2 md:h-3 md:w-3" />
                     </a>
                   )}
                 </div>
               ) : (
-                <p>Click a shop to view details</p>
+                <p className="text-[10px] md:text-xs">Click shop for details</p>
               )}
             </OverlayPanel>
           </div>
