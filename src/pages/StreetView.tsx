@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { useStreetBySlug } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
 import CityScene, { CameraView } from "@/components/3d/CityScene";
+import ShopDetailModal from "@/components/3d/ShopDetailModal";
 
 const PanelBox = ({ 
-  title, 
+  title,
   icon: Icon, 
   children 
 }: { 
@@ -38,6 +39,12 @@ const StreetView = () => {
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
   const [selectedShop, setSelectedShop] = useState<ShopBranding | null>(null);
+  const [showShopModal, setShowShopModal] = useState(false);
+
+  const handleShopClick = (shop: ShopBranding) => {
+    setSelectedShop(shop);
+    setShowShopModal(true);
+  };
 
   // Transform spots data to shop brandings
   const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
@@ -162,8 +169,16 @@ const StreetView = () => {
             timeOfDay={timeOfDay} 
             cameraView={cameraView}
             shopBrandings={shopBrandings}
-            onShopClick={setSelectedShop}
+            onShopClick={handleShopClick}
           />
+          
+          {/* Shop Detail Modal */}
+          {showShopModal && (
+            <ShopDetailModal 
+              shop={selectedShop} 
+              onClose={() => setShowShopModal(false)} 
+            />
+          )}
           
           {/* Top Controls Bar */}
           <div className="absolute top-4 left-4 right-4 flex items-center justify-between pointer-events-none">
@@ -413,8 +428,16 @@ const StreetView = () => {
                 timeOfDay={timeOfDay} 
                 cameraView={cameraView} 
                 shopBrandings={shopBrandings}
-                onShopClick={setSelectedShop}
+                onShopClick={handleShopClick}
               />
+              
+              {/* Shop Detail Modal */}
+              {showShopModal && (
+                <ShopDetailModal 
+                  shop={selectedShop} 
+                  onClose={() => setShowShopModal(false)} 
+                />
+              )}
             </div>
           </div>
 
