@@ -78,7 +78,8 @@ const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
   };
 
   const handleRentSpot = () => {
-    navigate("/merchant/create-shop");
+    // Pass spot info via URL params to pre-select in create shop wizard
+    navigate(`/merchant/create-shop?spotId=${shop.spotId}&streetId=${shop.streetId || ''}`);
     onClose();
   };
 
