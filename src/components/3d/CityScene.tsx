@@ -178,19 +178,12 @@ export default function CityScene({
   const deviceType = useDeviceType();
   const isMobile = deviceType === 'mobile';
   const [joystickInput, setJoystickInput] = useState({ x: 0, y: 0 });
-  const [isReady, setIsReady] = useState(false);
   
   // Use store for camera rotation to persist across game mode changes
   const { cameraRotation, setCameraRotation } = usePlayerStore();
   
   const isMouseDownRef = useRef(false);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
-
-  // Delay rendering to prevent immediate context loss
-  useEffect(() => {
-    const timer = setTimeout(() => setIsReady(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
 
   const handleJoystickMove = useCallback((x: number, y: number) => {
     setJoystickInput({ x, y });
@@ -243,28 +236,12 @@ export default function CityScene({
     };
   }, [isMobile, handleCameraMove]);
 
-  // Show loading until ready
-  if (!isReady) {
-    return (
-      <div className="relative h-full w-full flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-muted-foreground">Initializing 3D scene...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="relative h-full w-full">
       <Canvas
         className="h-full w-full"
         camera={{ position: [0, 10, 50], fov: 50 }}
-        gl={{ 
-          antialias: false, 
-          powerPreference: "default",
-          preserveDrawingBuffer: true,
-        }}
+        gl={{ antialias: false, powerPreference: "high-performance" }}
       >
         <Suspense fallback={null}>
           <SceneInner 

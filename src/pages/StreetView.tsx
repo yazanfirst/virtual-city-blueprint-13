@@ -33,18 +33,13 @@ const PanelBox = ({
 
 const StreetView = () => {
   const { streetId } = useParams<{ streetId: string }>();
-  const { data: street, isLoading, error } = useStreetBySlug(streetId || "");
+  const { data: street, isLoading } = useStreetBySlug(streetId || "");
   const { data: spotsData } = useAllSpotsForStreet(streetId || "");
   const [isMaximized, setIsMaximized] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
   const [selectedShop, setSelectedShop] = useState<ShopBranding | null>(null);
   const [showShopModal, setShowShopModal] = useState(false);
-
-  // Debug log
-  useEffect(() => {
-    console.log('StreetView - streetId:', streetId, 'isLoading:', isLoading, 'street:', street, 'error:', error);
-  }, [streetId, isLoading, street, error]);
 
   const handleShopClick = (shop: ShopBranding) => {
     setSelectedShop(shop);
@@ -107,25 +102,7 @@ const StreetView = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen pt-24 pb-12 px-4 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />
-          <div className="animate-pulse text-primary">Loading street...</div>
-          <p className="text-muted-foreground text-xs mt-2">Slug: {streetId}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen pt-24 pb-12 px-4 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-destructive mb-4">Error loading street</div>
-          <p className="text-muted-foreground text-sm">{String(error)}</p>
-          <Button variant="cyber" className="mt-4" asChild>
-            <Link to="/city-map">Back to City Map</Link>
-          </Button>
-        </div>
+        <div className="animate-pulse text-primary">Loading street...</div>
       </div>
     );
   }

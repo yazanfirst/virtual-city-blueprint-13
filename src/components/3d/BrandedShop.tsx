@@ -21,34 +21,13 @@ const templateColors = {
   nature_organic: { bg: "#2D5016", roof: "#1E3A0F", window: "#90EE90", accent: "#FFB347" },
 };
 
-// Font styles for signage - using Google Fonts URLs
-// drei Text component uses troika-three-text which loads fonts from URLs
-const fontConfigs = {
-  classic: { 
-    url: 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxP.ttf',
-    letterSpacing: 0.02,
-    name: 'Roboto'
-  },
-  bold: { 
-    url: 'https://fonts.gstatic.com/s/bebasneue/v14/JTUSjIg69CK48gW7PXoo9Wlhyw.ttf',
-    letterSpacing: 0.01,
-    name: 'Bebas Neue'
-  },
-  elegant: { 
-    url: 'https://fonts.gstatic.com/s/playfairdisplay/v36/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDXbtM.ttf',
-    letterSpacing: 0.03,
-    name: 'Playfair Display'
-  },
-  modern: { 
-    url: 'https://fonts.gstatic.com/s/orbitron/v29/yMJMMIlzdpvBhQQL_SC3X9yhF25-T1nyGy6BoWgz.ttf',
-    letterSpacing: 0,
-    name: 'Orbitron'
-  },
-  playful: { 
-    url: 'https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ-6H6MmBp0u-.ttf',
-    letterSpacing: 0.02,
-    name: 'Pacifico'
-  },
+// Font styles for signage
+const fontStyles = {
+  classic: { letterSpacing: 0.02, fontWeight: 400 },
+  bold: { letterSpacing: 0.01, fontWeight: 700 },
+  elegant: { letterSpacing: 0.05, fontWeight: 300 },
+  modern: { letterSpacing: 0, fontWeight: 500 },
+  playful: { letterSpacing: 0.03, fontWeight: 600 },
 };
 
 const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
@@ -57,7 +36,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
   
   const template = (facadeTemplate as keyof typeof templateColors) || 'modern_neon';
   const colors = templateColors[template] || templateColors.modern_neon;
-  const fontConfig = fontConfigs[(signageFont as keyof typeof fontConfigs) || 'classic'];
+  const font = fontStyles[(signageFont as keyof typeof fontStyles) || 'classic'];
   
   const primaryHex = primaryColor || '#3B82F6';
   const accentHex = accentColor || '#10B981';
@@ -195,8 +174,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
         <Text 
           position={[hasShop && logoUrl ? 0.4 : 0, 0, 0.15]} 
           fontSize={hasShop ? textSize : 0.4}
-          letterSpacing={fontConfig.letterSpacing}
-          font={hasShop ? fontConfig.url : undefined}
+          letterSpacing={font.letterSpacing}
           color={hasShop ? "#FFFFFF" : (isNight ? "#FFFF00" : "#FFDD00")}
           anchorX="center" 
           anchorY="middle"

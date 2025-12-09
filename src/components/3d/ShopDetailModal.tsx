@@ -23,14 +23,6 @@ const templateLabels: Record<string, string> = {
   nature_organic: "Nature Organic",
 };
 
-const fontLabels: Record<string, string> = {
-  classic: "Classic",
-  bold: "Bold",
-  elegant: "Elegant",
-  modern: "Modern",
-  playful: "Playful",
-};
-
 const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
   const navigate = useNavigate();
   const { user, isMerchant } = useAuth();
@@ -175,19 +167,9 @@ const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
                       color: shop.primaryColor,
                     }}
                   >
-                    {templateLabels[shop.facadeTemplate || 'modern_neon'] || shop.facadeTemplate}
+                    {templateLabels[shop.facadeTemplate] || shop.facadeTemplate}
                   </span>
                 </div>
-
-                {/* Font Style */}
-                {shop.signageFont && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Font Style</span>
-                    <span className="text-foreground font-medium">
-                      {fontLabels[shop.signageFont] || shop.signageFont}
-                    </span>
-                  </div>
-                )}
                 
                 {/* Color Preview */}
                 <div className="flex items-center justify-between text-sm">
