@@ -4,9 +4,10 @@ interface SpotSelectionMapProps {
   spots: SpotWithShop[];
   selectedSpotId: string;
   onSelectSpot: (spotId: string) => void;
+  highlightedSpotId?: string; // For external selection (e.g., from 3D view)
 }
 
-const SpotSelectionMap = ({ spots, selectedSpotId, onSelectSpot }: SpotSelectionMapProps) => {
+const SpotSelectionMap = ({ spots, selectedSpotId, onSelectSpot, highlightedSpotId }: SpotSelectionMapProps) => {
   // Group spots by their label prefix (L, R, N, S)
   const leftSpots = spots.filter(s => s.spot_label.startsWith('L')).sort((a, b) => a.sort_order - b.sort_order);
   const rightSpots = spots.filter(s => s.spot_label.startsWith('R')).sort((a, b) => a.sort_order - b.sort_order);
@@ -15,37 +16,50 @@ const SpotSelectionMap = ({ spots, selectedSpotId, onSelectSpot }: SpotSelection
 
   const getSpotStatus = (spot: SpotWithShop) => {
     if (spot.id === selectedSpotId) return 'selected';
+    if (spot.id === highlightedSpotId) return 'highlighted';
     if (!spot.shop) return 'available';
     if (spot.shop.status === 'pending_review') return 'pending';
     if (spot.shop.status === 'active') return 'taken';
+    if (spot.shop.status === 'suspended') return 'suspended';
     return 'available';
   };
 
   const getSpotColor = (status: string) => {
     switch (status) {
-      case 'selected': return 'bg-primary border-primary text-primary-foreground';
+      case 'selected': return 'bg-primary border-primary text-primary-foreground ring-2 ring-primary ring-offset-2 ring-offset-background';
+      case 'highlighted': return 'bg-secondary/30 border-secondary text-secondary-foreground animate-pulse ring-2 ring-secondary';
       case 'available': return 'bg-green-500/20 border-green-500 text-green-400 hover:bg-green-500/30 cursor-pointer';
       case 'pending': return 'bg-yellow-500/20 border-yellow-500 text-yellow-400 cursor-not-allowed';
       case 'taken': return 'bg-red-500/20 border-red-500 text-red-400 cursor-not-allowed';
+      case 'suspended': return 'bg-orange-500/20 border-orange-500 text-orange-400 cursor-not-allowed';
       default: return 'bg-muted border-border';
     }
   };
 
   const handleSpotClick = (spot: SpotWithShop) => {
     const status = getSpotStatus(spot);
-    if (status === 'available' || status === 'selected') {
+    if (status === 'available' || status === 'selected' || status === 'highlighted') {
       onSelectSpot(spot.id);
     }
   };
 
   const SpotButton = ({ spot }: { spot: SpotWithShop }) => {
     const status = getSpotStatus(spot);
+    const isHighlighted = spot.id === highlightedSpotId;
+    
     return (
       <button
         onClick={() => handleSpotClick(spot)}
-        disabled={status === 'taken' || status === 'pending'}
-        className={`w-10 h-10 rounded border-2 font-display text-xs font-bold transition-all ${getSpotColor(status)}`}
-        title={`${spot.spot_label} - ${status === 'available' ? 'Available' : status === 'taken' ? 'Taken' : status === 'pending' ? 'Pending Review' : 'Selected'}`}
+        disabled={status === 'taken' || status === 'pending' || status === 'suspended'}
+        className={`w-10 h-10 rounded border-2 font-display text-xs font-bold transition-all ${getSpotColor(status)} ${isHighlighted ? 'scale-110 z-10' : ''}`}
+        title={`${spot.spot_label} - ${
+          status === 'available' ? 'Available' : 
+          status === 'taken' ? 'Taken' : 
+          status === 'pending' ? 'Pending Review' : 
+          status === 'suspended' ? 'Suspended' :
+          status === 'highlighted' ? 'Selected in 3D View' :
+          'Selected'
+        }${spot.shop?.name ? ` (${spot.shop.name})` : ''}`}
       >
         {spot.spot_label}
       </button>
@@ -55,7 +69,7 @@ const SpotSelectionMap = ({ spots, selectedSpotId, onSelectSpot }: SpotSelection
   return (
     <div className="relative bg-muted/50 rounded-lg p-6 min-h-[400px]">
       {/* Legend */}
-      <div className="absolute top-4 right-4 flex gap-3 text-xs">
+      <div className="absolute top-4 right-4 flex flex-wrap gap-3 text-xs">
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded bg-green-500/50 border border-green-500" />
           <span className="text-muted-foreground">Available</span>
@@ -68,6 +82,16 @@ const SpotSelectionMap = ({ spots, selectedSpotId, onSelectSpot }: SpotSelection
           <div className="w-3 h-3 rounded bg-red-500/50 border border-red-500" />
           <span className="text-muted-foreground">Taken</span>
         </div>
+        <div className="flex items-center gap-1">
+          <div className="w-3 h-3 rounded bg-orange-500/50 border border-orange-500" />
+          <span className="text-muted-foreground">Suspended</span>
+        </div>
+        {highlightedSpotId && (
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded bg-secondary/50 border border-secondary animate-pulse" />
+            <span className="text-muted-foreground">3D Selected</span>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col items-center justify-center pt-8">
