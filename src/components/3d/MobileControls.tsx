@@ -123,24 +123,13 @@ const MobileControls = ({ onJoystickMove, onCameraMove }: MobileControlsProps) =
   return (
     <div 
       ref={containerRef}
-      className="absolute inset-0" 
-      style={{ zIndex: 200, touchAction: 'none', pointerEvents: 'none' }}
+      className="absolute inset-x-0 bottom-0 h-2/3" 
+      style={{ zIndex: 50, touchAction: 'none' }}
     >
-      {/* Touch areas - invisible but captures touches */}
-      <div 
-        className="absolute left-0 top-0 bottom-0 w-1/2"
-        style={{ pointerEvents: 'auto' }}
-      />
-      <div 
-        className="absolute right-0 top-0 bottom-0 w-1/2"
-        style={{ pointerEvents: 'auto' }}
-      />
-      
-      {/* Left side - Joystick visual - positioned lower left, avoiding top controls */}
+      {/* Left side - Joystick visual */}
       <div
         ref={joystickRef}
         className="absolute bottom-4 left-4 w-24 h-24 rounded-full bg-black/50 border-2 border-white/40"
-        style={{ pointerEvents: 'none' }}
       >
         <div
           ref={knobRef}
@@ -149,16 +138,12 @@ const MobileControls = ({ onJoystickMove, onCameraMove }: MobileControlsProps) =
             left: '50%',
             top: '50%',
             transform: `translate(calc(-50% + ${joystickPos.x}px), calc(-50% + ${joystickPos.y}px))`,
-            pointerEvents: 'none',
           }}
         />
       </div>
 
-      {/* Right side - Camera hint - positioned lower right */}
-      <div 
-        className="absolute bottom-4 right-4 bg-black/40 rounded-lg px-2 py-1 text-white/50 text-[10px]"
-        style={{ pointerEvents: 'none' }}
-      >
+      {/* Right side - Camera hint */}
+      <div className="absolute bottom-4 right-4 bg-black/40 rounded-lg px-2 py-1 text-white/50 text-[10px]">
         Drag to look
       </div>
     </div>
