@@ -1,15 +1,27 @@
-import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Store, AlertCircle } from "lucide-react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, Store, AlertCircle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/StatusBadge";
-import { getStreetById, getShopsForStreet } from "@/lib/streets";
+import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
+
+type SpotStatus = "active" | "coming-soon" | "for-rent" | "taken";
 
 const MerchantShops = () => {
   const { streetId } = useParams<{ streetId: string }>();
-  const street = getStreetById(streetId || "");
-  const shops = getShopsForStreet(streetId || "");
+  const navigate = useNavigate();
+  const { data: street, isLoading: streetLoading } = useStreetBySlug(streetId || "");
+  const { data: spotsWithShops, isLoading: spotsLoading } = useSpotsWithShops(street?.id || "");
 
-  if (!street || !street.isActive) {
+  const isLoading = streetLoading || spotsLoading;
+
+  const getSpotStatus = (spot: any): SpotStatus => {
+    if (!spot.shop) return "for-rent";
+    if (spot.shop.status === "active") return "taken";
+    if (spot.shop.status === "pending_review") return "coming-soon";
+    return "for-rent";
+  };
+
+  if (!isLoading && (!street || !street.is_active)) {
     return (
       <div className="min-h-screen pt-24 pb-12 px-4">
         <div className="container mx-auto max-w-6xl">
@@ -35,80 +47,112 @@ const MerchantShops = () => {
     );
   }
 
+  const availableSpots = spotsWithShops?.filter(s => !s.shop) || [];
+
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
       <div className="container mx-auto max-w-6xl">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/merchant/streets">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <Store className="h-5 w-5 text-primary" />
-              <h1 className="font-display text-3xl font-bold text-foreground">
-                Shops in {street.name}
-              </h1>
+        <div className="flex items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" asChild>
+              <Link to="/merchant/streets">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <Store className="h-5 w-5 text-primary" />
+                <h1 className="font-display text-3xl font-bold text-foreground">
+                  {isLoading ? "Loading..." : `Shops in ${street?.name}`}
+                </h1>
+              </div>
+              <p className="text-muted-foreground">
+                {availableSpots.length} spots available for rent
+              </p>
             </div>
-            <p className="text-muted-foreground">
-              {shops.filter(s => s.status === "for-rent").length} shops available for rent
-            </p>
           </div>
+          
+          {availableSpots.length > 0 && (
+            <Button variant="cyber" onClick={() => navigate('/merchant/create-shop')}>
+              <Plus className="mr-2 h-4 w-4" />
+              Rent a Shop
+            </Button>
+          )}
         </div>
 
         {/* Shops Table */}
-        <div className="cyber-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-4 px-6 font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                    Shop Name
-                  </th>
-                  <th className="text-left py-4 px-6 font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="text-right py-4 px-6 font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {shops.map((shop) => (
-                  <tr 
-                    key={shop.id} 
-                    className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
-                  >
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/30">
-                          <Store className="h-5 w-5 text-primary" />
-                        </div>
-                        <span className="font-medium text-foreground">{shop.name}</span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <StatusBadge status={shop.status} />
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      {shop.status === "for-rent" ? (
-                        <Button variant="cyber" size="sm">
-                          Rent Shop
-                        </Button>
-                      ) : (
-                        <Button variant="disabled" size="sm" disabled>
-                          Occupied
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {isLoading ? (
+          <div className="cyber-card text-center py-12">
+            <p className="text-muted-foreground animate-pulse">Loading spots...</p>
           </div>
-        </div>
+        ) : (
+          <div className="cyber-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-4 px-6 font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                      Spot
+                    </th>
+                    <th className="text-left py-4 px-6 font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                      Shop Name
+                    </th>
+                    <th className="text-left py-4 px-6 font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                      Status
+                    </th>
+                    <th className="text-right py-4 px-6 font-display text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {spotsWithShops?.map((spot) => {
+                    const status = getSpotStatus(spot);
+                    return (
+                      <tr 
+                        key={spot.id} 
+                        className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="py-4 px-6">
+                          <span className="font-display font-bold text-primary">{spot.spot_label}</span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/30">
+                              <Store className="h-5 w-5 text-primary" />
+                            </div>
+                            <span className="font-medium text-foreground">
+                              {spot.shop?.name || "Available"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <StatusBadge status={status} />
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          {status === "for-rent" ? (
+                            <Button 
+                              variant="cyber" 
+                              size="sm"
+                              onClick={() => navigate('/merchant/create-shop')}
+                            >
+                              Rent Shop
+                            </Button>
+                          ) : (
+                            <Button variant="disabled" size="sm" disabled>
+                              Occupied
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

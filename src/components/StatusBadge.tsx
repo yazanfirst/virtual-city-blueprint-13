@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 interface StatusBadgeProps {
-  status: "active" | "coming-soon" | "for-rent" | "taken";
+  status: "active" | "coming-soon" | "for-rent" | "taken" | "pending_review" | "rejected" | "suspended";
   className?: string;
 }
 
@@ -9,23 +9,35 @@ const StatusBadge = ({ status, className }: StatusBadgeProps) => {
   const statusConfig = {
     "active": {
       label: "Active",
-      className: "bg-primary/20 text-primary border-primary/40",
+      className: "bg-green-500/20 text-green-400 border-green-500/40",
     },
     "coming-soon": {
-      label: "Coming Soon",
-      className: "bg-secondary/20 text-secondary border-secondary/40",
+      label: "Pending",
+      className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/40",
+    },
+    "pending_review": {
+      label: "Pending Review",
+      className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/40",
     },
     "for-rent": {
       label: "For Rent",
-      className: "bg-green-500/20 text-green-400 border-green-500/40",
+      className: "bg-primary/20 text-primary border-primary/40",
     },
     "taken": {
       label: "Taken",
       className: "bg-red-500/20 text-red-400 border-red-500/40",
     },
+    "rejected": {
+      label: "Rejected",
+      className: "bg-red-500/20 text-red-400 border-red-500/40",
+    },
+    "suspended": {
+      label: "Suspended",
+      className: "bg-orange-500/20 text-orange-400 border-orange-500/40",
+    },
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[status] || statusConfig["for-rent"];
 
   return (
     <span
@@ -37,10 +49,12 @@ const StatusBadge = ({ status, className }: StatusBadgeProps) => {
     >
       <span className={cn(
         "mr-2 h-1.5 w-1.5 rounded-full",
-        status === "active" && "bg-primary animate-pulse-glow",
-        status === "coming-soon" && "bg-secondary",
-        status === "for-rent" && "bg-green-400 animate-pulse-glow",
-        status === "taken" && "bg-red-400"
+        status === "active" && "bg-green-400 animate-pulse",
+        (status === "coming-soon" || status === "pending_review") && "bg-yellow-400",
+        status === "for-rent" && "bg-primary animate-pulse",
+        status === "taken" && "bg-red-400",
+        status === "rejected" && "bg-red-400",
+        status === "suspended" && "bg-orange-400"
       )} />
       {config.label}
     </span>

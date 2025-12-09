@@ -2,10 +2,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StreetCard from "@/components/StreetCard";
-import { streets } from "@/lib/streets";
+import { useStreets } from "@/hooks/useStreets";
 
 const MerchantStreets = () => {
   const navigate = useNavigate();
+  const { data: streets, isLoading } = useStreets();
 
   return (
     <div className="min-h-screen pt-24 pb-12 px-4">
@@ -31,19 +32,25 @@ const MerchantStreets = () => {
         </div>
 
         {/* Streets Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {streets.map((street) => (
-            <StreetCard
-              key={street.id}
-              id={street.id}
-              name={street.name}
-              category={street.category}
-              isActive={street.isActive}
-              actionLabel="View Shops"
-              onAction={street.isActive ? () => navigate(`/merchant/shops/${street.id}`) : undefined}
-            />
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground animate-pulse">Loading streets...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {streets?.map((street) => (
+              <StreetCard
+                key={street.id}
+                id={street.id}
+                name={street.name}
+                category={street.category}
+                isActive={street.is_active ?? false}
+                actionLabel="View Shops"
+                onAction={street.is_active ? () => navigate(`/merchant/shops/${street.slug}`) : undefined}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
