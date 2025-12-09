@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, MapPin, Store, Palette, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,12 +56,24 @@ const steps = [
 
 const CreateShop = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<ShopFormData>(initialFormData);
   
   const { data: streets, isLoading: streetsLoading } = useStreets();
   const { data: spotsWithShops, isLoading: spotsLoading } = useSpotsWithShops(formData.streetId);
   const createShop = useCreateShop();
+
+  // Pre-select spot from URL params (coming from 3D game)
+  useEffect(() => {
+    const spotId = searchParams.get('spotId');
+    const streetId = searchParams.get('streetId');
+    
+    if (spotId && streetId) {
+      setFormData(prev => ({ ...prev, streetId, spotId }));
+      setCurrentStep(3); // Skip to Shop Info step
+    }
+  }, [searchParams]);
 
   const selectedStreet = streets?.find(s => s.id === formData.streetId);
   const selectedSpot = spotsWithShops?.find(s => s.id === formData.spotId);

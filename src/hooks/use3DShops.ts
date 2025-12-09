@@ -73,6 +73,7 @@ export function parsePosition3D(position3d: any): Position3D {
 
 export interface ShopBranding {
   spotId: string;
+  streetId: string;
   spotLabel: string;
   position: Position3D;
   hasShop: boolean;
@@ -93,6 +94,7 @@ export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): S
     if (spot.shop) {
       return {
         spotId: spot.id,
+        streetId: spot.street_id,
         spotLabel: spot.spot_label,
         position,
         hasShop: true,
@@ -109,6 +111,7 @@ export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): S
 
     return {
       spotId: spot.id,
+      streetId: spot.street_id,
       spotLabel: spot.spot_label,
       position,
       hasShop: false,
