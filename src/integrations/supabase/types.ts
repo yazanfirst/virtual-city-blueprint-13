@@ -14,16 +14,249 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          business_name: string | null
+          created_at: string | null
+          display_name: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          business_name?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          business_name?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      shop_reviews: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          shop_id: string
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          shop_id: string
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          shop_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_reviews_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_spots: {
+        Row: {
+          created_at: string | null
+          id: string
+          position_3d: Json
+          sort_order: number
+          spot_label: string
+          street_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          position_3d: Json
+          sort_order: number
+          spot_label: string
+          street_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          position_3d?: Json
+          sort_order?: number
+          spot_label?: string
+          street_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_spots_street_id_fkey"
+            columns: ["street_id"]
+            isOneToOne: false
+            referencedRelation: "streets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shops: {
+        Row: {
+          accent_color: string | null
+          admin_notes: string | null
+          branch_justification: string | null
+          branch_label: string | null
+          category: string | null
+          created_at: string | null
+          duplicate_brand: boolean | null
+          external_link: string | null
+          facade_template: Database["public"]["Enums"]["facade_template"] | null
+          id: string
+          logo_url: string | null
+          merchant_id: string
+          name: string
+          primary_color: string | null
+          spot_id: string
+          status: Database["public"]["Enums"]["shop_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          admin_notes?: string | null
+          branch_justification?: string | null
+          branch_label?: string | null
+          category?: string | null
+          created_at?: string | null
+          duplicate_brand?: boolean | null
+          external_link?: string | null
+          facade_template?:
+            | Database["public"]["Enums"]["facade_template"]
+            | null
+          id?: string
+          logo_url?: string | null
+          merchant_id: string
+          name: string
+          primary_color?: string | null
+          spot_id: string
+          status?: Database["public"]["Enums"]["shop_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          admin_notes?: string | null
+          branch_justification?: string | null
+          branch_label?: string | null
+          category?: string | null
+          created_at?: string | null
+          duplicate_brand?: boolean | null
+          external_link?: string | null
+          facade_template?:
+            | Database["public"]["Enums"]["facade_template"]
+            | null
+          id?: string
+          logo_url?: string | null
+          merchant_id?: string
+          name?: string
+          primary_color?: string | null
+          spot_id?: string
+          status?: Database["public"]["Enums"]["shop_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shops_spot_id_fkey"
+            columns: ["spot_id"]
+            isOneToOne: true
+            referencedRelation: "shop_spots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      streets: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          slug: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          slug: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_merchant: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "merchant" | "admin" | "player"
+      facade_template:
+        | "modern_neon"
+        | "minimal_white"
+        | "classic_brick"
+        | "cyber_tech"
+      shop_status: "pending_review" | "active" | "rejected" | "suspended"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +383,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["merchant", "admin", "player"],
+      facade_template: [
+        "modern_neon",
+        "minimal_white",
+        "classic_brick",
+        "cyber_tech",
+      ],
+      shop_status: ["pending_review", "active", "rejected", "suspended"],
+    },
   },
 } as const
