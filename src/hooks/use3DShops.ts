@@ -82,6 +82,7 @@ export interface ShopBranding {
   facadeTemplate?: string;
   logoUrl?: string | null;
   externalLink?: string | null;
+  signageFont?: string | null;
 }
 
 export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): ShopBranding[] {
@@ -100,6 +101,7 @@ export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): S
         facadeTemplate: spot.shop.facade_template || 'modern_neon',
         logoUrl: spot.shop.logo_url,
         externalLink: spot.shop.external_link,
+        signageFont: (spot.shop as any).signage_font || 'classic',
       };
     }
 

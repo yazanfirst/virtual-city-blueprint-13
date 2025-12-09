@@ -11,7 +11,8 @@ import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import BrandingEditor from "@/components/merchant/BrandingEditor";
 import ShopPreview from "@/components/merchant/ShopPreview";
 
-type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech";
+type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic";
+type SignageFont = "classic" | "bold" | "elegant" | "modern" | "playful";
 
 interface ShopFormData {
   streetId: string;
@@ -23,6 +24,7 @@ interface ShopFormData {
   primaryColor: string;
   accentColor: string;
   facadeTemplate: FacadeTemplate;
+  signageFont: SignageFont;
   duplicateBrand: boolean;
   branchLabel: string;
   branchJustification: string;
@@ -38,6 +40,7 @@ const initialFormData: ShopFormData = {
   primaryColor: "#3B82F6",
   accentColor: "#10B981",
   facadeTemplate: "modern_neon",
+  signageFont: "classic",
   duplicateBrand: false,
   branchLabel: "",
   branchJustification: "",
@@ -101,6 +104,7 @@ const CreateShop = () => {
         primary_color: formData.primaryColor,
         accent_color: formData.accentColor,
         facade_template: formData.facadeTemplate,
+        signage_font: formData.signageFont,
         duplicate_brand: formData.duplicateBrand,
         branch_label: formData.branchLabel || null,
         branch_justification: formData.branchJustification || null,
@@ -283,7 +287,8 @@ const CreateShop = () => {
                   accentColor={formData.accentColor}
                   facadeTemplate={formData.facadeTemplate}
                   logoUrl={formData.logoUrl}
-                  onUpdate={(updates) => updateFormData(updates)}
+                  signageFont={formData.signageFont}
+                  onUpdate={(updates) => updateFormData(updates as Partial<ShopFormData>)}
                 />
                 
                 <div>

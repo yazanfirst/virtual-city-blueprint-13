@@ -1,4 +1,4 @@
-type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech";
+type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic";
 
 interface ShopPreviewProps {
   name: string;
@@ -37,6 +37,30 @@ const templateStyles: Record<FacadeTemplate, {
     border: "border-purple-700",
     text: "text-purple-100",
     signBg: "bg-purple-900",
+  },
+  luxury_gold: {
+    bg: "bg-zinc-900",
+    border: "border-yellow-600",
+    text: "text-yellow-400",
+    signBg: "bg-zinc-800",
+  },
+  urban_industrial: {
+    bg: "bg-zinc-700",
+    border: "border-zinc-600",
+    text: "text-orange-400",
+    signBg: "bg-zinc-600",
+  },
+  retro_vintage: {
+    bg: "bg-amber-100",
+    border: "border-orange-300",
+    text: "text-orange-800",
+    signBg: "bg-amber-50",
+  },
+  nature_organic: {
+    bg: "bg-green-800",
+    border: "border-green-600",
+    text: "text-green-100",
+    signBg: "bg-green-700",
   },
 };
 

@@ -127,6 +127,7 @@ export type Database = {
           merchant_id: string
           name: string
           primary_color: string | null
+          signage_font: string | null
           spot_id: string
           status: Database["public"]["Enums"]["shop_status"] | null
           updated_at: string | null
@@ -148,6 +149,7 @@ export type Database = {
           merchant_id: string
           name: string
           primary_color?: string | null
+          signage_font?: string | null
           spot_id: string
           status?: Database["public"]["Enums"]["shop_status"] | null
           updated_at?: string | null
@@ -169,6 +171,7 @@ export type Database = {
           merchant_id?: string
           name?: string
           primary_color?: string | null
+          signage_font?: string | null
           spot_id?: string
           status?: Database["public"]["Enums"]["shop_status"] | null
           updated_at?: string | null
@@ -256,6 +259,10 @@ export type Database = {
         | "minimal_white"
         | "classic_brick"
         | "cyber_tech"
+        | "luxury_gold"
+        | "urban_industrial"
+        | "retro_vintage"
+        | "nature_organic"
       shop_status: "pending_review" | "active" | "rejected" | "suspended"
     }
     CompositeTypes: {
@@ -390,6 +397,10 @@ export const Constants = {
         "minimal_white",
         "classic_brick",
         "cyber_tech",
+        "luxury_gold",
+        "urban_industrial",
+        "retro_vintage",
+        "nature_organic",
       ],
       shop_status: ["pending_review", "active", "rejected", "suspended"],
     },
