@@ -3,37 +3,86 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import Index from "./pages/Index";
+import Auth from "./pages/Auth";
 import CityMap from "./pages/CityMap";
 import StreetView from "./pages/StreetView";
-import MerchantLogin from "./pages/merchant/MerchantLogin";
 import MerchantDashboard from "./pages/merchant/MerchantDashboard";
 import MerchantStreets from "./pages/merchant/MerchantStreets";
 import MerchantShops from "./pages/merchant/MerchantShops";
+import CreateShop from "./pages/merchant/CreateShop";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Navbar />
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/city-map" element={<CityMap />} />
-          <Route path="/city/:streetId" element={<StreetView />} />
-          <Route path="/merchant/login" element={<MerchantLogin />} />
-          <Route path="/merchant/dashboard" element={<MerchantDashboard />} />
-          <Route path="/merchant/streets" element={<MerchantStreets />} />
-          <Route path="/merchant/shops/:streetId" element={<MerchantShops />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Navbar />
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/city-map" element={<CityMap />} />
+            <Route path="/city/:streetId" element={<StreetView />} />
+            
+            {/* Merchant routes */}
+            <Route 
+              path="/merchant/dashboard" 
+              element={
+                <ProtectedRoute requireMerchant>
+                  <MerchantDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/merchant/streets" 
+              element={
+                <ProtectedRoute requireMerchant>
+                  <MerchantStreets />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/merchant/shops/:streetId" 
+              element={
+                <ProtectedRoute requireMerchant>
+                  <MerchantShops />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/merchant/create-shop" 
+              element={
+                <ProtectedRoute requireMerchant>
+                  <CreateShop />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Admin routes */}
+            <Route 
+              path="/admin/dashboard" 
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
