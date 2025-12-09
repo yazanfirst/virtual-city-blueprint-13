@@ -18,9 +18,11 @@ const SpotSelectionMap = ({ spots, selectedSpotId, onSelectSpot, highlightedSpot
     if (spot.id === selectedSpotId) return 'selected';
     if (spot.id === highlightedSpotId) return 'highlighted';
     if (!spot.shop) return 'available';
+    // All shop statuses block the spot - including suspended and rejected
     if (spot.shop.status === 'pending_review') return 'pending';
     if (spot.shop.status === 'active') return 'taken';
-    if (spot.shop.status === 'suspended') return 'suspended';
+    if (spot.shop.status === 'suspended') return 'taken'; // Suspended spots are still occupied
+    if (spot.shop.status === 'rejected') return 'available'; // Only rejected becomes available again
     return 'available';
   };
 
@@ -31,7 +33,6 @@ const SpotSelectionMap = ({ spots, selectedSpotId, onSelectSpot, highlightedSpot
       case 'available': return 'bg-green-500/20 border-green-500 text-green-400 hover:bg-green-500/30 cursor-pointer';
       case 'pending': return 'bg-yellow-500/20 border-yellow-500 text-yellow-400 cursor-not-allowed';
       case 'taken': return 'bg-red-500/20 border-red-500 text-red-400 cursor-not-allowed';
-      case 'suspended': return 'bg-orange-500/20 border-orange-500 text-orange-400 cursor-not-allowed';
       default: return 'bg-muted border-border';
     }
   };
@@ -50,13 +51,12 @@ const SpotSelectionMap = ({ spots, selectedSpotId, onSelectSpot, highlightedSpot
     return (
       <button
         onClick={() => handleSpotClick(spot)}
-        disabled={status === 'taken' || status === 'pending' || status === 'suspended'}
+        disabled={status === 'taken' || status === 'pending'}
         className={`w-10 h-10 rounded border-2 font-display text-xs font-bold transition-all ${getSpotColor(status)} ${isHighlighted ? 'scale-110 z-10' : ''}`}
         title={`${spot.spot_label} - ${
           status === 'available' ? 'Available' : 
-          status === 'taken' ? 'Taken' : 
+          status === 'taken' ? 'Occupied' : 
           status === 'pending' ? 'Pending Review' : 
-          status === 'suspended' ? 'Suspended' :
           status === 'highlighted' ? 'Selected in 3D View' :
           'Selected'
         }${spot.shop?.name ? ` (${spot.shop.name})` : ''}`}
@@ -80,11 +80,7 @@ const SpotSelectionMap = ({ spots, selectedSpotId, onSelectSpot, highlightedSpot
         </div>
         <div className="flex items-center gap-1">
           <div className="w-3 h-3 rounded bg-red-500/50 border border-red-500" />
-          <span className="text-muted-foreground">Taken</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded bg-orange-500/50 border border-orange-500" />
-          <span className="text-muted-foreground">Suspended</span>
+          <span className="text-muted-foreground">Occupied</span>
         </div>
         {highlightedSpotId && (
           <div className="flex items-center gap-1">

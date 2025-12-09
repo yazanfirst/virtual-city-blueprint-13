@@ -170,15 +170,14 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
           </Html>
         )}
         
-        {/* Text - using Html for custom fonts with larger size */}
+        {/* Text - using Html for custom fonts - removed scale for visibility */}
         {hasShop ? (
           <Html
-            position={[logoUrl ? 0.5 : 0, 0, 0.15]}
+            position={[logoUrl ? 0.3 : 0, 0, 0.16]}
             transform
             occlude
-            scale={0.1}
             style={{
-              width: logoUrl ? '200px' : '320px',
+              width: logoUrl ? '120px' : '180px',
               textAlign: 'center',
               pointerEvents: 'none',
             }}
@@ -187,13 +186,13 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
               style={{
                 fontFamily: font.fontFamily,
                 fontWeight: font.fontWeight,
-                fontSize: shopName && shopName.length > 15 ? '24px' : shopName && shopName.length > 10 ? '28px' : '32px',
+                fontSize: shopName && shopName.length > 15 ? '12px' : shopName && shopName.length > 10 ? '14px' : '16px',
                 color: '#FFFFFF',
-                textShadow: `0 0 8px ${primaryHex}, 0 0 16px ${primaryHex}, 2px 2px 4px rgba(0,0,0,0.8)`,
+                textShadow: `0 0 4px ${primaryHex}, 0 0 8px ${primaryHex}, 1px 1px 2px rgba(0,0,0,0.9)`,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                letterSpacing: '2px',
+                letterSpacing: '1px',
               }}
             >
               {shopName || "SHOP"}
