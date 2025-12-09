@@ -57,22 +57,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserRole = async (userId: string) => {
     try {
+      // Fetch ALL roles for the user (a user can have multiple roles like player + merchant)
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
+        .eq('user_id', userId);
 
       if (error) {
-        console.error('Error fetching user role:', error);
+        console.error('Error fetching user roles:', error);
         return;
       }
 
-      if (data) {
-        setUserRole(data.role as UserRole);
+      if (data && data.length > 0) {
+        // Store the highest priority role: admin > merchant > player
+        const roles = data.map(r => r.role as UserRole);
+        if (roles.includes('admin')) {
+          setUserRole('admin');
+        } else if (roles.includes('merchant')) {
+          setUserRole('merchant');
+        } else {
+          setUserRole(roles[0]);
+        }
       }
     } catch (err) {
-      console.error('Error fetching user role:', err);
+      console.error('Error fetching user roles:', err);
     }
   };
 
