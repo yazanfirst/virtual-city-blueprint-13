@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Target, User, Store, AlertCircle, Maximize2, Minimize2, Sun, Moon, ZoomIn, Move, UserCircle, Eye } from "lucide-react";
+import { ArrowLeft, Target, User, Store, AlertCircle, Maximize2, Minimize2, Sun, Moon, ZoomIn, Move, UserCircle, Eye, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug } from "@/hooks/useStreets";
+import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
 import CityScene, { CameraView } from "@/components/3d/CityScene";
 
 const PanelBox = ({ 
@@ -32,9 +33,14 @@ const PanelBox = ({
 const StreetView = () => {
   const { streetId } = useParams<{ streetId: string }>();
   const { data: street, isLoading } = useStreetBySlug(streetId || "");
+  const { data: spotsData } = useAllSpotsForStreet(streetId || "");
   const [isMaximized, setIsMaximized] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
+  const [selectedShop, setSelectedShop] = useState<ShopBranding | null>(null);
+
+  // Transform spots data to shop brandings
+  const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
 
   // Request fullscreen + landscape orientation when maximized on mobile
   useEffect(() => {
@@ -155,6 +161,8 @@ const StreetView = () => {
             streetId={street.id} 
             timeOfDay={timeOfDay} 
             cameraView={cameraView}
+            shopBrandings={shopBrandings}
+            onShopClick={setSelectedShop}
           />
           
           {/* Top Controls Bar */}
@@ -260,8 +268,25 @@ const StreetView = () => {
               </div>
             </OverlayPanel>
             
-            <OverlayPanel title="Shop" icon={Store} className="w-40">
-              <p>Click a shop to view</p>
+            <OverlayPanel title="Shop" icon={Store} className="w-48">
+              {selectedShop?.hasShop ? (
+                <div className="space-y-2">
+                  <p className="text-foreground font-medium">{selectedShop.shopName}</p>
+                  {selectedShop.category && <p className="text-xs">{selectedShop.category}</p>}
+                  {selectedShop.externalLink && (
+                    <a 
+                      href={selectedShop.externalLink} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-primary hover:underline text-xs"
+                    >
+                      Visit Store <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <p>Click a shop to view details</p>
+              )}
             </OverlayPanel>
           </div>
         </div>
@@ -383,7 +408,13 @@ const StreetView = () => {
                 </span>
               </div>
               
-              <CityScene streetId={street.id} timeOfDay={timeOfDay} cameraView={cameraView} />
+              <CityScene 
+                streetId={street.id} 
+                timeOfDay={timeOfDay} 
+                cameraView={cameraView} 
+                shopBrandings={shopBrandings}
+                onShopClick={setSelectedShop}
+              />
             </div>
           </div>
 
@@ -407,9 +438,38 @@ const StreetView = () => {
             </PanelBox>
 
             <PanelBox title="Shop Info Panel" icon={Store}>
-              <p>
-                Click on a shop in the 3D scene to view details here.
-              </p>
+              {selectedShop?.hasShop ? (
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="text-foreground font-medium">{selectedShop.shopName}</h4>
+                    {selectedShop.category && (
+                      <p className="text-xs text-muted-foreground">{selectedShop.category}</p>
+                    )}
+                  </div>
+                  {selectedShop.externalLink && (
+                    <Button variant="outline" size="sm" asChild className="w-full">
+                      <a 
+                        href={selectedShop.externalLink} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-2" />
+                        Visit Store
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              ) : selectedShop ? (
+                <div className="space-y-2">
+                  <p className="text-foreground font-medium">Spot {selectedShop.spotLabel}</p>
+                  <p className="text-xs">This spot is available for rent!</p>
+                  <Button variant="cyber" size="sm" asChild className="w-full">
+                    <Link to="/merchant/create-shop">Rent This Spot</Link>
+                  </Button>
+                </div>
+              ) : (
+                <p>Click on a shop in the 3D scene to view details here.</p>
+              )}
             </PanelBox>
           </div>
         </div>

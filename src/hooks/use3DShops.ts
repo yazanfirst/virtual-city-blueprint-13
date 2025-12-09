@@ -71,12 +71,12 @@ export function parsePosition3D(position3d: any): Position3D {
   return position3d as Position3D;
 }
 
-// Get shop branding data for 3D rendering
 export interface ShopBranding {
   spotLabel: string;
   position: Position3D;
   hasShop: boolean;
   shopName?: string;
+  category?: string | null;
   primaryColor?: string;
   accentColor?: string;
   facadeTemplate?: string;
@@ -94,6 +94,7 @@ export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): S
         position,
         hasShop: true,
         shopName: spot.shop.name,
+        category: spot.shop.category,
         primaryColor: spot.shop.primary_color || '#3B82F6',
         accentColor: spot.shop.accent_color || '#10B981',
         facadeTemplate: spot.shop.facade_template || 'modern_neon',
