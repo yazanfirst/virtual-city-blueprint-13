@@ -5,6 +5,10 @@ import LowPolyCharacter from './LowPolyCharacter';
 import { usePlayerStore } from '@/stores/playerStore';
 
 const PLAYER_RADIUS = 0.45;
+const STEP_HEIGHT = 0.28;
+const JUMP_VELOCITY = 0.35;
+const GRAVITY = 0.026;
+const BENCH_PLATFORM_HEIGHT = 0.65;
 
 // Tree and lamp locations are shared with the scene layout
 const TREE_COLLIDERS = [
@@ -39,9 +43,37 @@ const BENCH_COLLIDERS = [
   { minX: -47.5, maxX: -42.5, minZ: 36.5, maxZ: 39.5 },
 ];
 
-const PLATFORM_SURFACES = [
+type CircularPlatform = {
+  type: 'circle';
+  x: number;
+  z: number;
+  radius: number;
+  height: number;
+  requiresJump?: boolean;
+};
+
+type BoxPlatform = {
+  type: 'box';
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+  height: number;
+  requiresJump?: boolean;
+};
+
+type PlatformSurface = CircularPlatform | BoxPlatform;
+
+const PLATFORM_SURFACES: PlatformSurface[] = [
   // Fountain base - low platform players can jump onto
-  { x: 0, z: 0, radius: 4.4, height: 0.8 },
+  { type: 'circle', x: 0, z: 0, radius: 4.6, height: 0.82, requiresJump: true },
+  // Benches can be landed on but shouldn't auto-step when walking
+  ...BENCH_COLLIDERS.map((bench) => ({
+    type: 'box',
+    ...bench,
+    height: BENCH_PLATFORM_HEIGHT,
+    requiresJump: true,
+  } as PlatformSurface)),
 ];
 
 const CYLINDER_COLLIDERS = [
@@ -73,10 +105,9 @@ const COLLISION_BOXES = [
   // District gates
   { minX: 73, maxX: 83, minZ: -6, maxZ: 6 },
   { minX: -83, maxX: -73, minZ: -6, maxZ: 6 },
-  // Lakes and benches use simple rectangles to block the player from walking through geometry
+  // Lakes use simple rectangles to block the player from walking through geometry
   { minX: -64, maxX: -46, minZ: -52, maxZ: -44 },
   { minX: 50, maxX: 66, minZ: 44, maxZ: 52 },
-  ...BENCH_COLLIDERS,
 ];
 
 type PlayerControllerProps = {
@@ -122,7 +153,12 @@ const PlayerController = ({
   const cameraHeight = viewMode === "firstPerson" ? 2.5 : 4;
 
   // Check collision with buildings and props
-  const checkCollision = (x: number, z: number, radius: number = PLAYER_RADIUS): boolean => {
+  const checkCollision = (
+    x: number,
+    z: number,
+    y: number = positionRef.current.y,
+    radius: number = PLAYER_RADIUS,
+  ): boolean => {
     for (const box of COLLISION_BOXES) {
       if (
         x + radius > box.minX &&
@@ -145,17 +181,42 @@ const PlayerController = ({
       }
     }
 
+    for (const bench of BENCH_COLLIDERS) {
+      if (
+        x + radius > bench.minX &&
+        x - radius < bench.maxX &&
+        z + radius > bench.minZ &&
+        z - radius < bench.maxZ
+      ) {
+        // Block if the player is at ground height; allow movement when already elevated on top
+        if (y < BENCH_PLATFORM_HEIGHT - 0.05) {
+          return true;
+        }
+      }
+    }
+
     return false;
   };
 
-  const getSurfaceHeight = useCallback((x: number, z: number): number => {
-    let surface = 0.25;
+  const getSurfaceHeight = useCallback((x: number, z: number): { height: number; requiresJump: boolean } => {
+    let surface = { height: 0.25, requiresJump: false };
 
     for (const platform of PLATFORM_SURFACES) {
-      const dx = x - platform.x;
-      const dz = z - platform.z;
-      if (dx * dx + dz * dz <= platform.radius * platform.radius) {
-        surface = Math.max(surface, platform.height);
+      if (platform.type === 'circle') {
+        const dx = x - platform.x;
+        const dz = z - platform.z;
+        if (dx * dx + dz * dz <= platform.radius * platform.radius && platform.height > surface.height) {
+          surface = { height: platform.height, requiresJump: Boolean(platform.requiresJump) };
+        }
+      } else if (
+        platform.type === 'box' &&
+        x >= platform.minX &&
+        x <= platform.maxX &&
+        z >= platform.minZ &&
+        z <= platform.maxZ &&
+        platform.height > surface.height
+      ) {
+        surface = { height: platform.height, requiresJump: Boolean(platform.requiresJump) };
       }
     }
 
@@ -163,11 +224,11 @@ const PlayerController = ({
   }, []);
 
   const attemptJump = useCallback(() => {
-    const groundHeight = getSurfaceHeight(positionRef.current.x, positionRef.current.z);
-    const onGround = positionRef.current.y <= groundHeight + 0.001;
+    const groundInfo = getSurfaceHeight(positionRef.current.x, positionRef.current.z);
+    const onGround = positionRef.current.y <= groundInfo.height + 0.001 && verticalVelocityRef.current === 0;
 
     if (!isJumping && onGround) {
-      verticalVelocityRef.current = 0.32;
+      verticalVelocityRef.current = JUMP_VELOCITY;
       setIsJumping(true);
     }
   }, [getSurfaceHeight, isJumping]);
@@ -307,10 +368,11 @@ const PlayerController = ({
     }
 
     // Apply jump/gravity
-    const groundHeight = getSurfaceHeight(positionRef.current.x, positionRef.current.z);
+    const groundInfo = getSurfaceHeight(positionRef.current.x, positionRef.current.z);
+    const groundHeight = groundInfo.height;
+
     if (isJumping || positionRef.current.y > groundHeight) {
-      const gravity = 0.025;
-      verticalVelocityRef.current -= gravity;
+      verticalVelocityRef.current -= GRAVITY;
       positionRef.current.y = Math.max(groundHeight, positionRef.current.y + verticalVelocityRef.current);
       positionChanged = true;
 
@@ -320,10 +382,13 @@ const PlayerController = ({
         setIsJumping(false);
       }
     } else if (positionRef.current.y < groundHeight) {
-      // Step up onto low platforms smoothly
-      positionRef.current.y = groundHeight;
-      verticalVelocityRef.current = 0;
-      positionChanged = true;
+      // Step up onto low platforms smoothly without pulling the player onto benches/fountain unless jumped
+      const heightDelta = groundHeight - positionRef.current.y;
+      if (heightDelta <= STEP_HEIGHT && !groundInfo.requiresJump) {
+        positionRef.current.y = groundHeight;
+        verticalVelocityRef.current = 0;
+        positionChanged = true;
+      }
     }
 
     // Apply position to group

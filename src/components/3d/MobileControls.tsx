@@ -20,15 +20,20 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
   const lastCameraPosRef = useRef<{ x: number; y: number } | null>(null);
   const joystickStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  const JOYSTICK_RADIUS = 56; // half of 112px (w-28)
+  const JOYSTICK_RADIUS = 56;
+  const JOYSTICK_HANDLE_RADIUS = 24;
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const handleTouchStart = (e: TouchEvent) => {
+      if ((e.target as HTMLElement)?.closest('[data-control-ignore="true"]')) {
+        return;
+      }
+
       const screenWidth = window.innerWidth;
-      
+
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         const { clientX, clientY, identifier } = touch;
@@ -62,15 +67,15 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
           const deltaY = clientY - joystickStartRef.current.y;
           const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
           const maxDistance = JOYSTICK_RADIUS;
-          const clampedDistance = Math.min(distance, maxDistance);
+          const clampedDistance = Math.min(distance, maxDistance - JOYSTICK_HANDLE_RADIUS);
           const angle = Math.atan2(deltaY, deltaX);
-          
+
           const normalizedX = (clampedDistance / maxDistance) * Math.cos(angle);
           const normalizedY = (clampedDistance / maxDistance) * Math.sin(angle);
-          
-          setJoystickPos({ 
-            x: normalizedX * 30, 
-            y: normalizedY * 30 
+
+          setJoystickPos({
+            x: normalizedX * (maxDistance - JOYSTICK_HANDLE_RADIUS),
+            y: normalizedY * (maxDistance - JOYSTICK_HANDLE_RADIUS)
           });
           
           onJoystickMove(normalizedX, -normalizedY);
@@ -147,50 +152,51 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
   return (
     <div
       ref={containerRef}
-      className="absolute inset-x-0 bottom-0 h-2/3"
+      className="absolute inset-0"
       style={{ zIndex: 50, touchAction: 'none' }}
     >
-      <div className="pointer-events-none absolute bottom-5 left-4 flex items-end gap-6">
-        {/* Left side - Joystick visual */}
-        <div
-          ref={joystickRef}
-          className="pointer-events-auto h-24 w-24 rounded-full border-2 border-white/40 bg-black/50"
-        >
+      <div className="pointer-events-none absolute inset-0">
+        <div className="pointer-events-none absolute bottom-6 left-5 flex items-center gap-5">
+          {/* Left side - Joystick visual */}
           <div
-            ref={knobRef}
-            className="absolute h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/80 bg-white/60 shadow-lg"
-            style={{
-              left: '50%',
-              top: '50%',
-              transform: `translate(calc(-50% + ${joystickPos.x}px), calc(-50% + ${joystickPos.y}px))`,
-            }}
-          />
+            ref={joystickRef}
+            className="pointer-events-auto h-28 w-28 rounded-full border-2 border-white/35 bg-black/45 backdrop-blur-sm"
+          >
+            <div
+              ref={knobRef}
+              className="absolute h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/80 bg-white/70 shadow-lg"
+              style={{
+                left: '50%',
+                top: '50%',
+                transform: `translate(calc(-50% + ${joystickPos.x}px), calc(-50% + ${joystickPos.y}px))`,
+              }}
+            />
+          </div>
         </div>
 
-        {/* Jump button close to movement controls */}
-        <button
-          type="button"
-          aria-label="Jump"
-          onClick={triggerJump}
-          onTouchStart={(e) => {
-            e.preventDefault();
-            triggerJump();
-          }}
-          onTouchEnd={() => setJumpPressed(false)}
-          className={`pointer-events-auto flex h-16 w-16 items-center justify-center rounded-full border text-sm font-bold shadow-[0_10px_25px_rgba(0,0,0,0.35)] transition-transform duration-150 ${
-            jumpPressed
-              ? 'scale-95 border-white/80 bg-amber-300 ring-4 ring-white/70 ring-offset-2 ring-offset-amber-200'
-              : 'border-white/70 bg-amber-200/90 ring-2 ring-white/40'
-          }`}
-        >
-          Jump
-        </button>
-      </div>
-
-      {/* Right side - Actions */}
-      <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2">
-        <div className="rounded-lg bg-black/40 px-2 py-1 text-[10px] text-white/60 shadow-inner">
-          Drag to look
+        {/* Right side - Jump button and look hint */}
+        <div className="pointer-events-none absolute bottom-6 right-5 flex flex-col items-end gap-2">
+          <button
+            type="button"
+            aria-label="Jump"
+            data-control-ignore="true"
+            onClick={triggerJump}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              triggerJump();
+            }}
+            onTouchEnd={() => setJumpPressed(false)}
+            className={`pointer-events-auto flex h-20 w-20 items-center justify-center rounded-full border text-base font-bold shadow-[0_12px_30px_rgba(0,0,0,0.4)] transition duration-150 ${
+              jumpPressed
+                ? 'scale-95 border-white/80 bg-amber-300 ring-4 ring-white/70 ring-offset-2 ring-offset-amber-200'
+                : 'border-white/70 bg-amber-200/95 ring-2 ring-white/40'
+            }`}
+          >
+            Jump
+          </button>
+          <div className="pointer-events-none rounded-lg bg-black/45 px-2 py-1 text-[10px] text-white/60 shadow-inner backdrop-blur-sm">
+            Drag to look
+          </div>
         </div>
       </div>
     </div>
