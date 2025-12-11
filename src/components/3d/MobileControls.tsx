@@ -12,6 +12,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
   const joystickRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const jumpButtonRef = useRef<HTMLButtonElement>(null);
   const jumpFeedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Track active touches by ID
@@ -24,36 +25,44 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
   const JOYSTICK_HANDLE_RADIUS = 24;
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const isWithinJoystick = (clientX: number, clientY: number) => {
+      const joystickEl = joystickRef.current;
+      if (!joystickEl) return false;
+      const rect = joystickEl.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const dx = clientX - centerX;
+      const dy = clientY - centerY;
+      return Math.sqrt(dx * dx + dy * dy) <= JOYSTICK_RADIUS;
+    };
 
     const handleTouchStart = (e: TouchEvent) => {
-      if ((e.target as HTMLElement)?.closest('[data-control-ignore="true"]')) {
-        return;
-      }
-
-      const screenWidth = window.innerWidth;
-
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         const { clientX, clientY, identifier } = touch;
-        
-        // Left half = joystick area
-        if (clientX < screenWidth / 2 && joystickTouchIdRef.current === null) {
+        const touchTarget = touch.target as HTMLElement | null;
+
+        // Ignore touches that start on other UI so they propagate normally
+        const isJumpButtonTouch = !!(touchTarget && jumpButtonRef.current && jumpButtonRef.current.contains(touchTarget));
+        const isControlIgnored = !!touchTarget?.closest('[data-control-ignore="true"]');
+
+        if (!isJumpButtonTouch && !isControlIgnored && isWithinJoystick(clientX, clientY) && joystickTouchIdRef.current === null) {
           joystickTouchIdRef.current = identifier;
           joystickStartRef.current = { x: clientX, y: clientY };
           setJoystickPos({ x: 0, y: 0 });
           onJoystickMove(0, 0);
+          e.preventDefault();
+          continue;
         }
-        // Right half = camera area
-        else if (clientX >= screenWidth / 2 && cameraTouchIdRef.current === null) {
+
+        // Start camera control only when touching the 3D canvas (so UI remains interactive)
+        const isCanvasTouch = touchTarget?.closest('canvas');
+        if (isCanvasTouch && cameraTouchIdRef.current === null) {
           cameraTouchIdRef.current = identifier;
           lastCameraPosRef.current = { x: clientX, y: clientY };
+          e.preventDefault();
         }
       }
-      
-      // Prevent scrolling when touch starts on game area
-      e.preventDefault();
     };
 
     const handleTouchMove = (e: TouchEvent) => {
@@ -91,9 +100,13 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
           lastCameraPosRef.current = { x: clientX, y: clientY };
         }
       }
-      
-      // Prevent scrolling during game touch
-      e.preventDefault();
+
+      if (
+        (joystickTouchIdRef.current !== null && joystickStartRef.current !== null) ||
+        (cameraTouchIdRef.current !== null && lastCameraPosRef.current !== null)
+      ) {
+        e.preventDefault();
+      }
     };
 
     const handleTouchEnd = (e: TouchEvent) => {
@@ -114,17 +127,17 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
       }
     };
 
-    // Attach to container element with passive: false to prevent scrolling
-    container.addEventListener('touchstart', handleTouchStart, { passive: false });
-    container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    container.addEventListener('touchend', handleTouchEnd, { passive: true });
-    container.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+    // Attach to window so the overlay doesn't block UI interactions
+    window.addEventListener('touchstart', handleTouchStart, { passive: false });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     return () => {
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('touchend', handleTouchEnd);
-      container.removeEventListener('touchcancel', handleTouchEnd);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
     };
   }, [onJoystickMove, onCameraMove]);
 
@@ -152,8 +165,8 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0"
-      style={{ zIndex: 50, touchAction: 'none' }}
+      className="pointer-events-none absolute inset-0"
+      style={{ zIndex: 50 }}
     >
       <div className="pointer-events-none absolute inset-0">
         <div className="pointer-events-none absolute bottom-6 left-5 flex items-center gap-5">
@@ -180,6 +193,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
             type="button"
             aria-label="Jump"
             data-control-ignore="true"
+            ref={jumpButtonRef}
             onClick={triggerJump}
             onTouchStart={(e) => {
               e.preventDefault();
