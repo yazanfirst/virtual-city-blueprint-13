@@ -7,8 +7,11 @@ import * as THREE from "three";
 import PlayerController from "./PlayerController";
 import MobileControls from "./MobileControls";
 import BrandedShop from "./BrandedShop";
+import NPCCharacter from "./NPCCharacter";
+import CollectibleItem from "./CollectibleItem";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
+import { useGameStore } from "@/stores/gameStore";
 import { ShopBranding } from "@/hooks/use3DShops";
 
 export type CameraView = "thirdPerson" | "firstPerson";
@@ -156,6 +159,33 @@ const billboards = [
   { x: -25, z: 50, rotation: Math.PI / 6 },
   { x: 68, z: 20, rotation: -Math.PI / 3 },
   { x: -68, z: 20, rotation: Math.PI / 3 },
+];
+
+// NPCs - walking around the city
+const npcPaths = [
+  { id: 'npc1', start: [-8, 0.25, 30], end: [-8, 0.25, 45], color: '#4A7FB5', name: 'Alex' },
+  { id: 'npc2', start: [8, 0.25, 20], end: [8, 0.25, 35], color: '#D97B4A', name: 'Jordan' },
+  { id: 'npc3', start: [30, 0.25, 8], end: [50, 0.25, 8], color: '#5BBAA5', name: 'Sam' },
+  { id: 'npc4', start: [-30, 0.25, -8], end: [-50, 0.25, -8], color: '#D98BB5', name: 'Taylor' },
+  { id: 'npc5', start: [-8, 0.25, -25], end: [-8, 0.25, -40], color: '#9B7BB5', name: 'Morgan' },
+  { id: 'npc6', start: [8, 0.25, -30], end: [8, 0.25, -50], color: '#6B9B6B', name: 'Riley' },
+];
+
+// Collectible coins scattered around
+const coinPositions = [
+  { id: 'coin1', x: 5, z: 25, type: 'coin' as const },
+  { id: 'coin2', x: -5, z: 35, type: 'coin' as const },
+  { id: 'coin3', x: 25, z: 5, type: 'coin' as const },
+  { id: 'coin4', x: -25, z: -5, type: 'coin' as const },
+  { id: 'coin5', x: 0, z: -35, type: 'coin' as const },
+  { id: 'coin6', x: 40, z: 12, type: 'coin' as const },
+  { id: 'coin7', x: -40, z: -12, type: 'coin' as const },
+  { id: 'gem1', x: 45, z: 40, type: 'gem' as const },
+  { id: 'gem2', x: -45, z: 40, type: 'gem' as const },
+  { id: 'star1', x: 0, z: 0, type: 'star' as const },
+  { id: 'coin8', x: 55, z: 5, type: 'coin' as const },
+  { id: 'coin9', x: -55, z: -5, type: 'coin' as const },
+  { id: 'coin10', x: 8, z: -45, type: 'coin' as const },
 ];
 
 // Clouds
@@ -618,6 +648,7 @@ function LaneMarking({ position, rotation = 0 }: { position: [number, number, nu
 function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
+  const collectCoin = useGameStore((state) => state.collectCoin);
 
   useEffect(() => {
     scene.background = null;
@@ -637,6 +668,10 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
   const getBrandingAtPosition = (x: number, z: number): ShopBranding | undefined => {
     return brandingsByPosition.get(`${x},${z}`);
   };
+
+  const handleCollectItem = useCallback((id: string, type: 'coin' | 'gem' | 'star') => {
+    collectCoin(id);
+  }, [collectCoin]);
 
   return (
     <>
@@ -752,6 +787,30 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {/* === PARKS === */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[45, 0.02, 42]}><planeGeometry args={[16, 16]} /><meshLambertMaterial color="#6ABF6A" /></mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-45, 0.02, 42]}><planeGeometry args={[16, 16]} /><meshLambertMaterial color="#6ABF6A" /></mesh>
+
+      {/* === NPCs === */}
+      {npcPaths.map((npc) => (
+        <NPCCharacter
+          key={npc.id}
+          startPosition={npc.start as [number, number, number]}
+          endPosition={npc.end as [number, number, number]}
+          clothingColor={npc.color}
+          isNight={isNight}
+          name={npc.name}
+        />
+      ))}
+
+      {/* === COLLECTIBLES === */}
+      {coinPositions.map((coin) => (
+        <CollectibleItem
+          key={coin.id}
+          id={coin.id}
+          position={[coin.x, 0.5, coin.z]}
+          type={coin.type}
+          isNight={isNight}
+          onCollect={handleCollectItem}
+        />
+      ))}
 
       {/* === PLAYER CHARACTER === */}
       <PlayerController 

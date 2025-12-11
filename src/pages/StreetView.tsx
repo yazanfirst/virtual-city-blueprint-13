@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Target, User, Store, AlertCircle, Maximize2, Minimize2, Sun, Moon, ZoomIn, Move, UserCircle, Eye, ExternalLink, Map } from "lucide-react";
+import { ArrowLeft, Target, User, Store, AlertCircle, Maximize2, Minimize2, Sun, Moon, ZoomIn, Move, UserCircle, Eye, ExternalLink, Map, Coins, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
 import CityScene, { CameraView } from "@/components/3d/CityScene";
 import ShopDetailModal from "@/components/3d/ShopDetailModal";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
+import { useGameStore } from "@/stores/gameStore";
 
 const PanelBox = ({ 
   title,
@@ -43,6 +44,9 @@ const StreetView = () => {
   const [selectedShop, setSelectedShop] = useState<ShopBranding | null>(null);
   const [showShopModal, setShowShopModal] = useState(false);
   const [show2DMap, setShow2DMap] = useState(false);
+
+  // Game state
+  const { coins, level, xp, missions } = useGameStore();
 
   // Find the spot ID for the selected shop (to highlight in 2D map)
   const selectedSpotId = selectedShop?.spotId || "";
@@ -269,18 +273,23 @@ const StreetView = () => {
             </div>
           </div>
           
-          {/* Left side - Missions Panel (all screens) */}
-          <div className="absolute top-10 md:top-16 left-2 md:left-4 pointer-events-auto" style={{ zIndex: 150 }}>
-            <OverlayPanel title="Missions" icon={Target} className="w-32 md:w-48">
-              <ul className="space-y-1">
-                <li className="flex items-center gap-2">
-                  <span className="h-1 w-1 rounded-full bg-primary" />
-                  <span className="text-[10px] md:text-xs">Visit 3 shops</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1 w-1 rounded-full bg-muted-foreground" />
-                  <span className="text-[10px] md:text-xs">Find hidden item</span>
-                </li>
+          {/* Left side - Missions Panel - hidden in landscape mobile */}
+          <div className="absolute top-10 md:top-16 left-2 md:left-4 pointer-events-auto landscape:hidden md:landscape:block" style={{ zIndex: 150 }}>
+            <OverlayPanel title="Missions" icon={Target} className="w-36 md:w-52">
+              <ul className="space-y-1.5">
+                {missions.slice(0, 3).map((mission) => (
+                  <li key={mission.id} className="flex items-center gap-2">
+                    <span className={`h-1.5 w-1.5 rounded-full ${mission.progress >= mission.target ? 'bg-green-500' : mission.progress > 0 ? 'bg-primary' : 'bg-muted-foreground'}`} />
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-[10px] md:text-xs block truncate ${mission.completed ? 'line-through text-muted-foreground' : ''}`}>
+                        {mission.title}
+                      </span>
+                      <span className="text-[8px] md:text-[10px] text-muted-foreground">
+                        {mission.progress}/{mission.target}
+                      </span>
+                    </div>
+                  </li>
+                ))}
               </ul>
             </OverlayPanel>
           </div>
@@ -319,17 +328,26 @@ const StreetView = () => {
             </div>
           )}
           
-          {/* Right side - Player & Shop panels (all screens) */}
-          <div className="absolute top-10 md:top-auto md:bottom-4 right-2 md:right-4 pointer-events-auto flex flex-col gap-1 md:gap-2" style={{ zIndex: 150 }}>
+          {/* Right side - Player & Shop panels - hidden in landscape mobile */}
+          <div className="absolute top-10 md:top-auto md:bottom-4 right-2 md:right-4 pointer-events-auto flex flex-col gap-1 md:gap-2 landscape:hidden md:landscape:flex" style={{ zIndex: 150 }}>
             <OverlayPanel title="Player" icon={User} className="w-28 md:w-40">
               <div className="space-y-0.5 md:space-y-1 text-[10px] md:text-xs">
-                <div className="flex justify-between">
-                  <span>Level</span>
-                  <span className="text-foreground">1</span>
+                <div className="flex justify-between items-center">
+                  <span className="flex items-center gap-1"><Trophy className="h-2.5 w-2.5" /> Level</span>
+                  <span className="text-foreground font-bold">{level}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Coins</span>
-                  <span className="text-primary">500</span>
+                <div className="flex justify-between items-center">
+                  <span className="flex items-center gap-1"><Coins className="h-2.5 w-2.5" /> Coins</span>
+                  <span className="text-primary font-bold">{coins}</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-1.5 mt-1">
+                  <div 
+                    className="bg-primary h-1.5 rounded-full transition-all" 
+                    style={{ width: `${(xp % 200) / 2}%` }}
+                  />
+                </div>
+                <div className="text-[8px] text-muted-foreground text-center">
+                  {xp % 200}/200 XP
                 </div>
               </div>
             </OverlayPanel>
