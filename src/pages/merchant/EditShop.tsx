@@ -31,7 +31,7 @@ interface ShopData {
   logo_url: string | null;
   primary_color: string | null;
   accent_color: string | null;
-  facade_template: FacadeTemplate | null;
+  facade_template: ShopFacadeTemplate | null;
   signage_font: string | null;
   status: string | null;
 }
@@ -51,8 +51,8 @@ const EditShop = () => {
     logoUrl: "",
     primaryColor: "#3B82F6",
     accentColor: "#10B981",
-    facadeTemplate: "modern_neon" as FacadeTemplate,
-    signageFont: "classic" as SignageFont,
+    facadeTemplate: "modern_neon" as ShopFacadeTemplate,
+    signageFont: "classic" as ShopSignageFont,
   });
 
   useEffect(() => {
@@ -91,8 +91,8 @@ const EditShop = () => {
         logoUrl: data.logo_url || "",
         primaryColor: data.primary_color || "#3B82F6",
         accentColor: data.accent_color || "#10B981",
-        facadeTemplate: (data.facade_template as FacadeTemplate) || "modern_neon",
-        signageFont: (data.signage_font as SignageFont) || "classic",
+        facadeTemplate: (data.facade_template as ShopFacadeTemplate) || "modern_neon",
+        signageFont: (data.signage_font as ShopSignageFont) || "classic",
       });
     } catch (error) {
       console.error('Error fetching shop:', error);

@@ -1,4 +1,4 @@
-type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic";
+type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic" | "led_display" | "pharaoh_gold" | "greek_marble" | "art_deco" | "japanese_zen" | "neon_cyberpunk";
 
 interface ShopPreviewProps {
   name: string;
@@ -61,6 +61,42 @@ const templateStyles: Record<FacadeTemplate, {
     border: "border-green-600",
     text: "text-green-100",
     signBg: "bg-green-700",
+  },
+  led_display: {
+    bg: "bg-black",
+    border: "border-green-500",
+    text: "text-green-400",
+    signBg: "bg-zinc-900",
+  },
+  pharaoh_gold: {
+    bg: "bg-amber-950",
+    border: "border-yellow-500",
+    text: "text-yellow-300",
+    signBg: "bg-amber-900",
+  },
+  greek_marble: {
+    bg: "bg-stone-100",
+    border: "border-stone-400",
+    text: "text-blue-900",
+    signBg: "bg-stone-200",
+  },
+  art_deco: {
+    bg: "bg-slate-900",
+    border: "border-yellow-500",
+    text: "text-yellow-400",
+    signBg: "bg-slate-800",
+  },
+  japanese_zen: {
+    bg: "bg-stone-800",
+    border: "border-red-700",
+    text: "text-red-300",
+    signBg: "bg-stone-700",
+  },
+  neon_cyberpunk: {
+    bg: "bg-violet-950",
+    border: "border-fuchsia-500",
+    text: "text-cyan-300",
+    signBg: "bg-violet-900",
   },
 };
 

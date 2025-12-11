@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LayoutDashboard, Store, Plus, Clock, CheckCircle, XCircle, Trash2, PauseCircle, PlayCircle } from "lucide-react";
+import { LayoutDashboard, Store, Plus, Clock, CheckCircle, XCircle, Trash2, PauseCircle, PlayCircle, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMerchantShops } from "@/hooks/useMerchantShops";
 import { useAuth } from "@/hooks/useAuth";
@@ -171,6 +171,21 @@ const MerchantDashboard = () => {
                   </div>
                   
                   <div className="flex items-center gap-2 shrink-0">
+                    {/* Edit button for all shops except pending */}
+                    {shop.status !== 'pending_review' && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        asChild
+                        className="text-primary border-primary/50 hover:bg-primary/10"
+                      >
+                        <Link to={`/merchant/edit-shop/${shop.id}`}>
+                          <Edit className="h-4 w-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Edit</span>
+                        </Link>
+                      </Button>
+                    )}
+                    
                     {/* Suspend/Reactivate button for active/suspended shops */}
                     {shop.status === 'active' && (
                       <Button 

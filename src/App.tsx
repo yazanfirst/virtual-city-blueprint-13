@@ -10,10 +10,12 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CityMap from "./pages/CityMap";
 import StreetView from "./pages/StreetView";
+import Settings from "./pages/Settings";
 import MerchantDashboard from "./pages/merchant/MerchantDashboard";
 import MerchantStreets from "./pages/merchant/MerchantStreets";
 import MerchantShops from "./pages/merchant/MerchantShops";
 import CreateShop from "./pages/merchant/CreateShop";
+import EditShop from "./pages/merchant/EditShop";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -33,6 +35,16 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/city-map" element={<CityMap />} />
             <Route path="/city/:streetId" element={<StreetView />} />
+            
+            {/* Settings - requires auth */}
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              } 
+            />
             
             {/* Merchant routes */}
             <Route 
@@ -64,6 +76,14 @@ const App = () => (
               element={
                 <ProtectedRoute requireMerchant>
                   <CreateShop />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/merchant/edit-shop/:shopId" 
+              element={
+                <ProtectedRoute requireMerchant>
+                  <EditShop />
                 </ProtectedRoute>
               } 
             />
