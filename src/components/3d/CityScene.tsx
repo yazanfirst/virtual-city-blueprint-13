@@ -8,6 +8,7 @@ import PlayerController from "./PlayerController";
 import MobileControls from "./MobileControls";
 import BrandedShop from "./BrandedShop";
 import NPCCharacter from "./NPCCharacter";
+import CarVehicle from "./CarVehicle";
 import CollectibleItem from "./CollectibleItem";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
@@ -161,14 +162,24 @@ const billboards = [
   { x: -68, z: 20, rotation: Math.PI / 3 },
 ];
 
-// NPCs - walking around the city
+// NPCs - walking around the city (one direction, respawn)
 const npcPaths = [
-  { id: 'npc1', start: [-8, 0.25, 30], end: [-8, 0.25, 45], color: '#4A7FB5', name: 'Alex' },
-  { id: 'npc2', start: [8, 0.25, 20], end: [8, 0.25, 35], color: '#D97B4A', name: 'Jordan' },
-  { id: 'npc3', start: [30, 0.25, 8], end: [50, 0.25, 8], color: '#5BBAA5', name: 'Sam' },
-  { id: 'npc4', start: [-30, 0.25, -8], end: [-50, 0.25, -8], color: '#D98BB5', name: 'Taylor' },
-  { id: 'npc5', start: [-8, 0.25, -25], end: [-8, 0.25, -40], color: '#9B7BB5', name: 'Morgan' },
-  { id: 'npc6', start: [8, 0.25, -30], end: [8, 0.25, -50], color: '#6B9B6B', name: 'Riley' },
+  { id: 'npc1', start: [-8, 0.25, -60], end: [-8, 0.25, 55], color: '#4A7FB5', name: 'Alex' },
+  { id: 'npc2', start: [8, 0.25, 55], end: [8, 0.25, -60], color: '#D97B4A', name: 'Jordan' },
+  { id: 'npc3', start: [-75, 0.25, 8], end: [75, 0.25, 8], color: '#5BBAA5', name: 'Sam' },
+  { id: 'npc4', start: [75, 0.25, -8], end: [-75, 0.25, -8], color: '#D98BB5', name: 'Taylor' },
+  { id: 'npc5', start: [-8, 0.25, 20], end: [-8, 0.25, 50], color: '#9B7BB5', name: 'Morgan' },
+  { id: 'npc6', start: [8, 0.25, -20], end: [8, 0.25, -55], color: '#6B9B6B', name: 'Riley' },
+];
+
+// Cars - driving on roads
+const carPaths = [
+  { id: 'car1', start: [3, 0, -70], end: [3, 0, 60], color: '#D97B4A', speed: 0.025 },
+  { id: 'car2', start: [-3, 0, 60], end: [-3, 0, -70], color: '#4A7FB5', speed: 0.02 },
+  { id: 'car3', start: [-80, 0, 3], end: [80, 0, 3], color: '#5BBAA5', speed: 0.022 },
+  { id: 'car4', start: [80, 0, -3], end: [-80, 0, -3], color: '#CC3333', speed: 0.018 },
+  { id: 'car5', start: [3, 0, 30], end: [3, 0, 55], color: '#FFD700', speed: 0.015 },
+  { id: 'car6', start: [-3, 0, -30], end: [-3, 0, -55], color: '#9B7BB5', speed: 0.02 },
 ];
 
 // Collectible coins scattered around
@@ -797,6 +808,18 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           clothingColor={npc.color}
           isNight={isNight}
           name={npc.name}
+        />
+      ))}
+
+      {/* === CARS === */}
+      {carPaths.map((car) => (
+        <CarVehicle
+          key={car.id}
+          startPosition={car.start as [number, number, number]}
+          endPosition={car.end as [number, number, number]}
+          carColor={car.color}
+          speed={car.speed}
+          isNight={isNight}
         />
       ))}
 
