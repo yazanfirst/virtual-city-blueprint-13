@@ -198,7 +198,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
         </div>
 
         {/* Right side - Jump button and look hint */}
-        <div className="pointer-events-none absolute bottom-6 right-5 flex flex-col items-end gap-2">
+        <div className="pointer-events-none absolute bottom-6 right-8 sm:right-6 flex flex-col items-end gap-2">
           <button
             type="button"
             aria-label="Jump"
