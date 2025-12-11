@@ -11,7 +11,7 @@ import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import BrandingEditor from "@/components/merchant/BrandingEditor";
 import ShopPreview from "@/components/merchant/ShopPreview";
 
-type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic";
+type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic" | "led_display" | "pharaoh_gold" | "greek_marble" | "art_deco" | "japanese_zen" | "neon_cyberpunk";
 type SignageFont = "classic" | "bold" | "elegant" | "modern" | "playful";
 
 interface ShopFormData {

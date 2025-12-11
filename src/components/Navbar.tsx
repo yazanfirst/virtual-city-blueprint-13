@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Building2, Map, User, LogOut, Shield, LayoutDashboard } from "lucide-react";
+import { Building2, Map, User, LogOut, Shield, LayoutDashboard, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -89,6 +89,10 @@ const Navbar = () => {
                         Admin Dashboard
                       </DropdownMenuItem>
                     )}
+                    <DropdownMenuItem onClick={() => navigate('/settings')}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Settings
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut}>
                       <LogOut className="h-4 w-4 mr-2" />
