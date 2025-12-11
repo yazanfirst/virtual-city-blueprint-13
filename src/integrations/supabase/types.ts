@@ -263,6 +263,12 @@ export type Database = {
         | "urban_industrial"
         | "retro_vintage"
         | "nature_organic"
+        | "led_display"
+        | "pharaoh_gold"
+        | "greek_marble"
+        | "art_deco"
+        | "japanese_zen"
+        | "neon_cyberpunk"
       shop_status: "pending_review" | "active" | "rejected" | "suspended"
     }
     CompositeTypes: {
@@ -401,6 +407,12 @@ export const Constants = {
         "urban_industrial",
         "retro_vintage",
         "nature_organic",
+        "led_display",
+        "pharaoh_gold",
+        "greek_marble",
+        "art_deco",
+        "japanese_zen",
+        "neon_cyberpunk",
       ],
       shop_status: ["pending_review", "active", "rejected", "suspended"],
     },
