@@ -6,7 +6,7 @@ import { Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic";
+type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic" | "led_display" | "pharaoh_gold" | "greek_marble" | "art_deco" | "japanese_zen" | "neon_cyberpunk";
 type SignageFont = "classic" | "bold" | "elegant" | "modern" | "playful";
 
 interface BrandingEditorProps {
@@ -24,23 +24,29 @@ interface BrandingEditorProps {
   }>) => void;
 }
 
-const facadeTemplates: { id: FacadeTemplate; name: string; description: string }[] = [
-  { id: "modern_neon", name: "Modern Neon", description: "Dark with glowing neon accents" },
-  { id: "minimal_white", name: "Minimal White", description: "Clean, modern, minimalist" },
-  { id: "classic_brick", name: "Classic Brick", description: "Traditional storefront style" },
-  { id: "cyber_tech", name: "Cyber Tech", description: "Futuristic, geometric patterns" },
-  { id: "luxury_gold", name: "Luxury Gold", description: "Premium gold accents, elegant" },
-  { id: "urban_industrial", name: "Urban Industrial", description: "Raw, warehouse style" },
-  { id: "retro_vintage", name: "Retro Vintage", description: "Classic 50s-60s aesthetic" },
-  { id: "nature_organic", name: "Nature Organic", description: "Green, natural, eco-friendly" },
+const facadeTemplates: { id: FacadeTemplate; name: string; description: string; icon: string }[] = [
+  { id: "modern_neon", name: "Modern Neon", description: "Dark with glowing neon accents", icon: "💜" },
+  { id: "minimal_white", name: "Minimal White", description: "Clean, modern, minimalist", icon: "⬜" },
+  { id: "classic_brick", name: "Classic Brick", description: "Traditional storefront style", icon: "🧱" },
+  { id: "cyber_tech", name: "Cyber Tech", description: "Futuristic, geometric patterns", icon: "🔮" },
+  { id: "luxury_gold", name: "Luxury Gold", description: "Premium gold accents, elegant", icon: "👑" },
+  { id: "urban_industrial", name: "Urban Industrial", description: "Raw, warehouse style", icon: "🏭" },
+  { id: "retro_vintage", name: "Retro Vintage", description: "Classic 50s-60s aesthetic", icon: "📻" },
+  { id: "nature_organic", name: "Nature Organic", description: "Green, natural, eco-friendly", icon: "🌿" },
+  { id: "led_display", name: "LED Display", description: "Vibrant LED strip lighting", icon: "💡" },
+  { id: "pharaoh_gold", name: "Pharaoh Gold", description: "Egyptian pyramid inspired", icon: "🏛️" },
+  { id: "greek_marble", name: "Greek Marble", description: "Classical columns & marble", icon: "🏛️" },
+  { id: "art_deco", name: "Art Deco", description: "1920s geometric elegance", icon: "✨" },
+  { id: "japanese_zen", name: "Japanese Zen", description: "Minimalist Japanese style", icon: "⛩️" },
+  { id: "neon_cyberpunk", name: "Neon Cyberpunk", description: "Heavy neon, futuristic", icon: "🌆" },
 ];
 
-const signageFonts: { id: SignageFont; name: string; preview: string }[] = [
-  { id: "classic", name: "Classic", preview: "Aa" },
-  { id: "bold", name: "Bold", preview: "Aa" },
-  { id: "elegant", name: "Elegant", preview: "Aa" },
-  { id: "modern", name: "Modern", preview: "Aa" },
-  { id: "playful", name: "Playful", preview: "Aa" },
+const signageFonts: { id: SignageFont; name: string; preview: string; fontFamily: string }[] = [
+  { id: "classic", name: "Classic", preview: "Aa", fontFamily: "'Times New Roman', serif" },
+  { id: "bold", name: "Bold", preview: "Aa", fontFamily: "'Impact', sans-serif" },
+  { id: "elegant", name: "Elegant", preview: "Aa", fontFamily: "'Playfair Display', serif" },
+  { id: "modern", name: "Modern", preview: "Aa", fontFamily: "'Orbitron', sans-serif" },
+  { id: "playful", name: "Playful", preview: "Aa", fontFamily: "'Pacifico', cursive" },
 ];
 
 const BrandingEditor = ({
@@ -208,19 +214,22 @@ const BrandingEditor = ({
       <div className="space-y-3">
         <h3 className="font-display font-bold">Facade Style</h3>
         
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-2">
           {facadeTemplates.map((template) => (
             <button
               key={template.id}
               onClick={() => onUpdate({ facadeTemplate: template.id })}
               className={`text-left p-3 rounded-lg border transition-all ${
                 facadeTemplate === template.id
-                  ? "border-primary bg-primary/10"
+                  ? "border-primary bg-primary/10 ring-2 ring-primary/30"
                   : "border-border hover:border-primary/50"
               }`}
             >
-              <span className="font-medium text-sm">{template.name}</span>
-              <p className="text-xs text-muted-foreground mt-0.5">{template.description}</p>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">{template.icon}</span>
+                <span className="font-medium text-sm">{template.name}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{template.description}</p>
             </button>
           ))}
         </div>
@@ -235,18 +244,19 @@ const BrandingEditor = ({
             <button
               key={font.id}
               onClick={() => onUpdate({ signageFont: font.id })}
-              className={`px-4 py-2 rounded-lg border transition-all ${
+              className={`px-4 py-3 rounded-lg border transition-all min-w-[100px] ${
                 signageFont === font.id
-                  ? "border-primary bg-primary/10"
+                  ? "border-primary bg-primary/10 ring-2 ring-primary/30"
                   : "border-border hover:border-primary/50"
               }`}
             >
-              <span className={`font-medium text-sm ${
-                font.id === 'bold' ? 'font-bold' : 
-                font.id === 'elegant' ? 'font-light tracking-wider' : 
-                font.id === 'modern' ? 'font-medium' :
-                font.id === 'playful' ? 'font-semibold' : ''
-              }`}>{font.name}</span>
+              <span 
+                className="block text-lg mb-1"
+                style={{ fontFamily: font.fontFamily }}
+              >
+                {font.preview}
+              </span>
+              <span className="text-xs text-muted-foreground">{font.name}</span>
             </button>
           ))}
         </div>
