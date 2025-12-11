@@ -3,9 +3,10 @@ import { useRef, useState, useEffect } from 'react';
 type MobileControlsProps = {
   onJoystickMove: (x: number, y: number) => void;
   onCameraMove: (deltaX: number, deltaY: number) => void;
+  onJump?: () => void;
 };
 
-const MobileControls = ({ onJoystickMove, onCameraMove }: MobileControlsProps) => {
+const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControlsProps) => {
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
   const joystickRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
@@ -123,7 +124,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove }: MobileControlsProps) =
   return (
     <div 
       ref={containerRef}
-      className="absolute inset-x-0 bottom-0 h-2/3" 
+      className="absolute inset-x-0 bottom-0 h-2/3"
       style={{ zIndex: 50, touchAction: 'none' }}
     >
       {/* Left side - Joystick visual */}
@@ -142,9 +143,22 @@ const MobileControls = ({ onJoystickMove, onCameraMove }: MobileControlsProps) =
         />
       </div>
 
-      {/* Right side - Camera hint */}
-      <div className="absolute bottom-4 right-4 bg-black/40 rounded-lg px-2 py-1 text-white/50 text-[10px]">
-        Drag to look
+      {/* Right side - Actions */}
+      <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2">
+        <button
+          type="button"
+          onClick={() => onJump?.()}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            onJump?.();
+          }}
+          className="px-4 py-2 rounded-full bg-white/80 text-black text-xs font-semibold shadow-lg active:scale-95"
+        >
+          Jump
+        </button>
+        <div className="bg-black/40 rounded-lg px-2 py-1 text-white/50 text-[10px]">
+          Drag to look
+        </div>
       </div>
     </div>
   );

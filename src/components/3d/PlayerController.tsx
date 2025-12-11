@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import LowPolyCharacter from './LowPolyCharacter';
@@ -46,6 +46,7 @@ const PlayerController = ({
   cameraRotation = { azimuth: 0, polar: Math.PI / 4 },
 }: PlayerControllerProps) => {
   const groupRef = useRef<THREE.Group>(null);
+  const verticalVelocityRef = useRef(0);
   const [keys, setKeys] = useState({
     forward: false,
     backward: false,
@@ -53,17 +54,37 @@ const PlayerController = ({
     right: false,
   });
   const [characterRotation, setCharacterRotation] = useState(0);
-  
+  const [isJumping, setIsJumping] = useState(false);
+
   // Use store for position to persist across game mode changes
-  const { position, setPosition } = usePlayerStore();
+  const { position, setPosition, jumpCounter, incrementJump } = usePlayerStore();
   const positionRef = useRef(new THREE.Vector3(...position));
-  
+  const lastJumpCounterRef = useRef(jumpCounter);
+
   const { camera } = useThree();
 
-  // Sync positionRef with store position on mount
+  // Keep position in sync if store updates externally
   useEffect(() => {
     positionRef.current.set(...position);
-  }, []);
+  }, [position]);
+
+  const attemptJump = useCallback(() => {
+    const groundHeight = 0.25;
+    const onGround = positionRef.current.y <= groundHeight + 0.001;
+
+    if (!isJumping && onGround) {
+      verticalVelocityRef.current = 0.28;
+      setIsJumping(true);
+    }
+  }, [isJumping]);
+
+  // Trigger jump when jump counter increments (keyboard or UI)
+  useEffect(() => {
+    if (jumpCounter > lastJumpCounterRef.current) {
+      attemptJump();
+    }
+    lastJumpCounterRef.current = jumpCounter;
+  }, [attemptJump, jumpCounter]);
 
   // Camera settings - PUBG style
   const cameraDistance = viewMode === "firstPerson" ? 0 : 10;
@@ -104,6 +125,10 @@ const PlayerController = ({
         case 'ArrowRight':
           setKeys((k) => ({ ...k, right: true }));
           break;
+        case 'Space':
+          e.preventDefault();
+          incrementJump();
+          break;
       }
     };
 
@@ -135,9 +160,9 @@ const PlayerController = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [incrementJump]);
 
-  const isWalking = keys.forward || keys.backward || keys.left || keys.right || 
+  const isWalking = keys.forward || keys.backward || keys.left || keys.right ||
     Math.abs(joystickInput.x) > 0.1 || Math.abs(joystickInput.y) > 0.1;
 
   // Movement and camera logic
@@ -185,9 +210,11 @@ const PlayerController = ({
       direction.add(right.clone().multiplyScalar(joyX));
     }
 
+    let positionChanged = false;
+
     if (direction.length() > 0) {
       direction.normalize();
-      
+
       // Calculate new position
       const newX = positionRef.current.x + direction.x * speed;
       const newZ = positionRef.current.z + direction.z * speed;
@@ -196,9 +223,7 @@ const PlayerController = ({
       if (!checkCollision(newX, newZ)) {
         positionRef.current.x = THREE.MathUtils.clamp(newX, -70, 70);
         positionRef.current.z = THREE.MathUtils.clamp(newZ, -60, 55);
-        
-        // Update store with new position
-        setPosition([positionRef.current.x, positionRef.current.y, positionRef.current.z]);
+        positionChanged = true;
       }
 
       // Update character rotation to face movement direction
@@ -206,8 +231,27 @@ const PlayerController = ({
       setCharacterRotation(targetRotation);
     }
 
+    // Apply jump/gravity
+    const groundHeight = 0.25;
+    if (isJumping || positionRef.current.y > groundHeight) {
+      const gravity = 0.02;
+      verticalVelocityRef.current -= gravity;
+      positionRef.current.y = Math.max(groundHeight, positionRef.current.y + verticalVelocityRef.current);
+      positionChanged = true;
+
+      if (positionRef.current.y <= groundHeight && verticalVelocityRef.current <= 0) {
+        positionRef.current.y = groundHeight;
+        verticalVelocityRef.current = 0;
+        setIsJumping(false);
+      }
+    }
+
     // Apply position to group
     groupRef.current.position.copy(positionRef.current);
+
+    if (positionChanged) {
+      setPosition([positionRef.current.x, positionRef.current.y, positionRef.current.z]);
+    }
 
     // Update camera position based on view mode
     const playerPos = positionRef.current;

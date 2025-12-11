@@ -180,7 +180,7 @@ export default function CityScene({
   const [joystickInput, setJoystickInput] = useState({ x: 0, y: 0 });
   
   // Use store for camera rotation to persist across game mode changes
-  const { cameraRotation, setCameraRotation } = usePlayerStore();
+  const { cameraRotation, setCameraRotation, incrementJump } = usePlayerStore();
   
   const isMouseDownRef = useRef(false);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
@@ -188,6 +188,10 @@ export default function CityScene({
   const handleJoystickMove = useCallback((x: number, y: number) => {
     setJoystickInput({ x, y });
   }, []);
+
+  const handleJump = useCallback(() => {
+    incrementJump();
+  }, [incrementJump]);
 
   const handleCameraMove = useCallback((deltaX: number, deltaY: number) => {
     setCameraRotation({
@@ -255,10 +259,25 @@ export default function CityScene({
         </Suspense>
       </Canvas>
       {isMobile && (
-        <MobileControls 
+        <MobileControls
           onJoystickMove={handleJoystickMove}
           onCameraMove={handleCameraMove}
+          onJump={handleJump}
         />
+      )}
+      {!isMobile && (
+        <div
+          className="pointer-events-none absolute bottom-4 right-4 flex flex-col items-end"
+          style={{ zIndex: 55 }}
+        >
+          <button
+            type="button"
+            onClick={handleJump}
+            className="pointer-events-auto rounded-full bg-black/60 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black/70"
+          >
+            Jump <span className="text-xs text-white/70">(Space)</span>
+          </button>
+        </div>
       )}
     </div>
   );
