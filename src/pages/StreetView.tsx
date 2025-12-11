@@ -44,6 +44,7 @@ const StreetView = () => {
   const [selectedShop, setSelectedShop] = useState<ShopBranding | null>(null);
   const [showShopModal, setShowShopModal] = useState(false);
   const [show2DMap, setShow2DMap] = useState(false);
+  const [showMissions, setShowMissions] = useState(false);
 
   // Game state
   const { coins, level, xp } = useGameStore();
@@ -272,6 +273,54 @@ const StreetView = () => {
               </Button>
             </div>
           </div>
+          
+          {/* Left side - Mission Tab Button */}
+          <div className="absolute top-10 md:top-16 left-2 md:left-4 pointer-events-auto" style={{ zIndex: 150 }}>
+            <button
+              onClick={() => setShowMissions(true)}
+              className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg"
+            >
+              <Target className="h-4 w-4 text-primary" />
+              <span className="font-display text-xs md:text-sm font-bold uppercase tracking-wider">Missions</span>
+            </button>
+          </div>
+          
+          {/* Mission Popup */}
+          {showMissions && (
+            <div 
+              className="absolute inset-0 flex items-center justify-center pointer-events-auto"
+              style={{ zIndex: 200 }}
+              onClick={() => setShowMissions(false)}
+            >
+              <div 
+                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/30">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/30">
+                      <Target className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
+                      Missions
+                    </h3>
+                  </div>
+                  <button 
+                    onClick={() => setShowMissions(false)} 
+                    className="text-muted-foreground hover:text-foreground p-1"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                
+                <div className="text-center py-8 text-muted-foreground">
+                  <Target className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p className="text-sm">Missions coming soon!</p>
+                  <p className="text-xs mt-2">Check back later for exciting challenges.</p>
+                </div>
+              </div>
+            </div>
+          )}
           
           {/* 2D Map Overlay - Full screen on mobile, positioned on desktop */}
           {show2DMap && spotsWithShops && (
