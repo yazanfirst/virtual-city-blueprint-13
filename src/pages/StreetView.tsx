@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Target, User, Store, AlertCircle, Maximize2, Minimize2, Sun, Moon, ZoomIn, Move, UserCircle, Eye, ExternalLink, Map, Coins, Trophy } from "lucide-react";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Map, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
@@ -44,9 +44,12 @@ const StreetView = () => {
   const [selectedShop, setSelectedShop] = useState<ShopBranding | null>(null);
   const [showShopModal, setShowShopModal] = useState(false);
   const [show2DMap, setShow2DMap] = useState(false);
+  
+  // Mobile landscape popup state
+  const [activePopup, setActivePopup] = useState<'player' | 'shop' | null>(null);
 
   // Game state
-  const { coins, level, xp, missions } = useGameStore();
+  const { coins, level, xp } = useGameStore();
 
   // Find the spot ID for the selected shop (to highlight in 2D map)
   const selectedSpotId = selectedShop?.spotId || "";
@@ -273,27 +276,6 @@ const StreetView = () => {
             </div>
           </div>
           
-          {/* Left side - Missions Panel - hidden in landscape mobile */}
-          <div className="absolute top-10 md:top-16 left-2 md:left-4 pointer-events-auto landscape:hidden md:landscape:block" style={{ zIndex: 150 }}>
-            <OverlayPanel title="Missions" icon={Target} className="w-36 md:w-52">
-              <ul className="space-y-1.5">
-                {missions.slice(0, 3).map((mission) => (
-                  <li key={mission.id} className="flex items-center gap-2">
-                    <span className={`h-1.5 w-1.5 rounded-full ${mission.progress >= mission.target ? 'bg-green-500' : mission.progress > 0 ? 'bg-primary' : 'bg-muted-foreground'}`} />
-                    <div className="flex-1 min-w-0">
-                      <span className={`text-[10px] md:text-xs block truncate ${mission.completed ? 'line-through text-muted-foreground' : ''}`}>
-                        {mission.title}
-                      </span>
-                      <span className="text-[8px] md:text-[10px] text-muted-foreground">
-                        {mission.progress}/{mission.target}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </OverlayPanel>
-          </div>
-          
           {/* 2D Map Overlay - Full screen on mobile, positioned on desktop */}
           {show2DMap && spotsWithShops && (
             <div 
@@ -328,8 +310,8 @@ const StreetView = () => {
             </div>
           )}
           
-          {/* Right side - Player & Shop panels - hidden in landscape mobile */}
-          <div className="absolute top-10 md:top-auto md:bottom-4 right-2 md:right-4 pointer-events-auto flex flex-col gap-1 md:gap-2 landscape:hidden md:landscape:flex" style={{ zIndex: 150 }}>
+          {/* Desktop: Show panels normally - hidden on mobile landscape */}
+          <div className="absolute top-10 md:top-auto md:bottom-4 right-2 md:right-4 pointer-events-auto flex-col gap-1 md:gap-2 hidden md:flex" style={{ zIndex: 150 }}>
             <OverlayPanel title="Player" icon={User} className="w-28 md:w-40">
               <div className="space-y-0.5 md:space-y-1 text-[10px] md:text-xs">
                 <div className="flex justify-between items-center">
@@ -373,6 +355,106 @@ const StreetView = () => {
               )}
             </OverlayPanel>
           </div>
+          
+          {/* Mobile Landscape: Bottom tab buttons for popup panels */}
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 pointer-events-auto flex gap-2 md:hidden landscape:flex portrait:hidden" style={{ zIndex: 160 }}>
+            <button
+              onClick={() => setActivePopup(activePopup === 'player' ? null : 'player')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-md transition-all ${
+                activePopup === 'player' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-background/80 text-foreground border border-border/50'
+              }`}
+            >
+              <User className="h-3 w-3" />
+              Player
+            </button>
+            <button
+              onClick={() => setActivePopup(activePopup === 'shop' ? null : 'shop')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-md transition-all ${
+                activePopup === 'shop' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-background/80 text-foreground border border-border/50'
+              }`}
+            >
+              <Store className="h-3 w-3" />
+              Shop
+            </button>
+          </div>
+          
+          {/* Mobile Landscape: Popup panels */}
+          {activePopup && (
+            <div 
+              className="absolute inset-0 flex items-center justify-center pointer-events-auto md:hidden landscape:flex portrait:hidden"
+              style={{ zIndex: 180 }}
+              onClick={() => setActivePopup(null)}
+            >
+              <div 
+                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 shadow-xl max-w-xs w-[85vw]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-3 pb-2 border-b border-border/30">
+                  <div className="flex items-center gap-2">
+                    {activePopup === 'player' ? <User className="h-4 w-4 text-primary" /> : <Store className="h-4 w-4 text-primary" />}
+                    <span className="font-display text-sm font-bold uppercase tracking-wider text-foreground">
+                      {activePopup === 'player' ? 'Player Stats' : 'Shop Info'}
+                    </span>
+                  </div>
+                  <button onClick={() => setActivePopup(null)} className="text-muted-foreground hover:text-foreground">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                {activePopup === 'player' && (
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="flex items-center gap-2"><Trophy className="h-4 w-4 text-primary" /> Level</span>
+                      <span className="text-foreground font-bold text-lg">{level}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="flex items-center gap-2"><Coins className="h-4 w-4 text-yellow-500" /> Coins</span>
+                      <span className="text-primary font-bold text-lg">{coins}</span>
+                    </div>
+                    <div className="mt-2">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                        <span>Experience</span>
+                        <span>{xp % 200}/200 XP</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div 
+                          className="bg-primary h-2 rounded-full transition-all" 
+                          style={{ width: `${(xp % 200) / 2}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {activePopup === 'shop' && (
+                  <div className="text-sm">
+                    {selectedShop?.hasShop ? (
+                      <div className="space-y-2">
+                        <p className="text-foreground font-medium text-base">{selectedShop.shopName}</p>
+                        {selectedShop.category && <p className="text-muted-foreground">{selectedShop.category}</p>}
+                        {selectedShop.externalLink && (
+                          <a 
+                            href={selectedShop.externalLink} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-primary hover:underline mt-2"
+                          >
+                            Visit Store <ExternalLink className="h-4 w-4" />
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">Tap on a shop in the game to see details here</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
