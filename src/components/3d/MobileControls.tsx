@@ -176,18 +176,18 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
     <div
       ref={containerRef}
       className="pointer-events-none absolute inset-0"
-      style={{ zIndex: 50 }}
+      style={{ zIndex: 250 }}
     >
       <div className="pointer-events-none absolute inset-0">
-        <div className="pointer-events-none absolute bottom-6 left-5 flex items-center gap-5">
-          {/* Left side - Joystick visual */}
+        {/* Left side - Joystick visual - adjusted for landscape */}
+        <div className="pointer-events-none absolute bottom-4 left-4 landscape:bottom-2 landscape:left-3 flex items-center gap-5">
           <div
             ref={joystickRef}
-            className="pointer-events-auto h-28 w-28 rounded-full border-2 border-white/35 bg-black/45 backdrop-blur-sm"
+            className="pointer-events-auto h-24 w-24 landscape:h-20 landscape:w-20 rounded-full border-2 border-white/35 bg-black/45 backdrop-blur-sm"
           >
             <div
               ref={knobRef}
-              className="absolute h-12 w-12 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/80 bg-white/70 shadow-lg"
+              className="absolute h-10 w-10 landscape:h-8 landscape:w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/80 bg-white/70 shadow-lg"
               style={{
                 left: '50%',
                 top: '50%',
@@ -197,8 +197,8 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
           </div>
         </div>
 
-        {/* Right side - Jump button and look hint */}
-        <div className="pointer-events-none absolute bottom-6 right-8 sm:right-6 flex flex-col items-end gap-2">
+        {/* Right side - Jump button and look hint - adjusted for landscape */}
+        <div className="pointer-events-none absolute bottom-4 right-4 landscape:bottom-2 landscape:right-3 flex flex-col items-end gap-1">
           <button
             type="button"
             aria-label="Jump"
@@ -210,7 +210,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
               triggerJump();
             }}
             onTouchEnd={() => setJumpPressed(false)}
-            className={`pointer-events-auto flex h-16 w-16 items-center justify-center rounded-full border text-sm font-bold shadow-[0_12px_30px_rgba(0,0,0,0.4)] transition duration-150 ${
+            className={`pointer-events-auto flex h-14 w-14 landscape:h-12 landscape:w-12 items-center justify-center rounded-full border text-xs font-bold shadow-[0_8px_20px_rgba(0,0,0,0.4)] transition duration-150 ${
               jumpPressed
                 ? 'scale-95 border-white/80 bg-amber-300 ring-4 ring-white/70 ring-offset-2 ring-offset-amber-200'
                 : 'border-white/70 bg-amber-200/95 ring-2 ring-white/40'
@@ -218,7 +218,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
           >
             Jump
           </button>
-          <div className="pointer-events-none rounded-lg bg-black/45 px-2 py-1 text-[10px] text-white/60 shadow-inner backdrop-blur-sm">
+          <div className="pointer-events-none rounded-lg bg-black/45 px-2 py-0.5 text-[9px] text-white/60 shadow-inner backdrop-blur-sm landscape:hidden">
             Drag to look
           </div>
         </div>
