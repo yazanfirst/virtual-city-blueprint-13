@@ -4,7 +4,54 @@ import * as THREE from 'three';
 import LowPolyCharacter from './LowPolyCharacter';
 import { usePlayerStore } from '@/stores/playerStore';
 
-// Building collision boxes
+const PLAYER_RADIUS = 0.45;
+
+// Tree and lamp locations are shared with the scene layout
+const TREE_COLLIDERS = [
+  { x: 10, z: 45 }, { x: 10, z: 33 }, { x: 10, z: 21 },
+  { x: 10, z: -21 }, { x: 10, z: -33 }, { x: 10, z: -45 },
+  { x: -10, z: 45 }, { x: -10, z: 33 }, { x: -10, z: 21 },
+  { x: -10, z: -21 }, { x: -10, z: -33 }, { x: -10, z: -45 },
+  { x: 28, z: 15 }, { x: 40, z: 15 }, { x: 52, z: 15 },
+  { x: -28, z: 15 }, { x: -40, z: 15 }, { x: -52, z: 15 },
+  { x: 45, z: 40 }, { x: 48, z: 43 }, { x: 42, z: 38 },
+  { x: -45, z: 40 }, { x: -48, z: 43 }, { x: -42, z: 38 },
+  { x: -55, z: -45 }, { x: -58, z: -42 },
+  { x: 58, z: 45 }, { x: 55, z: 48 },
+];
+
+const LAMP_COLLIDERS = [
+  { x: -10, z: 38 }, { x: 10, z: 38 }, { x: -10, z: 24 }, { x: 10, z: 24 },
+  { x: -10, z: -24 }, { x: 10, z: -24 }, { x: -10, z: -38 }, { x: 10, z: -38 },
+  { x: -10, z: -50 }, { x: 10, z: -50 },
+  { x: 30, z: 10 }, { x: 42, z: 10 }, { x: 54, z: 10 },
+  { x: -30, z: 10 }, { x: -42, z: 10 }, { x: -54, z: 10 },
+  { x: 30, z: -10 }, { x: 42, z: -10 }, { x: 54, z: -10 },
+  { x: -30, z: -10 }, { x: -42, z: -10 }, { x: -54, z: -10 },
+];
+
+const BENCH_COLLIDERS = [
+  { minX: 7.5, maxX: 10.5, minZ: 38.5, maxZ: 41.5 },
+  { minX: -10.5, maxX: -7.5, minZ: 38.5, maxZ: 41.5 },
+  { minX: 7.5, maxX: 10.5, minZ: -49.5, maxZ: -46.5 },
+  { minX: -10.5, maxX: -7.5, minZ: -49.5, maxZ: -46.5 },
+  { minX: 42.5, maxX: 47.5, minZ: 36.5, maxZ: 39.5 },
+  { minX: -47.5, maxX: -42.5, minZ: 36.5, maxZ: 39.5 },
+];
+
+const PLATFORM_SURFACES = [
+  // Fountain base - low platform players can jump onto
+  { x: 0, z: 0, radius: 4.4, height: 0.8 },
+];
+
+const CYLINDER_COLLIDERS = [
+  ...TREE_COLLIDERS.map(({ x, z }) => ({ x, z, radius: 1.2, height: 6 })),
+  ...LAMP_COLLIDERS.map(({ x, z }) => ({ x, z, radius: 0.6, height: 5 })),
+  // Fountain pillar blocks the center so players stand on the rim, not inside
+  { x: 0, z: 0, radius: 1.2, height: 4.5 },
+];
+
+// Building collision boxes and props with rectangular footprints
 const COLLISION_BOXES = [
   // Main Boulevard East shops (x=18)
   ...[-52, -40, -28, -16, 16, 28, 40].map(z => ({ minX: 14, maxX: 22, minZ: z - 4, maxZ: z + 4 })),
@@ -23,11 +70,13 @@ const COLLISION_BOXES = [
   { minX: -37, maxX: -27, minZ: 15, maxZ: 25 },
   { minX: -37, maxX: -27, minZ: -40, maxZ: -30 },
   { minX: -37, maxX: -27, minZ: -60, maxZ: -50 },
-  // Fountain/roundabout center
-  { minX: -5, maxX: 5, minZ: -5, maxZ: 5 },
   // District gates
   { minX: 73, maxX: 83, minZ: -6, maxZ: 6 },
   { minX: -83, maxX: -73, minZ: -6, maxZ: 6 },
+  // Lakes and benches use simple rectangles to block the player from walking through geometry
+  { minX: -64, maxX: -46, minZ: -52, maxZ: -44 },
+  { minX: 50, maxX: 66, minZ: 44, maxZ: 52 },
+  ...BENCH_COLLIDERS,
 ];
 
 type PlayerControllerProps = {
@@ -68,30 +117,12 @@ const PlayerController = ({
     positionRef.current.set(...position);
   }, [position]);
 
-  const attemptJump = useCallback(() => {
-    const groundHeight = 0.25;
-    const onGround = positionRef.current.y <= groundHeight + 0.001;
-
-    if (!isJumping && onGround) {
-      verticalVelocityRef.current = 0.28;
-      setIsJumping(true);
-    }
-  }, [isJumping]);
-
-  // Trigger jump when jump counter increments (keyboard or UI)
-  useEffect(() => {
-    if (jumpCounter > lastJumpCounterRef.current) {
-      attemptJump();
-    }
-    lastJumpCounterRef.current = jumpCounter;
-  }, [attemptJump, jumpCounter]);
-
   // Camera settings - PUBG style
   const cameraDistance = viewMode === "firstPerson" ? 0 : 10;
   const cameraHeight = viewMode === "firstPerson" ? 2.5 : 4;
 
-  // Check collision with buildings
-  const checkCollision = (x: number, z: number, radius: number = 0.5): boolean => {
+  // Check collision with buildings and props
+  const checkCollision = (x: number, z: number, radius: number = PLAYER_RADIUS): boolean => {
     for (const box of COLLISION_BOXES) {
       if (
         x + radius > box.minX &&
@@ -102,8 +133,52 @@ const PlayerController = ({
         return true;
       }
     }
+
+    for (const collider of CYLINDER_COLLIDERS) {
+      const dx = x - collider.x;
+      const dz = z - collider.z;
+      const distanceSq = dx * dx + dz * dz;
+      const combinedRadius = collider.radius + radius;
+
+      if (distanceSq < combinedRadius * combinedRadius) {
+        return true;
+      }
+    }
+
     return false;
   };
+
+  const getSurfaceHeight = useCallback((x: number, z: number): number => {
+    let surface = 0.25;
+
+    for (const platform of PLATFORM_SURFACES) {
+      const dx = x - platform.x;
+      const dz = z - platform.z;
+      if (dx * dx + dz * dz <= platform.radius * platform.radius) {
+        surface = Math.max(surface, platform.height);
+      }
+    }
+
+    return surface;
+  }, []);
+
+  const attemptJump = useCallback(() => {
+    const groundHeight = getSurfaceHeight(positionRef.current.x, positionRef.current.z);
+    const onGround = positionRef.current.y <= groundHeight + 0.001;
+
+    if (!isJumping && onGround) {
+      verticalVelocityRef.current = 0.32;
+      setIsJumping(true);
+    }
+  }, [getSurfaceHeight, isJumping]);
+
+  // Trigger jump when jump counter increments (keyboard or UI)
+  useEffect(() => {
+    if (jumpCounter > lastJumpCounterRef.current) {
+      attemptJump();
+    }
+    lastJumpCounterRef.current = jumpCounter;
+  }, [attemptJump, jumpCounter]);
 
   // Keyboard event handlers
   useEffect(() => {
@@ -232,9 +307,9 @@ const PlayerController = ({
     }
 
     // Apply jump/gravity
-    const groundHeight = 0.25;
+    const groundHeight = getSurfaceHeight(positionRef.current.x, positionRef.current.z);
     if (isJumping || positionRef.current.y > groundHeight) {
-      const gravity = 0.02;
+      const gravity = 0.025;
       verticalVelocityRef.current -= gravity;
       positionRef.current.y = Math.max(groundHeight, positionRef.current.y + verticalVelocityRef.current);
       positionChanged = true;
@@ -244,6 +319,11 @@ const PlayerController = ({
         verticalVelocityRef.current = 0;
         setIsJumping(false);
       }
+    } else if (positionRef.current.y < groundHeight) {
+      // Step up onto low platforms smoothly
+      positionRef.current.y = groundHeight;
+      verticalVelocityRef.current = 0;
+      positionChanged = true;
     }
 
     // Apply position to group

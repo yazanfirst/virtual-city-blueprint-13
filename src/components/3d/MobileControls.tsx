@@ -8,9 +8,11 @@ type MobileControlsProps = {
 
 const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControlsProps) => {
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
+  const [jumpPressed, setJumpPressed] = useState(false);
   const joystickRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const jumpFeedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Track active touches by ID
   const joystickTouchIdRef = useRef<number | null>(null);
@@ -121,42 +123,73 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
     };
   }, [onJoystickMove, onCameraMove]);
 
+  useEffect(() => {
+    return () => {
+      if (jumpFeedbackTimeoutRef.current) {
+        clearTimeout(jumpFeedbackTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const triggerJump = () => {
+    if (jumpFeedbackTimeoutRef.current) {
+      clearTimeout(jumpFeedbackTimeoutRef.current);
+    }
+
+    setJumpPressed(true);
+    onJump?.();
+
+    jumpFeedbackTimeoutRef.current = setTimeout(() => {
+      setJumpPressed(false);
+    }, 140);
+  };
+
   return (
-    <div 
+    <div
       ref={containerRef}
       className="absolute inset-x-0 bottom-0 h-2/3"
       style={{ zIndex: 50, touchAction: 'none' }}
     >
-      {/* Left side - Joystick visual */}
-      <div
-        ref={joystickRef}
-        className="absolute bottom-4 left-4 w-24 h-24 rounded-full bg-black/50 border-2 border-white/40"
-      >
+      <div className="pointer-events-none absolute bottom-5 left-4 flex items-end gap-6">
+        {/* Left side - Joystick visual */}
         <div
-          ref={knobRef}
-          className="absolute w-10 h-10 rounded-full bg-white/60 border-2 border-white/80 shadow-lg"
-          style={{
-            left: '50%',
-            top: '50%',
-            transform: `translate(calc(-50% + ${joystickPos.x}px), calc(-50% + ${joystickPos.y}px))`,
+          ref={joystickRef}
+          className="pointer-events-auto h-24 w-24 rounded-full border-2 border-white/40 bg-black/50"
+        >
+          <div
+            ref={knobRef}
+            className="absolute h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/80 bg-white/60 shadow-lg"
+            style={{
+              left: '50%',
+              top: '50%',
+              transform: `translate(calc(-50% + ${joystickPos.x}px), calc(-50% + ${joystickPos.y}px))`,
+            }}
+          />
+        </div>
+
+        {/* Jump button close to movement controls */}
+        <button
+          type="button"
+          aria-label="Jump"
+          onClick={triggerJump}
+          onTouchStart={(e) => {
+            e.preventDefault();
+            triggerJump();
           }}
-        />
+          onTouchEnd={() => setJumpPressed(false)}
+          className={`pointer-events-auto flex h-16 w-16 items-center justify-center rounded-full border text-sm font-bold shadow-[0_10px_25px_rgba(0,0,0,0.35)] transition-transform duration-150 ${
+            jumpPressed
+              ? 'scale-95 border-white/80 bg-amber-300 ring-4 ring-white/70 ring-offset-2 ring-offset-amber-200'
+              : 'border-white/70 bg-amber-200/90 ring-2 ring-white/40'
+          }`}
+        >
+          Jump
+        </button>
       </div>
 
       {/* Right side - Actions */}
       <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2">
-        <button
-          type="button"
-          onClick={() => onJump?.()}
-          onTouchStart={(e) => {
-            e.preventDefault();
-            onJump?.();
-          }}
-          className="px-4 py-2 rounded-full bg-white/80 text-black text-xs font-semibold shadow-lg active:scale-95"
-        >
-          Jump
-        </button>
-        <div className="bg-black/40 rounded-lg px-2 py-1 text-white/50 text-[10px]">
+        <div className="rounded-lg bg-black/40 px-2 py-1 text-[10px] text-white/60 shadow-inner">
           Drag to look
         </div>
       </div>
