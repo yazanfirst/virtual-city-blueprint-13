@@ -35,12 +35,12 @@ const LAMP_COLLIDERS = [
 ];
 
 const BENCH_COLLIDERS = [
-  { minX: 7.5, maxX: 10.5, minZ: 38.5, maxZ: 41.5 },
-  { minX: -10.5, maxX: -7.5, minZ: 38.5, maxZ: 41.5 },
-  { minX: 7.5, maxX: 10.5, minZ: -49.5, maxZ: -46.5 },
-  { minX: -10.5, maxX: -7.5, minZ: -49.5, maxZ: -46.5 },
-  { minX: 42.5, maxX: 47.5, minZ: 36.5, maxZ: 39.5 },
-  { minX: -47.5, maxX: -42.5, minZ: 36.5, maxZ: 39.5 },
+  { minX: 8, maxX: 10, minZ: 39, maxZ: 41 },
+  { minX: -10, maxX: -8, minZ: 39, maxZ: 41 },
+  { minX: 8, maxX: 10, minZ: -49, maxZ: -47 },
+  { minX: -10, maxX: -8, minZ: -49, maxZ: -47 },
+  { minX: 43.5, maxX: 46.5, minZ: 37.5, maxZ: 40.5 },
+  { minX: -46.5, maxX: -43.5, minZ: 37.5, maxZ: 40.5 },
 ];
 
 type CircularPlatform = {

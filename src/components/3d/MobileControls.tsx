@@ -19,6 +19,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
   const joystickTouchIdRef = useRef<number | null>(null);
   const cameraTouchIdRef = useRef<number | null>(null);
   const lastCameraPosRef = useRef<{ x: number; y: number } | null>(null);
+  const cameraDragActiveRef = useRef(false);
   const joystickStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const JOYSTICK_RADIUS = 56;
@@ -55,12 +56,12 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
           continue;
         }
 
-        // Start camera control only when touching the 3D canvas (so UI remains interactive)
+        // Start camera tracking only when touching the 3D canvas (so UI remains interactive)
         const isCanvasTouch = touchTarget?.closest('canvas');
         if (isCanvasTouch && cameraTouchIdRef.current === null) {
           cameraTouchIdRef.current = identifier;
           lastCameraPosRef.current = { x: clientX, y: clientY };
-          e.preventDefault();
+          cameraDragActiveRef.current = false;
         }
       }
     };
@@ -94,16 +95,24 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
         if (identifier === cameraTouchIdRef.current && lastCameraPosRef.current) {
           const deltaX = clientX - lastCameraPosRef.current.x;
           const deltaY = clientY - lastCameraPosRef.current.y;
-          
-          // Negative deltaX for natural camera rotation (drag left = look left)
-          onCameraMove(-deltaX * 0.012, deltaY * 0.008);
-          lastCameraPosRef.current = { x: clientX, y: clientY };
+          const distanceMoved = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+          if (!cameraDragActiveRef.current && distanceMoved > 6) {
+            cameraDragActiveRef.current = true;
+            lastCameraPosRef.current = { x: clientX, y: clientY };
+          }
+
+          if (cameraDragActiveRef.current) {
+            // Negative deltaX for natural camera rotation (drag left = look left)
+            onCameraMove(-deltaX * 0.012, deltaY * 0.008);
+            lastCameraPosRef.current = { x: clientX, y: clientY };
+          }
         }
       }
 
       if (
         (joystickTouchIdRef.current !== null && joystickStartRef.current !== null) ||
-        (cameraTouchIdRef.current !== null && lastCameraPosRef.current !== null)
+        (cameraTouchIdRef.current !== null && cameraDragActiveRef.current)
       ) {
         e.preventDefault();
       }
@@ -123,6 +132,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
         if (identifier === cameraTouchIdRef.current) {
           cameraTouchIdRef.current = null;
           lastCameraPosRef.current = null;
+          cameraDragActiveRef.current = false;
         }
       }
     };
@@ -200,7 +210,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
               triggerJump();
             }}
             onTouchEnd={() => setJumpPressed(false)}
-            className={`pointer-events-auto flex h-20 w-20 items-center justify-center rounded-full border text-base font-bold shadow-[0_12px_30px_rgba(0,0,0,0.4)] transition duration-150 ${
+            className={`pointer-events-auto flex h-16 w-16 items-center justify-center rounded-full border text-sm font-bold shadow-[0_12px_30px_rgba(0,0,0,0.4)] transition duration-150 ${
               jumpPressed
                 ? 'scale-95 border-white/80 bg-amber-300 ring-4 ring-white/70 ring-offset-2 ring-offset-amber-200'
                 : 'border-white/70 bg-amber-200/95 ring-2 ring-white/40'
