@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import NotificationDropdown from "./NotificationDropdown";
 
 const Navbar = () => {
   const location = useLocation();
@@ -68,7 +69,9 @@ const Navbar = () => {
           {!loading && (
             <>
               {user ? (
-                <DropdownMenu>
+                <>
+                  <NotificationDropdown />
+                  <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="gap-2">
                       <Avatar className="h-8 w-8 border border-primary/30">
@@ -105,7 +108,8 @@ const Navbar = () => {
                       Sign Out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
-                </DropdownMenu>
+                  </DropdownMenu>
+                </>
               ) : (
                 <Link
                   to="/auth"
