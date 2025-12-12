@@ -155,9 +155,12 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px',
-              width: '180px',
+              gap: '6px',
+              maxWidth: '160px',
               pointerEvents: 'none',
+              transform: 'translate(-50%, -50%)',
+              left: '50%',
+              top: '50%',
             }}
           >
             {/* Logo - if available */}
@@ -166,10 +169,10 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
                 src={logoUrl} 
                 alt="Shop logo"
                 style={{
-                  width: '32px',
-                  height: '32px',
+                  width: '24px',
+                  height: '24px',
                   objectFit: 'contain',
-                  borderRadius: '4px',
+                  borderRadius: '3px',
                   flexShrink: 0,
                 }}
               />
@@ -180,7 +183,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
                 fontFamily: font.fontFamily,
                 fontWeight: font.fontWeight,
                 letterSpacing: font.letterSpacing,
-                fontSize: shopName && shopName.length > 15 ? '10px' : shopName && shopName.length > 10 ? '12px' : '14px',
+                fontSize: shopName && shopName.length > 12 ? '9px' : shopName && shopName.length > 8 ? '11px' : '13px',
                 color: isSuspended ? '#888888' : '#FFFFFF',
                 textShadow: isSuspended 
                   ? '1px 1px 2px rgba(0,0,0,0.9)' 
@@ -190,6 +193,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
                 textOverflow: 'ellipsis',
                 textTransform: signageFont === 'elegant' ? 'uppercase' : 'none',
                 textAlign: 'center',
+                maxWidth: logoUrl ? '120px' : '150px',
               }}
             >
               {shopName || "SHOP"}
