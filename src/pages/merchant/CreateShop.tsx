@@ -13,6 +13,7 @@ import ShopPreview from "@/components/merchant/ShopPreview";
 
 type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic" | "led_display" | "pharaoh_gold" | "greek_marble" | "art_deco" | "japanese_zen" | "neon_cyberpunk";
 type SignageFont = "classic" | "bold" | "elegant" | "modern" | "playful";
+type TextureTemplate = "none" | "wood" | "marble" | "brick" | "metal" | "concrete" | "fabric" | "leather";
 
 interface ShopFormData {
   streetId: string;
@@ -25,6 +26,8 @@ interface ShopFormData {
   accentColor: string;
   facadeTemplate: FacadeTemplate;
   signageFont: SignageFont;
+  textureTemplate: TextureTemplate;
+  textureUrl: string;
   duplicateBrand: boolean;
   branchLabel: string;
   branchJustification: string;
@@ -41,6 +44,8 @@ const initialFormData: ShopFormData = {
   accentColor: "#10B981",
   facadeTemplate: "modern_neon",
   signageFont: "classic",
+  textureTemplate: "none",
+  textureUrl: "",
   duplicateBrand: false,
   branchLabel: "",
   branchJustification: "",
@@ -117,6 +122,8 @@ const CreateShop = () => {
         accent_color: formData.accentColor,
         facade_template: formData.facadeTemplate,
         signage_font: formData.signageFont,
+        texture_template: formData.textureTemplate !== 'none' ? formData.textureTemplate : null,
+        texture_url: formData.textureUrl || null,
         duplicate_brand: formData.duplicateBrand,
         branch_label: formData.branchLabel || null,
         branch_justification: formData.branchJustification || null,
@@ -294,12 +301,14 @@ const CreateShop = () => {
               </p>
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <BrandingEditor
+              <BrandingEditor
                   primaryColor={formData.primaryColor}
                   accentColor={formData.accentColor}
                   facadeTemplate={formData.facadeTemplate}
                   logoUrl={formData.logoUrl}
                   signageFont={formData.signageFont}
+                  textureTemplate={formData.textureTemplate}
+                  textureUrl={formData.textureUrl}
                   onUpdate={(updates) => updateFormData(updates as Partial<ShopFormData>)}
                 />
                 

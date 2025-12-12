@@ -163,6 +163,8 @@ export type Database = {
           signage_font: string | null
           spot_id: string
           status: Database["public"]["Enums"]["shop_status"] | null
+          texture_template: string | null
+          texture_url: string | null
           updated_at: string | null
         }
         Insert: {
@@ -185,6 +187,8 @@ export type Database = {
           signage_font?: string | null
           spot_id: string
           status?: Database["public"]["Enums"]["shop_status"] | null
+          texture_template?: string | null
+          texture_url?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -207,6 +211,8 @@ export type Database = {
           signage_font?: string | null
           spot_id?: string
           status?: Database["public"]["Enums"]["shop_status"] | null
+          texture_template?: string | null
+          texture_url?: string | null
           updated_at?: string | null
         }
         Relationships: [

@@ -22,6 +22,7 @@ import {
 
 type ShopFacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic" | "led_display" | "pharaoh_gold" | "greek_marble" | "art_deco" | "japanese_zen" | "neon_cyberpunk";
 type ShopSignageFont = "classic" | "bold" | "elegant" | "modern" | "playful";
+type TextureTemplate = "none" | "wood" | "marble" | "brick" | "metal" | "concrete" | "fabric" | "leather";
 
 interface ShopData {
   id: string;
@@ -33,6 +34,8 @@ interface ShopData {
   accent_color: string | null;
   facade_template: ShopFacadeTemplate | null;
   signage_font: string | null;
+  texture_template: string | null;
+  texture_url: string | null;
   status: string | null;
 }
 
@@ -53,6 +56,8 @@ const EditShop = () => {
     accentColor: "#10B981",
     facadeTemplate: "modern_neon" as ShopFacadeTemplate,
     signageFont: "classic" as ShopSignageFont,
+    textureTemplate: "none" as TextureTemplate,
+    textureUrl: "",
   });
 
   useEffect(() => {
@@ -93,6 +98,8 @@ const EditShop = () => {
         accentColor: data.accent_color || "#10B981",
         facadeTemplate: (data.facade_template as ShopFacadeTemplate) || "modern_neon",
         signageFont: (data.signage_font as ShopSignageFont) || "classic",
+        textureTemplate: ((data as any).texture_template as TextureTemplate) || "none",
+        textureUrl: (data as any).texture_url || "",
       });
     } catch (error) {
       console.error('Error fetching shop:', error);
@@ -117,7 +124,9 @@ const EditShop = () => {
       formData.primaryColor !== (originalData.primary_color || "#3B82F6") ||
       formData.accentColor !== (originalData.accent_color || "#10B981") ||
       formData.facadeTemplate !== (originalData.facade_template || "modern_neon") ||
-      formData.signageFont !== (originalData.signage_font || "classic")
+      formData.signageFont !== (originalData.signage_font || "classic") ||
+      formData.textureTemplate !== (originalData.texture_template || "none") ||
+      formData.textureUrl !== (originalData.texture_url || "")
     );
   };
 
@@ -138,6 +147,8 @@ const EditShop = () => {
           accent_color: formData.accentColor,
           facade_template: formData.facadeTemplate,
           signage_font: formData.signageFont,
+          texture_template: formData.textureTemplate !== 'none' ? formData.textureTemplate : null,
+          texture_url: formData.textureUrl || null,
           status: 'pending_review', // Changes require admin approval
           updated_at: new Date().toISOString(),
         })
@@ -260,6 +271,8 @@ const EditShop = () => {
                 facadeTemplate={formData.facadeTemplate}
                 logoUrl={formData.logoUrl}
                 signageFont={formData.signageFont}
+                textureTemplate={formData.textureTemplate}
+                textureUrl={formData.textureUrl}
                 onUpdate={(updates) => updateFormData(updates as Partial<typeof formData>)}
               />
               

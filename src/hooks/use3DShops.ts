@@ -86,6 +86,8 @@ export interface ShopBranding {
   logoUrl?: string | null;
   externalLink?: string | null;
   signageFont?: string | null;
+  textureTemplate?: string | null;
+  textureUrl?: string | null;
 }
 
 export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): ShopBranding[] {
@@ -108,6 +110,8 @@ export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): S
         logoUrl: spot.shop.logo_url,
         externalLink: spot.shop.external_link,
         signageFont: (spot.shop as any).signage_font || 'classic',
+        textureTemplate: (spot.shop as any).texture_template || null,
+        textureUrl: (spot.shop as any).texture_url || null,
       };
     }
 
