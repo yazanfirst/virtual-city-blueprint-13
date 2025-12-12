@@ -125,7 +125,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
       </mesh>
       
       {/* Signboard */}
-      <group position={[0, 5.2, 4.3]}>
+      <group position={[0.8, 5.2, 4.3]}>
         {/* Sign board background */}
         <mesh>
           <boxGeometry args={[4.5, 1.3, 0.2]} />
