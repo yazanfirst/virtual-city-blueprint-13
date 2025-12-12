@@ -66,15 +66,15 @@ const InteriorScene = ({ shop }: { shop: ShopBranding }) => {
   return (
     <group>
       {/* Lighting */}
-      <ambientLight intensity={0.9} color="#f7f1e3" />
-      <hemisphereLight args={["#ffffff", "#1a1a1f", 0.6]} position={[0, 4, 0]} />
-      <pointLight position={[0, 4, 0]} intensity={1.8} color={primary} />
-      <pointLight position={[2.5, 3, 2.5]} intensity={1.4} color={accent} />
+      <ambientLight intensity={1.2} color="#faf4e5" />
+      <hemisphereLight args={["#ffffff", "#1a1a1f", 0.85]} position={[0, 4.5, 0]} />
+      <pointLight position={[0, 4.2, 0]} intensity={2} color={primary} />
+      <pointLight position={[2.5, 3.2, 2.5]} intensity={1.6} color={accent} />
       <spotLight
         position={[0, 4.5, -1]}
-        intensity={1.6}
-        angle={0.8}
-        penumbra={0.45}
+        intensity={1.9}
+        angle={0.95}
+        penumbra={0.5}
         color={primary}
         castShadow
         onUpdate={(self) => self.target.position.set(0, 1.8, -3)}
@@ -89,23 +89,23 @@ const InteriorScene = ({ shop }: { shop: ShopBranding }) => {
       {/* Back Wall */}
       <mesh position={[0, 2.5, -6]} receiveShadow>
         <boxGeometry args={[12, 5, 0.2]} />
-        <meshStandardMaterial map={brickTexture || undefined} color="#7a3b2f" />
+        <meshStandardMaterial map={brickTexture || undefined} color="#8d4936" />
       </mesh>
 
       {/* Side Walls */}
       <mesh position={[-6, 2.5, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
         <boxGeometry args={[12, 5, 0.2]} />
-        <meshStandardMaterial map={brickTexture || undefined} color="#7a3b2f" />
+        <meshStandardMaterial map={brickTexture || undefined} color="#8d4936" />
       </mesh>
       <mesh position={[6, 2.5, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
         <boxGeometry args={[12, 5, 0.2]} />
-        <meshStandardMaterial map={brickTexture || undefined} color="#7a3b2f" />
+        <meshStandardMaterial map={brickTexture || undefined} color="#8d4936" />
       </mesh>
 
       {/* Front wall keeps the view enclosed */}
       <mesh position={[0, 2.5, 6]} rotation={[0, Math.PI, 0]} receiveShadow>
         <boxGeometry args={[12, 5, 0.2]} />
-        <meshStandardMaterial map={brickTexture || undefined} color="#7a3b2f" />
+        <meshStandardMaterial map={brickTexture || undefined} color="#8d4936" />
       </mesh>
 
       {/* Ceiling */}
@@ -143,7 +143,7 @@ const InteriorScene = ({ shop }: { shop: ShopBranding }) => {
             boxShadow: "0 10px 40px rgba(0,0,0,0.4)",
           }}
         >
-          Explore the brick gallery and showcase products in 3D.
+          Welcome inside—rotate, swipe, and zoom to browse your virtual showroom.
         </div>
       </Html>
     </group>
@@ -165,19 +165,21 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
             Exit Shop
           </Button>
         </div>
-        <Canvas shadows camera={{ position: [0, 2.4, 2], fov: 55 }}>
-          <color attach="background" args={["#0d0d12"]} />
-          <fog attach="fog" args={["#0d0d12", 10, 22]} />
+        <Canvas shadows camera={{ position: [0, 2.6, 2.2], fov: 55 }}>
+          <color attach="background" args={["#131320"]} />
+          <fog attach="fog" args={["#131320", 10, 20]} />
           <React.Suspense fallback={null}>
             <InteriorScene shop={shop} />
           </React.Suspense>
           <OrbitControls
             enablePan={false}
-            maxDistance={4}
+            enableDamping
+            dampingFactor={0.12}
+            maxDistance={3.2}
             minDistance={2}
             target={[0, 1.6, -2]}
-            maxPolarAngle={Math.PI / 2.1}
-            minPolarAngle={Math.PI / 5}
+            maxPolarAngle={Math.PI / 2.4}
+            minPolarAngle={Math.PI / 4.3}
           />
         </Canvas>
         <div className="absolute bottom-3 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
