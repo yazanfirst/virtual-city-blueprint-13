@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          link: string | null
+          message: string
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message: string
+          read?: boolean
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message?: string
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -130,6 +163,8 @@ export type Database = {
           signage_font: string | null
           spot_id: string
           status: Database["public"]["Enums"]["shop_status"] | null
+          texture_template: string | null
+          texture_url: string | null
           updated_at: string | null
         }
         Insert: {
@@ -152,6 +187,8 @@ export type Database = {
           signage_font?: string | null
           spot_id: string
           status?: Database["public"]["Enums"]["shop_status"] | null
+          texture_template?: string | null
+          texture_url?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -174,6 +211,8 @@ export type Database = {
           signage_font?: string | null
           spot_id?: string
           status?: Database["public"]["Enums"]["shop_status"] | null
+          texture_template?: string | null
+          texture_url?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -263,6 +302,12 @@ export type Database = {
         | "urban_industrial"
         | "retro_vintage"
         | "nature_organic"
+        | "led_display"
+        | "pharaoh_gold"
+        | "greek_marble"
+        | "art_deco"
+        | "japanese_zen"
+        | "neon_cyberpunk"
       shop_status: "pending_review" | "active" | "rejected" | "suspended"
     }
     CompositeTypes: {
@@ -401,6 +446,12 @@ export const Constants = {
         "urban_industrial",
         "retro_vintage",
         "nature_organic",
+        "led_display",
+        "pharaoh_gold",
+        "greek_marble",
+        "art_deco",
+        "japanese_zen",
+        "neon_cyberpunk",
       ],
       shop_status: ["pending_review", "active", "rejected", "suspended"],
     },

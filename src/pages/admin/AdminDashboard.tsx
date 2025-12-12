@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { createNotification } from "@/hooks/useNotifications";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -45,6 +46,7 @@ const AdminDashboard = () => {
   const rejectedShops = shops?.filter(s => s.status === 'rejected') || [];
 
   const handleApprove = async (shopId: string) => {
+    const shop = shops?.find(s => s.id === shopId);
     const { error } = await supabase
       .from('shops')
       .update({ status: 'active' })
@@ -53,12 +55,23 @@ const AdminDashboard = () => {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      // Create notification for merchant
+      if (shop?.merchant_id) {
+        await createNotification(
+          shop.merchant_id,
+          "Shop Approved! 🎉",
+          `Your shop "${shop.name}" has been approved and is now live in the city!`,
+          "success",
+          "/merchant/dashboard"
+        );
+      }
       toast({ title: "Shop Approved", description: "The shop is now active." });
       refetch();
     }
   };
 
   const handleReject = async (shopId: string) => {
+    const shop = shops?.find(s => s.id === shopId);
     const { error } = await supabase
       .from('shops')
       .update({ status: 'rejected' })
@@ -67,12 +80,23 @@ const AdminDashboard = () => {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      // Create notification for merchant
+      if (shop?.merchant_id) {
+        await createNotification(
+          shop.merchant_id,
+          "Shop Rejected",
+          `Your shop "${shop.name}" was not approved. Please review our guidelines and try again.`,
+          "error",
+          "/merchant/dashboard"
+        );
+      }
       toast({ title: "Shop Rejected" });
       refetch();
     }
   };
 
   const handleSuspend = async (shopId: string) => {
+    const shop = shops?.find(s => s.id === shopId);
     const { error } = await supabase
       .from('shops')
       .update({ status: 'suspended' })
@@ -81,12 +105,23 @@ const AdminDashboard = () => {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      // Create notification for merchant
+      if (shop?.merchant_id) {
+        await createNotification(
+          shop.merchant_id,
+          "Shop Suspended",
+          `Your shop "${shop.name}" has been suspended by an administrator.`,
+          "warning",
+          "/merchant/dashboard"
+        );
+      }
       toast({ title: "Shop Suspended", description: "The shop has been suspended." });
       refetch();
     }
   };
 
   const handleReactivate = async (shopId: string) => {
+    const shop = shops?.find(s => s.id === shopId);
     const { error } = await supabase
       .from('shops')
       .update({ status: 'active' })
@@ -95,6 +130,16 @@ const AdminDashboard = () => {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      // Create notification for merchant
+      if (shop?.merchant_id) {
+        await createNotification(
+          shop.merchant_id,
+          "Shop Reactivated! 🎉",
+          `Your shop "${shop.name}" has been reactivated and is now live again!`,
+          "success",
+          "/merchant/dashboard"
+        );
+      }
       toast({ title: "Shop Reactivated", description: "The shop is now active again." });
       refetch();
     }
