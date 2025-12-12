@@ -200,19 +200,22 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
             center
             scale={1.1}
             style={{
-              display: 'flex',
+              display: 'grid',
+              gridAutoFlow: 'column',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
               width: '100%',
-              maxWidth: '170px',
+              maxWidth: '180px',
+              minWidth: '120px',
+              margin: '0 auto',
               pointerEvents: 'none',
             }}
           >
             {/* Logo - if available */}
             {logoUrl && (
-              <img 
-                src={logoUrl} 
+              <img
+                src={logoUrl}
                 alt="Shop logo"
                 style={{
                   width: '26px',
@@ -220,6 +223,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
                   objectFit: 'contain',
                   borderRadius: '4px',
                   flexShrink: 0,
+                  justifySelf: 'center',
                 }}
               />
             )}
@@ -236,8 +240,8 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
                       ? '12px'
                       : '14px',
                 color: isSuspended ? '#888888' : '#FFFFFF',
-                textShadow: isSuspended 
-                  ? '1px 1px 2px rgba(0,0,0,0.9)' 
+                textShadow: isSuspended
+                  ? '1px 1px 2px rgba(0,0,0,0.9)'
                   : `0 0 6px ${colors.glow}, 0 0 12px ${colors.glow}, 1px 1px 2px rgba(0,0,0,0.9)`,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -245,6 +249,8 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
                 textTransform: signageFont === 'elegant' ? 'uppercase' : 'none',
                 textAlign: 'center',
                 maxWidth: logoUrl ? '130px' : '160px',
+                justifySelf: 'center',
+                minWidth: 0,
               }}
             >
               {shopName || "SHOP"}
