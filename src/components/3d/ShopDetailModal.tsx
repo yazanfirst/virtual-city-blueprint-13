@@ -209,38 +209,42 @@ const ShopDetailModal = ({ shop, onClose, onEnterShop }: ShopDetailModalProps) =
                 </div>
               </div>
               
-              {/* Visit Store Button - disabled for suspended shops */}
-              {shop.externalLink && !shop.isSuspended && (
-                <Button
-                  className="w-full"
-                  style={{
-                    backgroundColor: shop.primaryColor,
-                    color: '#FFFFFF',
-                  }}
-                  asChild
-                >
-                  <a
-                    href={shop.externalLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ShoppingBag className="h-4 w-4 mr-2" />
-                    Visit Store
-                    <ExternalLink className="h-4 w-4 ml-2" />
-                  </a>
-                </Button>
-              )}
+              {(shop.externalLink || onEnterShop) && (
+                <div className="flex flex-col gap-3">
+                  {/* Visit Store Button - disabled for suspended shops */}
+                  {shop.externalLink && !shop.isSuspended && (
+                    <Button
+                      className="w-full"
+                      style={{
+                        backgroundColor: shop.primaryColor,
+                        color: '#FFFFFF',
+                      }}
+                      asChild
+                    >
+                      <a
+                        href={shop.externalLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ShoppingBag className="h-4 w-4 mr-2" />
+                        Visit Store
+                        <ExternalLink className="h-4 w-4 ml-2" />
+                      </a>
+                    </Button>
+                  )}
 
-              {/* Enter immersive shop view */}
-              {onEnterShop && (
-                <Button
-                  variant="secondary"
-                  className="w-full"
-                  onClick={() => onEnterShop(shop)}
-                >
-                  <ShoppingBag className="h-4 w-4 mr-2" />
-                  Enter Virtual Shop
-                </Button>
+                  {/* Enter immersive shop view */}
+                  {onEnterShop && (
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      onClick={() => onEnterShop(shop)}
+                    >
+                      <ShoppingBag className="h-4 w-4 mr-2" />
+                      Enter Virtual Shop
+                    </Button>
+                  )}
+                </div>
               )}
               
               {/* Message for suspended shops */}
