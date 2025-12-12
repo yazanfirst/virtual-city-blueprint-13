@@ -158,9 +158,6 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
               gap: '6px',
               maxWidth: '160px',
               pointerEvents: 'none',
-              transform: 'translate(-50%, -50%)',
-              left: '50%',
-              top: '50%',
             }}
           >
             {/* Logo - if available */}
