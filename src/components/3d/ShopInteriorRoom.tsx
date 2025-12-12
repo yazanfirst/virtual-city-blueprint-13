@@ -19,7 +19,7 @@ const useBrickTexture = () => {
 
     if (!ctx) return null;
 
-    ctx.fillStyle = "#6b2f21";
+    ctx.fillStyle = "#9a523b";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const brickWidth = 80;
@@ -29,7 +29,7 @@ const useBrickTexture = () => {
     for (let y = 0; y < canvas.height; y += brickHeight) {
       for (let x = 0; x < canvas.width + brickWidth; x += brickWidth) {
         const offset = (y / brickHeight) % 2 === 0 ? 0 : brickWidth / 2;
-        ctx.fillStyle = `rgba(255, 255, 255, 0.08)`;
+        ctx.fillStyle = `rgba(255, 255, 255, 0.12)`;
         ctx.fillRect(x + offset, y, brickWidth - mortar, brickHeight - mortar);
         ctx.strokeStyle = "#4e2117";
         ctx.lineWidth = mortar / 2;
@@ -39,7 +39,7 @@ const useBrickTexture = () => {
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(4, 2.5);
+    texture.repeat.set(3.5, 2);
     texture.anisotropy = 8;
     return texture;
   }, []);
@@ -66,15 +66,16 @@ const InteriorScene = ({ shop }: { shop: ShopBranding }) => {
   return (
     <group>
       {/* Lighting */}
-      <ambientLight intensity={1.2} color="#faf4e5" />
-      <hemisphereLight args={["#ffffff", "#1a1a1f", 0.85]} position={[0, 4.5, 0]} />
-      <pointLight position={[0, 4.2, 0]} intensity={2} color={primary} />
-      <pointLight position={[2.5, 3.2, 2.5]} intensity={1.6} color={accent} />
+      <ambientLight intensity={1.55} color="#fff8ea" />
+      <hemisphereLight args={["#ffffff", "#16161d", 1]} position={[0, 4.8, 0]} />
+      <pointLight position={[0, 4.3, 0]} intensity={2.4} color={primary} decay={1.5} />
+      <pointLight position={[2.5, 3.3, 2.5]} intensity={1.8} color={accent} decay={1.5} />
+      <pointLight position={[-2.5, 3.3, 2.5]} intensity={1.8} color={accent} decay={1.5} />
       <spotLight
         position={[0, 4.5, -1]}
-        intensity={1.9}
-        angle={0.95}
-        penumbra={0.5}
+        intensity={2.2}
+        angle={1}
+        penumbra={0.6}
         color={primary}
         castShadow
         onUpdate={(self) => self.target.position.set(0, 1.8, -3)}
@@ -83,35 +84,35 @@ const InteriorScene = ({ shop }: { shop: ShopBranding }) => {
       {/* Floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[12, 12]} />
-        <meshStandardMaterial color="#1a1a1f" roughness={0.8} metalness={0.1} />
+        <meshStandardMaterial color="#202330" roughness={0.72} metalness={0.08} />
       </mesh>
 
       {/* Back Wall */}
       <mesh position={[0, 2.5, -6]} receiveShadow>
         <boxGeometry args={[12, 5, 0.2]} />
-        <meshStandardMaterial map={brickTexture || undefined} color="#8d4936" />
+        <meshStandardMaterial map={brickTexture || undefined} color="#a25c43" />
       </mesh>
 
       {/* Side Walls */}
       <mesh position={[-6, 2.5, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
         <boxGeometry args={[12, 5, 0.2]} />
-        <meshStandardMaterial map={brickTexture || undefined} color="#8d4936" />
+        <meshStandardMaterial map={brickTexture || undefined} color="#a25c43" />
       </mesh>
       <mesh position={[6, 2.5, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
         <boxGeometry args={[12, 5, 0.2]} />
-        <meshStandardMaterial map={brickTexture || undefined} color="#8d4936" />
+        <meshStandardMaterial map={brickTexture || undefined} color="#a25c43" />
       </mesh>
 
       {/* Front wall keeps the view enclosed */}
       <mesh position={[0, 2.5, 6]} rotation={[0, Math.PI, 0]} receiveShadow>
         <boxGeometry args={[12, 5, 0.2]} />
-        <meshStandardMaterial map={brickTexture || undefined} color="#8d4936" />
+        <meshStandardMaterial map={brickTexture || undefined} color="#a25c43" />
       </mesh>
 
       {/* Ceiling */}
       <mesh position={[0, 5, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[12, 12]} />
-        <meshStandardMaterial color="#13131a" roughness={0.5} metalness={0.2} />
+        <meshStandardMaterial color="#1f2233" roughness={0.45} metalness={0.16} />
       </mesh>
 
       {/* Product pedestals */}
@@ -121,31 +122,16 @@ const InteriorScene = ({ shop }: { shop: ShopBranding }) => {
 
       {/* Floating brand title */}
       <Text
-        position={[0, 3.5, -2]}
-        fontSize={0.6}
-        color={primary}
+        position={[0, 3.6, -2]}
+        fontSize={0.7}
+        color={accent}
         anchorX="center"
         anchorY="middle"
+        outlineWidth={0.02}
+        outlineColor="#0b0d14"
       >
         {shop.shopName || "Virtual Shop"}
       </Text>
-
-      {/* Instruction label */}
-      <Html position={[0, 1.5, 2]} center distanceFactor={8} transform>
-        <div
-          style={{
-            padding: "10px 14px",
-            background: "rgba(0,0,0,0.6)",
-            borderRadius: "12px",
-            border: `1px solid ${accent}33`,
-            color: "white",
-            fontSize: "12px",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.4)",
-          }}
-        >
-          Welcome inside—rotate, swipe, and zoom to browse your virtual showroom.
-        </div>
-      </Html>
     </group>
   );
 };
@@ -156,8 +142,13 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
       <div className="absolute inset-0 bg-gradient-to-br from-background/60 via-background/80 to-background/90" />
       <div className="relative w-full max-w-6xl h-[70vh] cyber-card overflow-hidden border border-primary/30">
         <div className="absolute top-3 left-4 z-10">
-          <div className="rounded-full bg-primary/20 px-4 py-2 text-primary text-xs font-semibold uppercase tracking-wide">
+          <div className="rounded-full bg-primary/15 px-4 py-2 text-primary text-xs font-semibold uppercase tracking-wide shadow-lg backdrop-blur-sm">
             {shop.shopName || "Shop Interior"}
+          </div>
+        </div>
+        <div className="absolute top-3 inset-x-0 flex justify-center z-10">
+          <div className="rounded-full bg-background/70 px-5 py-2 text-sm font-semibold text-foreground shadow-lg border border-primary/20 backdrop-blur">
+            {shop.shopName || "Virtual Shop"}
           </div>
         </div>
         <div className="absolute top-3 right-3 z-10 flex gap-2">
@@ -166,8 +157,8 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
           </Button>
         </div>
         <Canvas shadows camera={{ position: [0, 2.6, 2.2], fov: 55 }}>
-          <color attach="background" args={["#131320"]} />
-          <fog attach="fog" args={["#131320", 10, 20]} />
+          <color attach="background" args={["#0f172a"]} />
+          <fog attach="fog" args={["#0f172a", 12, 22]} />
           <React.Suspense fallback={null}>
             <InteriorScene shop={shop} />
           </React.Suspense>
