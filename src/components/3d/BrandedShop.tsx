@@ -147,11 +147,11 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
         {/* Centered content container - Logo + Text centered together */}
         {hasShop ? (
           <Html
-            position={[0, 0.03, 0.16]}
+            position={[0, 0.06, 0.16]}
             transform
             occlude
             center
-            scale={1.2}
+            scale={1.1}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -167,8 +167,8 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
                 src={logoUrl} 
                 alt="Shop logo"
                 style={{
-                  width: '28px',
-                  height: '28px',
+                  width: '26px',
+                  height: '26px',
                   objectFit: 'contain',
                   borderRadius: '4px',
                   flexShrink: 0,
@@ -183,10 +183,10 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
                 letterSpacing: font.letterSpacing,
                 fontSize:
                   shopName && shopName.length > 12
-                    ? '11px'
+                    ? '10px'
                     : shopName && shopName.length > 8
-                      ? '13px'
-                      : '15px',
+                      ? '12px'
+                      : '14px',
                 color: isSuspended ? '#888888' : '#FFFFFF',
                 textShadow: isSuspended 
                   ? '1px 1px 2px rgba(0,0,0,0.9)' 
