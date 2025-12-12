@@ -147,7 +147,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
         {/* Centered content container - Logo + Text centered together */}
         {hasShop ? (
           <Html
-            position={[0, 0.06, 0.16]}
+            position={[0, 0.09, 0.16]}
             transform
             occlude
             center
