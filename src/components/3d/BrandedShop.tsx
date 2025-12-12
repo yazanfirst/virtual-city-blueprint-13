@@ -144,52 +144,43 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
           <meshBasicMaterial color={hasShop ? accentHex : (isNight ? "#00FFFF" : "#006666")} />
         </mesh>
         
-        {/* Logo if available - positioned on the left of the sign */}
-        {hasShop && logoUrl && (
+        {/* Centered content container - Logo + Text centered together */}
+        {hasShop ? (
           <Html
-            position={[-1.5, 0, 0.16]}
+            position={[0, 0, 0.16]}
             transform
             occlude
+            center
             style={{
-              width: '40px',
-              height: '40px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              gap: '8px',
+              width: '180px',
               pointerEvents: 'none',
             }}
           >
-            <img 
-              src={logoUrl} 
-              alt="Shop logo"
-              style={{
-                maxWidth: '40px',
-                maxHeight: '40px',
-                objectFit: 'contain',
-                borderRadius: '4px',
-              }}
-            />
-          </Html>
-        )}
-        
-        {/* Text - using Html for custom fonts with proper font application */}
-        {hasShop ? (
-          <Html
-            position={[logoUrl ? 0.3 : 0, 0, 0.16]}
-            transform
-            occlude
-            style={{
-              width: logoUrl ? '120px' : '180px',
-              textAlign: 'center',
-              pointerEvents: 'none',
-            }}
-          >
+            {/* Logo - if available */}
+            {logoUrl && (
+              <img 
+                src={logoUrl} 
+                alt="Shop logo"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  objectFit: 'contain',
+                  borderRadius: '4px',
+                  flexShrink: 0,
+                }}
+              />
+            )}
+            {/* Shop Name */}
             <div
               style={{
                 fontFamily: font.fontFamily,
                 fontWeight: font.fontWeight,
                 letterSpacing: font.letterSpacing,
-                fontSize: shopName && shopName.length > 15 ? '11px' : shopName && shopName.length > 10 ? '13px' : '15px',
+                fontSize: shopName && shopName.length > 15 ? '10px' : shopName && shopName.length > 10 ? '12px' : '14px',
                 color: isSuspended ? '#888888' : '#FFFFFF',
                 textShadow: isSuspended 
                   ? '1px 1px 2px rgba(0,0,0,0.9)' 
@@ -198,6 +189,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 textTransform: signageFont === 'elegant' ? 'uppercase' : 'none',
+                textAlign: 'center',
               }}
             >
               {shopName || "SHOP"}
@@ -223,6 +215,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
             position={[0, -0.8, 0.18]}
             transform
             occlude
+            center
             style={{
               pointerEvents: 'none',
             }}

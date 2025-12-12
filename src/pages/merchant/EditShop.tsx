@@ -271,6 +271,7 @@ const EditShop = () => {
                   accentColor={formData.accentColor}
                   facadeTemplate={formData.facadeTemplate}
                   logoUrl={formData.logoUrl}
+                  signageFont={formData.signageFont}
                 />
               </div>
             </div>

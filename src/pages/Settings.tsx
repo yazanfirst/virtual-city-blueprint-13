@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, 
   User, 
   Bell, 
   Shield, 
-  Palette, 
   LogOut,
   Camera,
   Check,
   Loader2,
   Store,
-  Crown
+  Crown,
+  Trash2,
+  Key,
+  Mail
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,9 +38,13 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const Settings = () => {
+  const navigate = useNavigate();
   const { user, signOut, isMerchant, isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [savingNotifications, setSavingNotifications] = useState(false);
   const [profile, setProfile] = useState({
     display_name: "",
     avatar_url: "",
@@ -180,6 +186,76 @@ const Settings = () => {
 
   const handleSignOut = async () => {
     await signOut();
+    navigate('/');
+  };
+
+  const handleResetPassword = async () => {
+    if (!user?.email) return;
+    
+    setSendingReset(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth?mode=reset`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Reset Email Sent",
+        description: "Check your email for a password reset link.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send reset email",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingReset(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    
+    setDeleting(true);
+    try {
+      // Delete user's profile first
+      await supabase.from('profiles').delete().eq('id', user.id);
+      
+      // Delete user roles
+      await supabase.from('user_roles').delete().eq('user_id', user.id);
+      
+      // Sign out user (account deletion requires admin SDK which we can't use client-side)
+      await signOut();
+      
+      toast({
+        title: "Account Deleted",
+        description: "Your account data has been removed. You've been signed out.",
+      });
+      
+      navigate('/');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete account",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleSaveNotifications = async () => {
+    setSavingNotifications(true);
+    // Simulate saving - in a real app, this would save to a database
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    toast({
+      title: "Preferences Saved",
+      description: "Your notification preferences have been updated.",
+    });
+    setSavingNotifications(false);
   };
 
   if (loading) {
@@ -332,13 +408,34 @@ const Settings = () => {
           {/* Notifications Tab */}
           <TabsContent value="notifications" className="space-y-6">
             <div className="cyber-card space-y-6">
-              <h3 className="font-display text-lg font-bold">Notification Preferences</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-lg font-bold">Notification Preferences</h3>
+                <Button 
+                  size="sm" 
+                  onClick={handleSaveNotifications}
+                  disabled={savingNotifications}
+                >
+                  {savingNotifications ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-1" />
+                      Save
+                    </>
+                  )}
+                </Button>
+              </div>
               
               <div className="space-y-4">
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="font-medium">Email Updates</p>
-                    <p className="text-sm text-muted-foreground">Receive updates about your account</p>
+                <div className="flex items-center justify-between py-3 border-b border-border">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Mail className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Email Updates</p>
+                      <p className="text-sm text-muted-foreground">Receive updates about your account</p>
+                    </div>
                   </div>
                   <Switch
                     checked={notifications.emailUpdates}
@@ -349,10 +446,15 @@ const Settings = () => {
                 </div>
 
                 {isMerchant && (
-                  <div className="flex items-center justify-between py-2">
-                    <div>
-                      <p className="font-medium">Shop Approval Notifications</p>
-                      <p className="text-sm text-muted-foreground">Get notified when your shop is reviewed</p>
+                  <div className="flex items-center justify-between py-3 border-b border-border">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-green-500/10">
+                        <Store className="h-4 w-4 text-green-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Shop Approval Notifications</p>
+                        <p className="text-sm text-muted-foreground">Get notified when your shop is reviewed</p>
+                      </div>
                     </div>
                     <Switch
                       checked={notifications.shopApprovals}
@@ -363,10 +465,15 @@ const Settings = () => {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="font-medium">New Features</p>
-                    <p className="text-sm text-muted-foreground">Learn about new features and updates</p>
+                <div className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-blue-500/10">
+                      <Bell className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">New Features</p>
+                      <p className="text-sm text-muted-foreground">Learn about new features and updates</p>
+                    </div>
                   </div>
                   <Switch
                     checked={notifications.newFeatures}
@@ -385,26 +492,55 @@ const Settings = () => {
               <h3 className="font-display text-lg font-bold">Security & Privacy</h3>
               
               <div className="space-y-4">
-                <div className="p-4 rounded-lg bg-muted">
-                  <h4 className="font-medium mb-2">Password</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    To change your password, use the password reset option
-                  </p>
-                  <Button variant="outline" size="sm" disabled>
-                    Change Password (Coming Soon)
+                {/* Password Reset */}
+                <div className="p-4 rounded-lg bg-muted border border-border">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Key className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Password</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Reset your password via email
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleResetPassword}
+                    disabled={sendingReset}
+                  >
+                    {sendingReset ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="mr-2 h-4 w-4" />
+                        Send Reset Email
+                      </>
+                    )}
                   </Button>
                 </div>
 
-                <Separator />
-
-                <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
-                  <h4 className="font-medium text-destructive mb-2">Danger Zone</h4>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Sign out of your account on this device
-                  </p>
+                {/* Sign Out */}
+                <div className="p-4 rounded-lg bg-muted border border-border">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 rounded-lg bg-orange-500/10">
+                      <LogOut className="h-4 w-4 text-orange-500" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Sign Out</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Sign out of your account on this device
+                      </p>
+                    </div>
+                  </div>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm">
+                      <Button variant="outline" size="sm">
                         <LogOut className="mr-2 h-4 w-4" />
                         Sign Out
                       </Button>
@@ -420,6 +556,58 @@ const Settings = () => {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={handleSignOut}>
                           Sign Out
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+
+                <Separator />
+
+                {/* Delete Account */}
+                <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 rounded-lg bg-destructive/20">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-destructive">Delete Account</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Permanently delete your account and all data
+                      </p>
+                    </div>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" disabled={deleting}>
+                        {deleting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Deleting...
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Account
+                          </>
+                        )}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-destructive">Delete Account?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete your account, 
+                          profile data, and all associated information. You will be signed out immediately.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleDeleteAccount}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete Forever
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

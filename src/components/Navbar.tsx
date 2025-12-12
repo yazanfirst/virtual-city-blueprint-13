@@ -2,7 +2,9 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Building2, Map, User, LogOut, Shield, LayoutDashboard, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfile } from "@/hooks/useProfile";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +17,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut, isMerchant, isAdmin, loading } = useAuth();
+  const { profile } = useProfile();
 
   const handleSignOut = async () => {
     await signOut();
@@ -68,11 +71,14 @@ const Navbar = () => {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 border border-primary/30">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
+                      <Avatar className="h-8 w-8 border border-primary/30">
+                        <AvatarImage src={profile?.avatar_url || ''} />
+                        <AvatarFallback className="bg-primary/20 text-primary text-sm">
+                          {profile?.display_name?.charAt(0) || user.email?.charAt(0) || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
                       <span className="hidden sm:inline text-sm">
-                        {user.email?.split('@')[0]}
+                        {profile?.display_name || user.email?.split('@')[0]}
                       </span>
                     </Button>
                   </DropdownMenuTrigger>
