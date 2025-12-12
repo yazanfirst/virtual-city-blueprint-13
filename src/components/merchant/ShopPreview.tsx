@@ -1,4 +1,13 @@
 type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic" | "led_display" | "pharaoh_gold" | "greek_marble" | "art_deco" | "japanese_zen" | "neon_cyberpunk";
+type SignageFont = "classic" | "bold" | "elegant" | "modern" | "playful";
+
+const fontStyles: Record<SignageFont, { fontFamily: string; fontWeight: number; letterSpacing: string }> = {
+  classic: { fontFamily: "'Times New Roman', Georgia, serif", fontWeight: 400, letterSpacing: '1px' },
+  bold: { fontFamily: "'Impact', 'Arial Black', sans-serif", fontWeight: 700, letterSpacing: '2px' },
+  elegant: { fontFamily: "'Playfair Display', Georgia, serif", fontWeight: 400, letterSpacing: '3px' },
+  modern: { fontFamily: "'Orbitron', 'Courier New', monospace", fontWeight: 500, letterSpacing: '2px' },
+  playful: { fontFamily: "'Pacifico', cursive, sans-serif", fontWeight: 400, letterSpacing: '0px' },
+};
 
 interface ShopPreviewProps {
   name: string;
@@ -6,6 +15,7 @@ interface ShopPreviewProps {
   accentColor: string;
   facadeTemplate: FacadeTemplate;
   logoUrl?: string;
+  signageFont?: SignageFont;
 }
 
 const templateStyles: Record<FacadeTemplate, {
@@ -106,8 +116,10 @@ const ShopPreview = ({
   accentColor,
   facadeTemplate,
   logoUrl,
+  signageFont = 'classic',
 }: ShopPreviewProps) => {
   const styles = templateStyles[facadeTemplate];
+  const font = fontStyles[signageFont];
 
   return (
     <div className={`relative w-full aspect-[4/3] rounded-lg overflow-hidden ${styles.bg} ${styles.border} border-2`}>
@@ -133,30 +145,37 @@ const ShopPreview = ({
             />
           )}
           
-          {/* Logo */}
-          {logoUrl && (
-            <div className="mb-2 w-12 h-12 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center">
-              <img 
-                src={logoUrl} 
-                alt="Shop logo" 
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            </div>
-          )}
-          
-          {/* Shop name */}
-          <h3 
-            className={`font-display text-xl font-bold text-center ${styles.text} relative z-10`}
-            style={{ 
-              textShadow: facadeTemplate === 'modern_neon' ? `0 0 10px ${primaryColor}, 0 0 20px ${primaryColor}` : 'none',
-              color: facadeTemplate === 'modern_neon' ? primaryColor : undefined,
-            }}
-          >
-            {name || "Shop Name"}
-          </h3>
+          {/* Centered Logo + Name Container */}
+          <div className="flex items-center justify-center gap-3 relative z-10">
+            {/* Logo */}
+            {logoUrl && (
+              <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0">
+                <img 
+                  src={logoUrl} 
+                  alt="Shop logo" 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
+            
+            {/* Shop name with selected font */}
+            <h3 
+              className={`text-xl font-bold text-center ${styles.text}`}
+              style={{ 
+                fontFamily: font.fontFamily,
+                fontWeight: font.fontWeight,
+                letterSpacing: font.letterSpacing,
+                textShadow: facadeTemplate === 'modern_neon' ? `0 0 10px ${primaryColor}, 0 0 20px ${primaryColor}` : 'none',
+                color: facadeTemplate === 'modern_neon' ? primaryColor : undefined,
+                textTransform: signageFont === 'elegant' ? 'uppercase' : 'none',
+              }}
+            >
+              {name || "Shop Name"}
+            </h3>
+          </div>
           
           {/* Cyber tech pattern */}
           {facadeTemplate === 'cyber_tech' && (

@@ -311,6 +311,7 @@ const CreateShop = () => {
                     accentColor={formData.accentColor}
                     facadeTemplate={formData.facadeTemplate}
                     logoUrl={formData.logoUrl}
+                    signageFont={formData.signageFont}
                   />
                 </div>
               </div>
@@ -361,6 +362,7 @@ const CreateShop = () => {
                     accentColor={formData.accentColor}
                     facadeTemplate={formData.facadeTemplate}
                     logoUrl={formData.logoUrl}
+                    signageFont={formData.signageFont}
                   />
                 </div>
               </div>
