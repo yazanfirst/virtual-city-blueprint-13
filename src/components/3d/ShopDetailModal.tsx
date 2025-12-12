@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 interface ShopDetailModalProps {
   shop: ShopBranding | null;
   onClose: () => void;
+  onEnterShop?: (shop: ShopBranding) => void;
 }
 
 const templateLabels: Record<string, string> = {
@@ -24,7 +25,7 @@ const templateLabels: Record<string, string> = {
   nature_organic: "Nature Organic",
 };
 
-const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
+const ShopDetailModal = ({ shop, onClose, onEnterShop }: ShopDetailModalProps) => {
   const navigate = useNavigate();
   const { user, isMerchant } = useAuth();
   const [upgrading, setUpgrading] = useState(false);
@@ -210,7 +211,7 @@ const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
               
               {/* Visit Store Button - disabled for suspended shops */}
               {shop.externalLink && !shop.isSuspended && (
-                <Button 
+                <Button
                   className="w-full"
                   style={{
                     backgroundColor: shop.primaryColor,
@@ -218,15 +219,27 @@ const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
                   }}
                   asChild
                 >
-                  <a 
-                    href={shop.externalLink} 
-                    target="_blank" 
+                  <a
+                    href={shop.externalLink}
+                    target="_blank"
                     rel="noopener noreferrer"
                   >
                     <ShoppingBag className="h-4 w-4 mr-2" />
                     Visit Store
                     <ExternalLink className="h-4 w-4 ml-2" />
                   </a>
+                </Button>
+              )}
+
+              {/* Enter immersive shop view */}
+              {onEnterShop && (
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => onEnterShop(shop)}
+                >
+                  <ShoppingBag className="h-4 w-4 mr-2" />
+                  Enter Virtual Shop
                 </Button>
               )}
               

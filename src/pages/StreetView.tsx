@@ -6,6 +6,7 @@ import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
 import CityScene, { CameraView } from "@/components/3d/CityScene";
 import ShopDetailModal from "@/components/3d/ShopDetailModal";
+import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import { useGameStore } from "@/stores/gameStore";
 
@@ -45,6 +46,8 @@ const StreetView = () => {
   const [showShopModal, setShowShopModal] = useState(false);
   const [show2DMap, setShow2DMap] = useState(false);
   const [showMissions, setShowMissions] = useState(false);
+  const [isInsideShop, setIsInsideShop] = useState(false);
+  const [interiorShop, setInteriorShop] = useState<ShopBranding | null>(null);
 
   // Game state
   const { coins, level, xp } = useGameStore();
@@ -55,6 +58,16 @@ const StreetView = () => {
   const handleShopClick = (shop: ShopBranding) => {
     setSelectedShop(shop);
     setShowShopModal(true);
+  };
+
+  const handleEnterShop = (shop: ShopBranding) => {
+    setInteriorShop(shop);
+    setIsInsideShop(true);
+    setShowShopModal(false);
+  };
+
+  const handleExitShop = () => {
+    setIsInsideShop(false);
   };
 
   // Transform spots data to shop brandings
@@ -145,7 +158,7 @@ const StreetView = () => {
   }
 
   // Compact overlay panel for game mode
-  const OverlayPanel = ({ 
+  const OverlayPanel = ({
     title, 
     icon: Icon, 
     children,
@@ -171,6 +184,10 @@ const StreetView = () => {
 
   // Game Mode (Maximized) Layout
   if (isMaximized) {
+    const interiorOverlay = isInsideShop && interiorShop ? (
+      <ShopInteriorRoom shop={interiorShop} onExit={handleExitShop} />
+    ) : null;
+
     return (
       <div className="fixed inset-0 z-50 bg-background">
         {/* Full-screen 3D Scene */}
@@ -185,9 +202,10 @@ const StreetView = () => {
           
           {/* Shop Detail Modal */}
           {showShopModal && (
-            <ShopDetailModal 
-              shop={selectedShop} 
-              onClose={() => setShowShopModal(false)} 
+            <ShopDetailModal
+              shop={selectedShop}
+              onClose={() => setShowShopModal(false)}
+              onEnterShop={handleEnterShop}
             />
           )}
           
@@ -401,14 +419,20 @@ const StreetView = () => {
             </OverlayPanel>
           </div>
         </div>
+        {interiorOverlay}
       </div>
     );
   }
 
+  const interiorOverlay = isInsideShop && interiorShop ? (
+    <ShopInteriorRoom shop={interiorShop} onExit={handleExitShop} />
+  ) : null;
+
   // Normal 3-Column Layout
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4">
-      <div className="container mx-auto max-w-7xl">
+    <>
+      <div className="min-h-screen pt-24 pb-12 px-4">
+        <div className="container mx-auto max-w-7xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="icon" asChild>
@@ -529,9 +553,10 @@ const StreetView = () => {
               
               {/* Shop Detail Modal */}
               {showShopModal && (
-                <ShopDetailModal 
-                  shop={selectedShop} 
-                  onClose={() => setShowShopModal(false)} 
+                <ShopDetailModal
+                  shop={selectedShop}
+                  onClose={() => setShowShopModal(false)}
+                  onEnterShop={handleEnterShop}
                 />
               )}
             </div>
@@ -592,8 +617,10 @@ const StreetView = () => {
             </PanelBox>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+      {interiorOverlay}
+    </>
   );
 };
 
