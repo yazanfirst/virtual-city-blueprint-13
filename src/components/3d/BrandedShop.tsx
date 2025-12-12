@@ -147,16 +147,17 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
         {/* Centered content container - Logo + Text centered together */}
         {hasShop ? (
           <Html
-            position={[0, 0, 0.16]}
+            position={[0, 0.03, 0.16]}
             transform
             occlude
             center
+            scale={1.2}
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px',
-              maxWidth: '160px',
+              gap: '8px',
+              maxWidth: '170px',
               pointerEvents: 'none',
             }}
           >
@@ -166,10 +167,10 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
                 src={logoUrl} 
                 alt="Shop logo"
                 style={{
-                  width: '24px',
-                  height: '24px',
+                  width: '28px',
+                  height: '28px',
                   objectFit: 'contain',
-                  borderRadius: '3px',
+                  borderRadius: '4px',
                   flexShrink: 0,
                 }}
               />
@@ -180,7 +181,12 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
                 fontFamily: font.fontFamily,
                 fontWeight: font.fontWeight,
                 letterSpacing: font.letterSpacing,
-                fontSize: shopName && shopName.length > 12 ? '9px' : shopName && shopName.length > 8 ? '11px' : '13px',
+                fontSize:
+                  shopName && shopName.length > 12
+                    ? '11px'
+                    : shopName && shopName.length > 8
+                      ? '13px'
+                      : '15px',
                 color: isSuspended ? '#888888' : '#FFFFFF',
                 textShadow: isSuspended 
                   ? '1px 1px 2px rgba(0,0,0,0.9)' 
@@ -190,7 +196,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
                 textOverflow: 'ellipsis',
                 textTransform: signageFont === 'elegant' ? 'uppercase' : 'none',
                 textAlign: 'center',
-                maxWidth: logoUrl ? '120px' : '150px',
+                maxWidth: logoUrl ? '130px' : '160px',
               }}
             >
               {shopName || "SHOP"}
