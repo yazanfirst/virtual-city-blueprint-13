@@ -62,7 +62,7 @@ const AdminDashboard = () => {
           "Shop Approved! 🎉",
           `Your shop "${shop.name}" has been approved and is now live in the city!`,
           "success",
-          "/merchant/shops"
+          "/merchant/dashboard"
         );
       }
       toast({ title: "Shop Approved", description: "The shop is now active." });
@@ -87,7 +87,7 @@ const AdminDashboard = () => {
           "Shop Rejected",
           `Your shop "${shop.name}" was not approved. Please review our guidelines and try again.`,
           "error",
-          "/merchant/shops"
+          "/merchant/dashboard"
         );
       }
       toast({ title: "Shop Rejected" });
@@ -112,7 +112,7 @@ const AdminDashboard = () => {
           "Shop Suspended",
           `Your shop "${shop.name}" has been suspended by an administrator.`,
           "warning",
-          "/merchant/shops"
+          "/merchant/dashboard"
         );
       }
       toast({ title: "Shop Suspended", description: "The shop has been suspended." });
@@ -137,7 +137,7 @@ const AdminDashboard = () => {
           "Shop Reactivated! 🎉",
           `Your shop "${shop.name}" has been reactivated and is now live again!`,
           "success",
-          "/merchant/shops"
+          "/merchant/dashboard"
         );
       }
       toast({ title: "Shop Reactivated", description: "The shop is now active again." });
