@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Text, Html } from "@react-three/drei";
+import { Text, Html, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { ShopBranding } from "@/hooks/use3DShops";
 
@@ -37,9 +37,40 @@ const fontStyles = {
   playful: { fontFamily: "'Pacifico', cursive, sans-serif", fontWeight: 400, letterSpacing: '0px' },
 };
 
+// Texture tint colors to apply over textures
+const textureColors: Record<string, string> = {
+  wood: "#8B6914",
+  marble: "#E8E4DC",
+  brick: "#8B4513",
+  metal: "#708090",
+  concrete: "#808080",
+  fabric: "#6B5B95",
+  leather: "#654321",
+};
+
+// Texture loading component
+const TexturedMesh = ({ textureUrl, isNight, buildingColor }: { textureUrl: string; isNight: boolean; buildingColor: string }) => {
+  const texture = useTexture(textureUrl);
+  
+  useMemo(() => {
+    if (texture) {
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(2, 2);
+    }
+  }, [texture]);
+
+  return (
+    <mesh position={[0, 3, 0]}>
+      <boxGeometry args={[8, 6, 8]} />
+      <meshLambertMaterial map={texture} color={isNight ? "#5A5A6A" : "#FFFFFF"} />
+    </mesh>
+  );
+};
+
 const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
-  const { position, hasShop, isSuspended, shopName, primaryColor, accentColor, facadeTemplate, logoUrl, signageFont } = branding;
+  const { position, hasShop, isSuspended, shopName, primaryColor, accentColor, facadeTemplate, logoUrl, signageFont, textureTemplate, textureUrl } = branding;
   const [hovered, setHovered] = useState(false);
+  const [textureError, setTextureError] = useState(false);
   
   const template = (facadeTemplate as keyof typeof templateColors) || 'modern_neon';
   const colors = templateColors[template] || templateColors.modern_neon;
@@ -54,7 +85,12 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
     return `#${c.getHexString()}`;
   }, [primaryHex, colors.bg, hasShop]);
 
-  const buildingColor = hasShop ? primaryHex : colors.bg;
+  // Determine building color based on texture or primary color
+  const hasTexture = hasShop && textureUrl && !textureError;
+  const hasPresetTexture = hasShop && textureTemplate && textureTemplate !== 'none';
+  const buildingColor = hasPresetTexture 
+    ? (textureColors[textureTemplate] || primaryHex) 
+    : (hasShop ? primaryHex : colors.bg);
   const roofColor = hasShop ? darker : colors.roof;
 
   // Decoration visibility - always show for shops at night
@@ -78,11 +114,22 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
         document.body.style.cursor = 'default';
       }}
     >
-      {/* Main body */}
-      <mesh position={[0, 3, 0]}>
-        <boxGeometry args={[8, 6, 8]} />
-        <meshLambertMaterial color={isNight ? "#3A3A4A" : buildingColor} />
-      </mesh>
+      {/* Main body - with texture support */}
+      {hasTexture ? (
+        <React.Suspense fallback={
+          <mesh position={[0, 3, 0]}>
+            <boxGeometry args={[8, 6, 8]} />
+            <meshLambertMaterial color={isNight ? "#3A3A4A" : buildingColor} />
+          </mesh>
+        }>
+          <TexturedMesh textureUrl={textureUrl!} isNight={isNight} buildingColor={buildingColor} />
+        </React.Suspense>
+      ) : (
+        <mesh position={[0, 3, 0]}>
+          <boxGeometry args={[8, 6, 8]} />
+          <meshLambertMaterial color={isNight ? "#3A3A4A" : buildingColor} />
+        </mesh>
+      )}
       
       {/* Roof */}
       <mesh position={[0, 6.2, 0]}>

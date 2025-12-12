@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 
 type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic" | "led_display" | "pharaoh_gold" | "greek_marble" | "art_deco" | "japanese_zen" | "neon_cyberpunk";
 type SignageFont = "classic" | "bold" | "elegant" | "modern" | "playful";
+type TextureTemplate = "none" | "wood" | "marble" | "brick" | "metal" | "concrete" | "fabric" | "leather";
 
 interface BrandingEditorProps {
   primaryColor: string;
@@ -15,12 +16,16 @@ interface BrandingEditorProps {
   facadeTemplate: FacadeTemplate;
   logoUrl: string;
   signageFont: SignageFont;
+  textureTemplate?: TextureTemplate;
+  textureUrl?: string;
   onUpdate: (updates: Partial<{
     primaryColor: string;
     accentColor: string;
     facadeTemplate: FacadeTemplate;
     logoUrl: string;
     signageFont: SignageFont;
+    textureTemplate: TextureTemplate;
+    textureUrl: string;
   }>) => void;
 }
 
@@ -49,12 +54,25 @@ const signageFonts: { id: SignageFont; name: string; preview: string; fontFamily
   { id: "playful", name: "Playful", preview: "Aa", fontFamily: "'Pacifico', cursive" },
 ];
 
+const textureTemplates: { id: TextureTemplate; name: string; description: string; icon: string }[] = [
+  { id: "none", name: "No Texture", description: "Use solid primary color", icon: "🎨" },
+  { id: "wood", name: "Wood", description: "Natural wood grain pattern", icon: "🪵" },
+  { id: "marble", name: "Marble", description: "Elegant marble stone", icon: "🏛️" },
+  { id: "brick", name: "Brick", description: "Classic red brick wall", icon: "🧱" },
+  { id: "metal", name: "Metal", description: "Industrial brushed metal", icon: "⚙️" },
+  { id: "concrete", name: "Concrete", description: "Modern raw concrete", icon: "🏗️" },
+  { id: "fabric", name: "Fabric", description: "Soft textile pattern", icon: "🧵" },
+  { id: "leather", name: "Leather", description: "Premium leather texture", icon: "👜" },
+];
+
 const BrandingEditor = ({
   primaryColor,
   accentColor,
   facadeTemplate,
   logoUrl,
   signageFont,
+  textureTemplate = "none",
+  textureUrl = "",
   onUpdate,
 }: BrandingEditorProps) => {
   const [uploading, setUploading] = useState(false);
@@ -118,6 +136,66 @@ const BrandingEditor = ({
 
   const handleRemoveLogo = () => {
     onUpdate({ logoUrl: '' });
+  };
+
+  const [uploadingTexture, setUploadingTexture] = useState(false);
+
+  const handleTextureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file (PNG, JPG, etc.)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingTexture(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `texture-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('shop-logos')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('shop-logos')
+        .getPublicUrl(fileName);
+
+      onUpdate({ textureUrl: publicUrl, textureTemplate: 'none' });
+      
+      toast({
+        title: "Texture uploaded!",
+        description: "Your custom texture has been uploaded.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload texture",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingTexture(false);
+    }
+  };
+
+  const handleRemoveTexture = () => {
+    onUpdate({ textureUrl: '', textureTemplate: 'none' });
   };
 
   return (
@@ -259,6 +337,79 @@ const BrandingEditor = ({
               <span className="text-xs text-muted-foreground">{font.name}</span>
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Facade Texture */}
+      <div className="space-y-3">
+        <h3 className="font-display font-bold">Facade Texture</h3>
+        <p className="text-sm text-muted-foreground">Choose a preset texture or upload your own</p>
+        
+        {/* Texture Templates */}
+        <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-2">
+          {textureTemplates.map((texture) => (
+            <button
+              key={texture.id}
+              onClick={() => onUpdate({ textureTemplate: texture.id, textureUrl: '' })}
+              className={`text-left p-3 rounded-lg border transition-all ${
+                textureTemplate === texture.id && !textureUrl
+                  ? "border-primary bg-primary/10 ring-2 ring-primary/30"
+                  : "border-border hover:border-primary/50"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-lg">{texture.icon}</span>
+                <span className="font-medium text-sm">{texture.name}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{texture.description}</p>
+            </button>
+          ))}
+        </div>
+
+        {/* Custom Texture Upload */}
+        <div className="pt-2 border-t border-border">
+          <p className="text-sm font-medium mb-2">Or upload custom texture:</p>
+          {textureUrl ? (
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-lg border border-border overflow-hidden bg-muted">
+                <img 
+                  src={textureUrl} 
+                  alt="Custom texture" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleRemoveTexture}
+                className="text-destructive"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Remove
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <label className="flex flex-col items-center justify-center w-full h-16 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
+                <div className="flex items-center gap-2">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    {uploadingTexture ? "Uploading..." : "Upload texture image"}
+                  </p>
+                </div>
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept="image/*"
+                  onChange={handleTextureUpload}
+                  disabled={uploadingTexture}
+                />
+              </label>
+              <p className="text-xs text-muted-foreground mt-1">
+                PNG, JPG up to 2MB. Seamless textures work best.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
