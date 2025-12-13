@@ -20,6 +20,13 @@ interface FrameSpotConfig {
   wall: 'front' | 'left' | 'right' | 'back';
 }
 
+const FRAME_DIMENSIONS = {
+  outer: { width: 2, height: 2.5, depth: 0.12 },
+  inner: { width: 1.78, height: 2.28, depth: 0.08 },
+  mat: { width: 1.6, height: 2.05, depth: 0.02 },
+  content: { width: 180, height: 225 },
+};
+
 // 5 frames: 2 front wall, 1 left, 1 right, 1 back
 const FRAME_SPOTS: FrameSpotConfig[] = [
   // Front wall - 2 frames
@@ -170,6 +177,8 @@ const OrnateFrame = ({
   const hasItem = Boolean(item?.title);
   const frameColor = hasItem ? "#c9a227" : "#4a3f35";
   const innerColor = hasItem ? "#1a1510" : "#0f0d0a";
+  const cornerOffsetX = FRAME_DIMENSIONS.outer.width / 2 - 0.1;
+  const cornerOffsetY = FRAME_DIMENSIONS.outer.height / 2 - 0.15;
   
   return (
     <group position={config.position} rotation={config.rotation}>
@@ -186,8 +195,10 @@ const OrnateFrame = ({
       
       {/* Outer ornate frame */}
       <mesh position={[0, 0, 0.02]}>
-        <boxGeometry args={[2.4, 1.8, 0.12]} />
-        <meshStandardMaterial 
+        <boxGeometry
+          args={[FRAME_DIMENSIONS.outer.width, FRAME_DIMENSIONS.outer.height, FRAME_DIMENSIONS.outer.depth]}
+        />
+        <meshStandardMaterial
           color={frameColor}
           metalness={0.6}
           roughness={0.35}
@@ -198,8 +209,8 @@ const OrnateFrame = ({
       
       {/* Frame inner border */}
       <mesh position={[0, 0, 0.06]}>
-        <boxGeometry args={[2.1, 1.5, 0.08]} />
-        <meshStandardMaterial 
+        <boxGeometry args={[FRAME_DIMENSIONS.inner.width, FRAME_DIMENSIONS.inner.height, FRAME_DIMENSIONS.inner.depth]} />
+        <meshStandardMaterial
           color={hasItem ? "#8b7355" : "#3a3028"}
           metalness={0.4}
           roughness={0.5}
@@ -208,12 +219,17 @@ const OrnateFrame = ({
       
       {/* Frame mat/passepartout */}
       <mesh position={[0, 0, 0.1]}>
-        <boxGeometry args={[1.9, 1.3, 0.02]} />
+        <boxGeometry args={[FRAME_DIMENSIONS.mat.width, FRAME_DIMENSIONS.mat.height, FRAME_DIMENSIONS.mat.depth]} />
         <meshStandardMaterial color={innerColor} roughness={0.9} />
       </mesh>
       
       {/* Corner decorations */}
-      {[[-0.95, 0.65], [0.95, 0.65], [-0.95, -0.65], [0.95, -0.65]].map(([x, y], i) => (
+      {[
+        [-cornerOffsetX, cornerOffsetY],
+        [cornerOffsetX, cornerOffsetY],
+        [-cornerOffsetX, -cornerOffsetY],
+        [cornerOffsetX, -cornerOffsetY],
+      ].map(([x, y], i) => (
         <mesh key={i} position={[x, y, 0.08]}>
           <sphereGeometry args={[0.08, 8, 8]} />
           <meshStandardMaterial color={frameColor} metalness={0.7} roughness={0.3} />
@@ -234,9 +250,9 @@ const OrnateFrame = ({
             onSelect(config.slot);
           }}
           className="group transition-transform duration-200 hover:scale-[1.02] focus:outline-none"
-          style={{ 
-            width: '170px',
-            height: '115px',
+          style={{
+            width: `${FRAME_DIMENSIONS.content.width}px`,
+            height: `${FRAME_DIMENSIONS.content.height}px`,
             borderRadius: '4px',
             overflow: 'hidden',
             boxShadow: isSelected ? `0 0 20px ${accent}50` : 'none',
@@ -245,25 +261,25 @@ const OrnateFrame = ({
           {hasItem && item ? (
             <div className="relative h-full w-full bg-card/95 backdrop-blur-sm border border-border/30 overflow-hidden">
               {/* Product image */}
-              <div className="relative h-[70px] w-full overflow-hidden bg-muted">
+              <div className="relative h-[65%] w-full overflow-hidden bg-muted">
                 {item.image_url ? (
-                  <img 
-                    src={item.image_url} 
-                    alt={item.title} 
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                  <img
+                    src={item.image_url}
+                    alt={item.title}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 ) : (
-                  <div 
+                  <div
                     className="h-full w-full flex items-center justify-center"
                     style={{ background: `linear-gradient(135deg, ${primary}30, ${accent}20)` }}
                   >
                     <Package className="h-6 w-6 text-muted-foreground/50" />
                   </div>
                 )}
-                
+
                 {/* Price badge */}
                 {item.price != null && (
-                  <div 
+                  <div
                     className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-white shadow"
                     style={{ backgroundColor: accent }}
                   >
@@ -271,15 +287,15 @@ const OrnateFrame = ({
                   </div>
                 )}
               </div>
-              
+
               {/* Product title */}
-              <div className="p-1.5 bg-background/80">
-                <p className="text-[11px] font-medium text-foreground truncate">{item.title}</p>
-                <p className="text-[9px] text-muted-foreground">Tap to view</p>
+              <div className="p-1.5 bg-background/85">
+                <p className="text-[12px] font-medium text-foreground truncate">{item.title}</p>
+                <p className="text-[10px] text-muted-foreground">Tap to view</p>
               </div>
             </div>
           ) : (
-            <div 
+            <div
               className="h-full w-full flex flex-col items-center justify-center gap-2 bg-background/40 backdrop-blur-sm border border-dashed border-muted-foreground/20 rounded"
             >
               <Package className="h-6 w-6 text-muted-foreground/30" />
