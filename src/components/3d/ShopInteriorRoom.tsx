@@ -9,6 +9,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ShopItem, useShopItems } from "@/hooks/useShopItems";
 import { X, ExternalLink, ChevronLeft, ChevronRight, Package } from "lucide-react";
 
+type DeviceOrientation = "portrait" | "landscape";
+interface DeviceViewportState {
+  isMobile: boolean;
+  orientation: DeviceOrientation;
+}
+
 interface ShopInteriorRoomProps {
   shop: ShopBranding;
   onExit: () => void;
@@ -91,6 +97,51 @@ const createBrickTexture = () => {
 // Memoized brick texture hook
 const useBrickTexture = () => {
   return useMemo(() => createBrickTexture(), []);
+};
+
+const useDeviceViewport = (): DeviceViewportState => {
+  const [state, setState] = useState<DeviceViewportState>({
+    isMobile: false,
+    orientation: "portrait",
+  });
+
+  useEffect(() => {
+    const computeState = (): DeviceViewportState => {
+      if (typeof window === "undefined") {
+        return { isMobile: false, orientation: "portrait" };
+      }
+
+      const mobileQuery = window.matchMedia("(max-width: 768px)");
+      const portraitQuery = window.matchMedia("(orientation: portrait)");
+
+      const isMobile = mobileQuery.matches;
+      const isPortrait = portraitQuery.matches || window.innerHeight >= window.innerWidth;
+
+      return {
+        isMobile,
+        orientation: isPortrait ? "portrait" : "landscape",
+      };
+    };
+
+    const handleChange = () => setState(computeState());
+
+    const mobileQuery = window.matchMedia("(max-width: 768px)");
+    const portraitQuery = window.matchMedia("(orientation: portrait)");
+
+    handleChange();
+
+    mobileQuery.addEventListener("change", handleChange);
+    portraitQuery.addEventListener("change", handleChange);
+    window.addEventListener("resize", handleChange);
+
+    return () => {
+      mobileQuery.removeEventListener("change", handleChange);
+      portraitQuery.removeEventListener("change", handleChange);
+      window.removeEventListener("resize", handleChange);
+    };
+  }, []);
+
+  return state;
 };
 
 const ROOM_PIVOT = new THREE.Vector3(0, 2, -1.5);
@@ -452,6 +503,7 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
   const { data: items = [], isLoading } = useShopItems(shop.shopId);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const { isMobile, orientation } = useDeviceViewport();
 
   const wallItems = useMemo(() => {
     const filled = Array.from({ length: 5 }, () => undefined as ShopItem | undefined);
@@ -467,6 +519,16 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
   const primary = shop.primaryColor || "#3B82F6";
   const selectedItem = selectedSlot !== null ? wallItems[selectedSlot] : undefined;
   const filledSlots = wallItems.filter(Boolean);
+  const isMobilePortrait = isMobile && orientation === "portrait";
+  const isMobileLandscape = isMobile && orientation === "landscape";
+  const dialogSizeClasses = [
+    isMobilePortrait ? "max-w-[calc(100vw-1.25rem)] w-[calc(100vw-1.25rem)]" : "",
+    isMobileLandscape ? "max-w-[calc(100vw-1rem)] w-[calc(100vw-1rem)]" : "",
+    !isMobile ? "max-w-3xl w-[calc(100vw-4rem)]" : "",
+    "max-h-[calc(100vh-1.25rem)] overflow-y-auto p-4 sm:p-6",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   const handleSelectFrame = (slot: number, item?: ShopItem) => {
     setSelectedSlot(slot);
@@ -556,7 +618,7 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
       </Canvas>
 
       <Dialog open={showDetails && Boolean(selectedItem)} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-2xl w-[calc(100vw-2rem)]">
+        <DialogContent className={dialogSizeClasses}>
           {selectedItem && (
             <>
               <DialogHeader>
@@ -578,8 +640,20 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="grid gap-4 sm:grid-cols-[1.05fr_1fr] items-start">
-                <div className="relative w-full overflow-hidden rounded-xl border border-border/50 bg-muted">
+              <div
+                className={`grid gap-4 items-start ${
+                  isMobilePortrait
+                    ? "grid-cols-1"
+                    : isMobileLandscape
+                      ? "grid-cols-[1.05fr_1fr]"
+                      : "sm:grid-cols-[1.05fr_1fr]"
+                }`}
+              >
+                <div
+                  className={`relative w-full overflow-hidden rounded-xl border border-border/50 bg-muted aspect-[4/5] ${
+                    isMobilePortrait ? "max-h-[55vh]" : "max-h-[65vh]"
+                  }`}
+                >
                   {selectedItem.image_url ? (
                     <img
                       src={selectedItem.image_url}
