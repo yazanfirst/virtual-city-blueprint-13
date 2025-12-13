@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { ShopBranding } from "@/hooks/use3DShops";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ShopItem, useShopItems } from "@/hooks/useShopItems";
 import { X, ExternalLink, ChevronLeft, ChevronRight, Package } from "lucide-react";
 
@@ -172,7 +173,7 @@ const OrnateFrame = ({
   accent: string;
   primary: string;
   isSelected: boolean;
-  onSelect: (slot: number) => void;
+  onSelect: (slot: number, item?: ShopItem) => void;
 }) => {
   const hasItem = Boolean(item?.title);
   const frameColor = hasItem ? "#c9a227" : "#4a3f35";
@@ -247,7 +248,7 @@ const OrnateFrame = ({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onSelect(config.slot);
+            onSelect(config.slot, item);
           }}
           className="group transition-transform duration-200 hover:scale-[1.02] focus:outline-none"
           style={{
@@ -317,7 +318,7 @@ const InteriorScene = ({
   shop: ShopBranding;
   items: (ShopItem | undefined)[];
   selectedSlot: number | null;
-  onSelectItem: (slot: number) => void;
+  onSelectItem: (slot: number, item?: ShopItem) => void;
 }) => {
   const brickTexture = useBrickTexture();
   const accent = shop.accentColor || "#10B981";
@@ -450,6 +451,7 @@ const InteriorScene = ({
 const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
   const { data: items = [], isLoading } = useShopItems(shop.shopId);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   const wallItems = useMemo(() => {
     const filled = Array.from({ length: 5 }, () => undefined as ShopItem | undefined);
@@ -465,6 +467,19 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
   const primary = shop.primaryColor || "#3B82F6";
   const selectedItem = selectedSlot !== null ? wallItems[selectedSlot] : undefined;
   const filledSlots = wallItems.filter(Boolean);
+
+  const handleSelectFrame = (slot: number, item?: ShopItem) => {
+    setSelectedSlot(slot);
+    if (item) {
+      setShowDetails(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedItem) {
+      setShowDetails(false);
+    }
+  }, [selectedItem]);
   
   const navigateItem = (direction: 'prev' | 'next') => {
     const filledIndices = wallItems.map((item, i) => item ? i : -1).filter(i => i !== -1);
@@ -534,11 +549,79 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
             shop={shop}
             items={wallItems}
             selectedSlot={selectedSlot}
-            onSelectItem={setSelectedSlot}
+            onSelectItem={handleSelectFrame}
           />
         </React.Suspense>
         <RoomCameraController />
       </Canvas>
+
+      <Dialog open={showDetails && Boolean(selectedItem)} onOpenChange={setShowDetails}>
+        <DialogContent className="max-w-2xl w-[calc(100vw-2rem)]">
+          {selectedItem && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-start justify-between gap-3 text-foreground">
+                  <span className="text-lg sm:text-xl font-semibold leading-tight">
+                    {selectedItem.title}
+                  </span>
+                  {selectedItem.price != null && (
+                    <span
+                      className="shrink-0 px-3 py-1 rounded-full text-sm font-bold text-white"
+                      style={{ backgroundColor: accent }}
+                    >
+                      ${Number(selectedItem.price).toFixed(2)}
+                    </span>
+                  )}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Full product details
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid gap-4 sm:grid-cols-[1.05fr_1fr] items-start">
+                <div className="relative w-full overflow-hidden rounded-xl border border-border/50 bg-muted">
+                  {selectedItem.image_url ? (
+                    <img
+                      src={selectedItem.image_url}
+                      alt={selectedItem.title}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div
+                      className="flex aspect-[4/5] h-full w-full items-center justify-center text-muted-foreground/60"
+                      style={{ background: `linear-gradient(135deg, ${primary}25, ${accent}20)` }}
+                    >
+                      <Package className="h-10 w-10" />
+                    </div>
+                  )}
+                  {selectedItem.price != null && (
+                    <div
+                      className="absolute bottom-3 right-3 rounded-lg px-3 py-1 text-sm font-semibold text-white shadow-lg"
+                      style={{ backgroundColor: accent }}
+                    >
+                      ${Number(selectedItem.price).toFixed(2)}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  {selectedItem.description ? (
+                    <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-line">
+                      {selectedItem.description}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No description provided.</p>
+                  )}
+
+                  <div className="rounded-lg border border-border/60 bg-card/70 p-3 text-xs text-muted-foreground">
+                    Displayed in slot {selectedSlot !== null ? selectedSlot + 1 : "-"}. Tap other frames to view their details.
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Bottom Panel - Mobile landscape friendly */}
       <div className="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 bg-gradient-to-t from-background via-background/95 to-transparent">
