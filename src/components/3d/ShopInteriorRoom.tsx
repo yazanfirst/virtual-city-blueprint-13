@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, OrbitControls, Text } from "@react-three/drei";
 import * as THREE from "three";
+import { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { ShopBranding } from "@/hooks/use3DShops";
 import { Button } from "@/components/ui/button";
 import { ShopItem, useShopItems } from "@/hooks/useShopItems";
@@ -82,6 +83,72 @@ const createBrickTexture = () => {
 // Memoized brick texture hook
 const useBrickTexture = () => {
   return useMemo(() => createBrickTexture(), []);
+};
+
+const ROOM_PIVOT = new THREE.Vector3(0, 2, -1.5);
+const ROOM_BOUNDS = {
+  minX: -5.6,
+  maxX: 5.6,
+  minY: 1.2,
+  maxY: 3.6,
+  minZ: -4.8,
+  maxZ: 4.2,
+};
+
+const RoomCameraController = () => {
+  const { camera, gl } = useThree();
+  const controlsRef = useRef<OrbitControlsImpl>(null);
+
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    controls.enablePan = false;
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.minDistance = 1.8;
+    controls.maxDistance = 4.6;
+    controls.minPolarAngle = Math.PI / 5;
+    controls.maxPolarAngle = Math.PI / 1.9;
+    controls.rotateSpeed = 0.55;
+    controls.target.copy(ROOM_PIVOT);
+
+    const clampCamera = () => {
+      const position = camera.position;
+
+      position.x = THREE.MathUtils.clamp(position.x, ROOM_BOUNDS.minX, ROOM_BOUNDS.maxX);
+      position.y = THREE.MathUtils.clamp(position.y, ROOM_BOUNDS.minY, ROOM_BOUNDS.maxY);
+      position.z = THREE.MathUtils.clamp(position.z, ROOM_BOUNDS.minZ, ROOM_BOUNDS.maxZ);
+
+      const offset = position.clone().sub(ROOM_PIVOT);
+      const clampedRadius = THREE.MathUtils.clamp(offset.length(), controls.minDistance, controls.maxDistance);
+
+      if (Math.abs(clampedRadius - offset.length()) > 1e-3) {
+        offset.setLength(clampedRadius);
+        position.copy(ROOM_PIVOT).add(offset);
+      }
+
+      camera.lookAt(ROOM_PIVOT);
+      controls.target.copy(ROOM_PIVOT);
+    };
+
+    clampCamera();
+    controls.addEventListener("change", clampCamera);
+
+    return () => {
+      controls.removeEventListener("change", clampCamera);
+    };
+  }, [camera]);
+
+  useFrame(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    controls.target.copy(ROOM_PIVOT);
+    controls.update();
+  });
+
+  return <OrbitControls ref={controlsRef} args={[camera, gl.domElement]} />;
 };
 
 // Beautiful ornate frame component
@@ -447,24 +514,14 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
         <color attach="background" args={["#291b14"]} />
         <fog attach="fog" args={["#291b14", 8, 18]} />
         <React.Suspense fallback={null}>
-          <InteriorScene 
-            shop={shop} 
-            items={wallItems} 
+          <InteriorScene
+            shop={shop}
+            items={wallItems}
             selectedSlot={selectedSlot}
-            onSelectItem={setSelectedSlot} 
+            onSelectItem={setSelectedSlot}
           />
         </React.Suspense>
-        <OrbitControls
-          enablePan={false}
-          enableDamping
-          dampingFactor={0.08}
-          maxDistance={5}
-          minDistance={1.5}
-          target={[0, 2, -2]}
-          maxPolarAngle={Math.PI / 2.1}
-          minPolarAngle={Math.PI / 5}
-          rotateSpeed={0.5}
-        />
+        <RoomCameraController />
       </Canvas>
 
       {/* Bottom Panel - Mobile landscape friendly */}
