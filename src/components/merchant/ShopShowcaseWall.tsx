@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, Info, Loader2, Trash } from "lucide-react";
+import { ImagePlus, Loader2, Trash2, Package, DollarSign, FileText, Sparkles, Check, X, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useDeleteShopItem, useShopItems, useUpsertShopItem } from "@/hooks/useShopItems";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ShowcaseWallProps {
   shopId: string;
@@ -29,14 +37,14 @@ const emptySlot: SlotState = {
   image_url: "",
 };
 
-const slotLabels = ["Spot 1", "Spot 2", "Spot 3", "Spot 4", "Spot 5"];
-
-const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor, accentColor }) => {
+const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#3B82F6", accentColor = "#10B981" }) => {
   const { data: items, isLoading } = useShopItems(shopId);
   const upsertItem = useUpsertShopItem(shopId);
   const deleteItem = useDeleteShopItem(shopId);
   const [slots, setSlots] = useState<SlotState[]>(() => Array.from({ length: 5 }, () => ({ ...emptySlot })));
   const [savingSlot, setSavingSlot] = useState<number | null>(null);
+  const [editingSlot, setEditingSlot] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<SlotState>({ ...emptySlot });
   const uploadRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -58,7 +66,7 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor, acc
     setSlots(next);
   }, [items]);
 
-  const handleFileUpload = async (slotIndex: number, file: File) => {
+  const handleFileUpload = async (file: File) => {
     if (!file.type.startsWith("image/")) {
       toast({
         title: "Invalid file type",
@@ -78,7 +86,7 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor, acc
     }
 
     const fileExt = file.name.split(".").pop();
-    const fileName = `items/${shopId}-${slotIndex}-${Date.now()}.${fileExt}`;
+    const fileName = `items/${shopId}-${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage.from("shop-logos").upload(fileName, file);
     if (uploadError) {
@@ -97,41 +105,40 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor, acc
     return publicUrl;
   };
 
-  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>, slotIndex: number) => {
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const uploadedUrl = await handleFileUpload(slotIndex, file);
+    const uploadedUrl = await handleFileUpload(file);
     if (!uploadedUrl) return;
 
-    setSlots(prev => {
-      const next = [...prev];
-      next[slotIndex] = { ...next[slotIndex], image_url: uploadedUrl };
-      return next;
-    });
+    setEditForm(prev => ({ ...prev, image_url: uploadedUrl }));
   };
 
-  const updateSlotField = (slotIndex: number, field: keyof SlotState, value: string) => {
-    setSlots(prev => {
-      const next = [...prev];
-      next[slotIndex] = { ...next[slotIndex], [field]: value };
-      return next;
-    });
+  const openEditDialog = (slotIndex: number) => {
+    setEditingSlot(slotIndex);
+    setEditForm({ ...slots[slotIndex] });
   };
 
-  const handleSave = async (slotIndex: number) => {
-    const slot = slots[slotIndex];
-    if (!slot.title.trim()) {
+  const closeEditDialog = () => {
+    setEditingSlot(null);
+    setEditForm({ ...emptySlot });
+  };
+
+  const handleSave = async () => {
+    if (editingSlot === null) return;
+    
+    if (!editForm.title.trim()) {
       toast({
         title: "Title required",
-        description: "Please add a short name for this item.",
+        description: "Please add a name for this item.",
         variant: "destructive",
       });
       return;
     }
 
-    const priceValue = slot.price ? Number(slot.price) : null;
-    if (slot.price && Number.isNaN(priceValue)) {
+    const priceValue = editForm.price ? Number(editForm.price) : null;
+    if (editForm.price && Number.isNaN(priceValue)) {
       toast({
         title: "Invalid price",
         description: "Please enter a valid number for price.",
@@ -140,21 +147,22 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor, acc
       return;
     }
 
-    setSavingSlot(slotIndex);
+    setSavingSlot(editingSlot);
     try {
       await upsertItem.mutateAsync({
-        id: slot.id,
+        id: editForm.id,
         shop_id: shopId,
-        slot_index: slotIndex,
-        title: slot.title.trim(),
-        description: slot.description?.trim() || null,
+        slot_index: editingSlot,
+        title: editForm.title.trim(),
+        description: editForm.description?.trim() || null,
         price: priceValue,
-        image_url: slot.image_url || null,
+        image_url: editForm.image_url || null,
       });
       toast({
-        title: "Saved",
-        description: `${slot.title} is now showcased in ${slotLabels[slotIndex]}.`,
+        title: "Item saved!",
+        description: `${editForm.title} is now displayed on your showcase wall.`,
       });
+      closeEditDialog();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to save item.";
       toast({
@@ -167,24 +175,22 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor, acc
     }
   };
 
-  const handleClear = async (slotIndex: number) => {
-    const existingId = items?.find(item => item.slot_index === slotIndex)?.id;
+  const handleDelete = async (slotIndex: number) => {
     setSavingSlot(slotIndex);
     try {
-      if (existingId) {
-        await deleteItem.mutateAsync(slotIndex);
-      }
+      await deleteItem.mutateAsync(slotIndex);
       setSlots(prev => {
         const next = [...prev];
         next[slotIndex] = { ...emptySlot };
         return next;
       });
       toast({
-        title: "Slot cleared",
-        description: `${slotLabels[slotIndex]} is now empty.`,
+        title: "Item removed",
+        description: "The showcase frame is now empty.",
       });
+      closeEditDialog();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unable to clear slot.";
+      const message = error instanceof Error ? error.message : "Unable to remove item.";
       toast({
         title: "Error",
         description: message,
@@ -195,138 +201,326 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor, acc
     }
   };
 
-  const slotsWithProgress = useMemo(
-    () =>
-      slots.map((slot, index) => ({
-        ...slot,
-        hasContent: Boolean(slot.title || slot.description || slot.image_url),
-        index,
-      })),
-    [slots]
-  );
+  const filledCount = useMemo(() => slots.filter(s => s.title).length, [slots]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
-    <div className="border rounded-2xl p-6 bg-card/70 space-y-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h3 className="text-xl font-display font-semibold text-foreground">Showcase Wall</h3>
-          <p className="text-sm text-muted-foreground">
-            Upload up to five hero items to display as framed art inside your virtual shop. Visitors can tap a frame to read the
-            description and price.
-          </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <div 
+              className="h-10 w-10 rounded-xl flex items-center justify-center"
+              style={{ backgroundColor: `${brandColor}20` }}
+            >
+              <Sparkles className="h-5 w-5" style={{ color: brandColor }} />
+            </div>
+            <div>
+              <h3 className="text-lg font-display font-bold text-foreground">Showcase Wall</h3>
+              <p className="text-sm text-muted-foreground">
+                Display up to 5 products in your virtual shop
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Info className="h-4 w-4" />
-          Images are optimized for fast loading. Keep files under 2MB.
+        <div 
+          className="px-3 py-1.5 rounded-full text-sm font-medium"
+          style={{ backgroundColor: `${accentColor}20`, color: accentColor }}
+        >
+          {filledCount}/5 slots used
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Loading showcase slots...
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {slotsWithProgress.map(slot => (
-            <div
-              key={slot.index}
-              className="rounded-xl border bg-background/80 p-4 space-y-4 shadow-sm"
-              style={{ borderColor: slot.hasContent ? brandColor || accentColor : undefined }}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{slotLabels[slot.index]}</p>
-                  <p className="font-semibold text-foreground">{slot.title || "Add an item"}</p>
-                </div>
-                {slot.image_url ? (
-                  <div className="h-16 w-16 rounded-lg overflow-hidden border bg-muted">
-                    <img src={slot.image_url} alt={slot.title} className="h-full w-full object-cover" />
+      {/* Wall Preview Grid */}
+      <div className="relative">
+        {/* Decorative wall background */}
+        <div 
+          className="absolute inset-0 rounded-2xl opacity-50"
+          style={{ 
+            background: `linear-gradient(135deg, ${brandColor}10, ${accentColor}10)`,
+          }}
+        />
+        
+        <div className="relative grid grid-cols-5 gap-3 p-6 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm">
+          {slots.map((slot, index) => {
+            const hasContent = Boolean(slot.title);
+            const isSaving = savingSlot === index;
+            
+            return (
+              <button
+                key={index}
+                onClick={() => openEditDialog(index)}
+                disabled={isSaving}
+                className={cn(
+                  "group relative aspect-[3/4] rounded-xl border-2 border-dashed transition-all duration-300",
+                  "hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary/50",
+                  hasContent 
+                    ? "border-transparent bg-background shadow-md" 
+                    : "border-muted-foreground/30 hover:border-primary/50 bg-muted/30"
+                )}
+              >
+                {isSaving && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-xl z-10">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  </div>
+                )}
+                
+                {hasContent ? (
+                  <div className="absolute inset-0 flex flex-col overflow-hidden rounded-xl">
+                    {/* Image */}
+                    <div className="relative flex-1 overflow-hidden">
+                      {slot.image_url ? (
+                        <img 
+                          src={slot.image_url} 
+                          alt={slot.title}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div 
+                          className="h-full w-full flex items-center justify-center"
+                          style={{ backgroundColor: `${brandColor}15` }}
+                        >
+                          <Package className="h-8 w-8 text-muted-foreground/50" />
+                        </div>
+                      )}
+                      {/* Hover overlay */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Edit3 className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
+                    
+                    {/* Info */}
+                    <div className="p-2 bg-background border-t border-border/50">
+                      <p className="text-xs font-medium text-foreground truncate">{slot.title}</p>
+                      {slot.price && (
+                        <p className="text-xs font-bold" style={{ color: accentColor }}>
+                          ${parseFloat(slot.price).toFixed(2)}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => uploadRefs.current[slot.index]?.click()}
-                    title="Upload image"
-                  >
-                    <ImagePlus className="h-4 w-4" />
-                  </Button>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-2">
+                    <div 
+                      className="h-10 w-10 rounded-full flex items-center justify-center transition-colors"
+                      style={{ backgroundColor: `${brandColor}10` }}
+                    >
+                      <ImagePlus className="h-5 w-5" style={{ color: brandColor }} />
+                    </div>
+                    <span className="text-xs text-muted-foreground text-center">
+                      Frame {index + 1}
+                    </span>
+                  </div>
                 )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  ref={el => (uploadRefs.current[slot.index] = el)}
-                  onChange={event => handleImageChange(event, slot.index)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tips */}
+      <div className="flex items-start gap-3 p-4 rounded-xl bg-muted/50 border border-border/50">
+        <Package className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+        <div className="text-sm text-muted-foreground">
+          <p className="font-medium text-foreground mb-1">Pro tips for showcase items:</p>
+          <ul className="list-disc list-inside space-y-1">
+            <li>Use high-quality product photos with good lighting</li>
+            <li>Keep descriptions short and compelling (max 2-3 lines)</li>
+            <li>Feature your best-sellers or newest arrivals</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editingSlot !== null} onOpenChange={(open) => !open && closeEditDialog()}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div 
+                className="h-8 w-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: `${brandColor}20` }}
+              >
+                <Package className="h-4 w-4" style={{ color: brandColor }} />
+              </div>
+              {editForm.id ? "Edit Product" : "Add Product"} - Frame {(editingSlot ?? 0) + 1}
+            </DialogTitle>
+            <DialogDescription>
+              This item will be displayed in a beautiful frame on your shop wall for visitors to see.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Image Upload */}
+            <div className="space-y-3">
+              <Label>Product Image</Label>
+              <div className="flex items-start gap-4">
+                <div 
+                  className={cn(
+                    "relative h-32 w-32 rounded-xl border-2 border-dashed overflow-hidden shrink-0 transition-colors",
+                    editForm.image_url ? "border-transparent" : "border-muted-foreground/30"
+                  )}
+                >
+                  {editForm.image_url ? (
+                    <>
+                      <img 
+                        src={editForm.image_url} 
+                        alt="Product preview"
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditForm(prev => ({ ...prev, image_url: "" }))}
+                        className="absolute top-1 right-1 h-6 w-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:bg-destructive/90"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => uploadRefs.current[editingSlot ?? 0]?.click()}
+                      className="h-full w-full flex flex-col items-center justify-center gap-2 hover:bg-muted/50 transition-colors"
+                    >
+                      <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Upload</span>
+                    </button>
+                  )}
+                </div>
+                <div className="flex-1 space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Upload a clear product photo. Square images work best.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Max file size: 2MB • PNG, JPG, WEBP
+                  </p>
+                  {!editForm.image_url && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => uploadRefs.current[editingSlot ?? 0]?.click()}
+                    >
+                      <ImagePlus className="h-4 w-4 mr-2" />
+                      Choose Image
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                ref={el => (uploadRefs.current[editingSlot ?? 0] = el)}
+                onChange={handleImageChange}
+              />
+            </div>
+
+            {/* Title */}
+            <div className="space-y-2">
+              <Label htmlFor="item-title" className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Product Name *
+              </Label>
+              <Input
+                id="item-title"
+                value={editForm.title}
+                onChange={e => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="e.g., Premium Cotton Hoodie"
+                className="bg-muted/50"
+              />
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="item-description" className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Description
+              </Label>
+              <Textarea
+                id="item-description"
+                value={editForm.description}
+                onChange={e => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Soft, comfortable hoodie made from 100% organic cotton..."
+                rows={3}
+                className="bg-muted/50 resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                Keep it short - this appears when visitors tap the frame.
+              </p>
+            </div>
+
+            {/* Price */}
+            <div className="space-y-2">
+              <Label htmlFor="item-price" className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                Price (USD)
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  id="item-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editForm.price}
+                  onChange={e => setEditForm(prev => ({ ...prev, price: e.target.value }))}
+                  placeholder="49.99"
+                  className="bg-muted/50 pl-7"
                 />
               </div>
-
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <Label htmlFor={`item-title-${slot.index}`}>Item title</Label>
-                  <Input
-                    id={`item-title-${slot.index}`}
-                    value={slot.title}
-                    placeholder="Vintage hoodie"
-                    onChange={e => updateSlotField(slot.index, "title", e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor={`item-description-${slot.index}`}>Short description</Label>
-                  <Textarea
-                    id={`item-description-${slot.index}`}
-                    value={slot.description}
-                    placeholder="Soft cotton hoodie with limited-edition print."
-                    onChange={e => updateSlotField(slot.index, "description", e.target.value)}
-                    rows={3}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor={`item-price-${slot.index}`}>Price (USD)</Label>
-                  <Input
-                    id={`item-price-${slot.index}`}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={slot.price}
-                    placeholder="49.99"
-                    onChange={e => updateSlotField(slot.index, "price", e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-2">
-                <Button
-                  className="w-full"
-                  style={{ backgroundColor: brandColor, color: brandColor ? "#fff" : undefined }}
-                  onClick={() => handleSave(slot.index)}
-                  disabled={savingSlot === slot.index}
-                >
-                  {savingSlot === slot.index ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    "Save to wall"
-                  )}
-                </Button>
-                {slot.hasContent && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleClear(slot.index)}
-                    disabled={savingSlot === slot.index}
-                    title="Clear slot"
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-between gap-3 pt-2">
+            <div>
+              {editForm.id && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => editingSlot !== null && handleDelete(editingSlot)}
+                  disabled={savingSlot !== null}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remove
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeEditDialog}
+                disabled={savingSlot !== null}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleSave}
+                disabled={savingSlot !== null || !editForm.title.trim()}
+                style={{ backgroundColor: brandColor }}
+              >
+                {savingSlot !== null ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Check className="h-4 w-4 mr-2" />
+                )}
+                Save Item
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
