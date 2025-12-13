@@ -17,11 +17,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tables } from "@/integrations/supabase/types";
+
+type ShopWithLocation = Tables<'shops'> & {
+  shop_spots?: {
+    spot_label?: string | null;
+    streets?: { name?: string | null } | null;
+  } | null;
+};
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("pending");
   
-  const { data: shops, isLoading, refetch } = useQuery({
+  const { data: shops, isLoading, refetch } = useQuery<ShopWithLocation[]>({
     queryKey: ['admin-all-shops'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -36,7 +44,7 @@ const AdminDashboard = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as ShopWithLocation[];
     },
   });
 
@@ -159,7 +167,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const ShopCard = ({ shop, actions }: { shop: any; actions: React.ReactNode }) => (
+  const ShopCard = ({ shop, actions }: { shop: ShopWithLocation; actions: React.ReactNode }) => (
     <div className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-muted rounded-lg gap-4">
       <div className="flex-1">
         <div className="flex items-center gap-2">
@@ -169,7 +177,7 @@ const AdminDashboard = () => {
           )}
         </div>
         <p className="text-sm text-muted-foreground">
-          {(shop as any).shop_spots?.streets?.name} - Spot {(shop as any).shop_spots?.spot_label}
+          {shop.shop_spots?.streets?.name} - Spot {shop.shop_spots?.spot_label}
         </p>
         {shop.category && <p className="text-xs text-muted-foreground mt-1">{shop.category}</p>}
         {shop.external_link && (

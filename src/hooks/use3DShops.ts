@@ -64,11 +64,16 @@ export interface Position3D {
 }
 
 // Helper to parse position_3d from the database
-export function parsePosition3D(position3d: any): Position3D {
+export function parsePosition3D(position3d: Position3D | string | null): Position3D {
   if (typeof position3d === 'string') {
-    return JSON.parse(position3d);
+    return JSON.parse(position3d) as Position3D;
   }
-  return position3d as Position3D;
+
+  if (position3d && typeof position3d === 'object') {
+    return position3d;
+  }
+
+  return { x: 0, z: 0, rotation: 0 };
 }
 
 export interface ShopBranding {
@@ -77,6 +82,7 @@ export interface ShopBranding {
   spotLabel: string;
   position: Position3D;
   hasShop: boolean;
+  shopId?: string;
   isSuspended?: boolean;
   shopName?: string;
   category?: string | null;
@@ -101,6 +107,7 @@ export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): S
         spotLabel: spot.spot_label,
         position,
         hasShop: true,
+        shopId: spot.shop.id,
         isSuspended: spot.shop.status === 'suspended',
         shopName: spot.shop.name,
         category: spot.shop.category,
@@ -109,9 +116,9 @@ export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): S
         facadeTemplate: spot.shop.facade_template || 'modern_neon',
         logoUrl: spot.shop.logo_url,
         externalLink: spot.shop.external_link,
-        signageFont: (spot.shop as any).signage_font || 'classic',
-        textureTemplate: (spot.shop as any).texture_template || null,
-        textureUrl: (spot.shop as any).texture_url || null,
+        signageFont: spot.shop.signage_font || 'classic',
+        textureTemplate: spot.shop.texture_template || null,
+        textureUrl: spot.shop.texture_url || null,
       };
     }
 
