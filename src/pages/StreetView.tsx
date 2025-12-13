@@ -92,7 +92,7 @@ const StreetView = () => {
         // Then try to lock to landscape
         if ('screen' in window && 'orientation' in screen) {
           const orientation = screen.orientation as ScreenOrientation & {
-            lock?: (orientation: OrientationLockType) => Promise<void>;
+            lock?: (orientation: string) => Promise<void>;
           };
           await orientation.lock?.('landscape');
         }

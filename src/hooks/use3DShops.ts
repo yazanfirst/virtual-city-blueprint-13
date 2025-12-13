@@ -98,7 +98,7 @@ export interface ShopBranding {
 
 export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): ShopBranding[] {
   return spotsWithShops.map(spot => {
-    const position = parsePosition3D(spot.position_3d);
+    const position = parsePosition3D(spot.position_3d as unknown as string | Position3D);
     
     if (spot.shop) {
       return {
