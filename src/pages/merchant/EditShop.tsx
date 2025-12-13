@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, Save, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import BrandingEditor from "@/components/merchant/BrandingEditor";
 import ShopPreview from "@/components/merchant/ShopPreview";
+import ShopShowcaseWall from "@/components/merchant/ShopShowcaseWall";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,15 +61,13 @@ const EditShop = () => {
     textureUrl: "",
   });
 
-  useEffect(() => {
-    if (shopId && user) {
-      fetchShop();
-    }
-  }, [shopId, user]);
+  /**
+   * Load the shop details for editing while enforcing merchant ownership.
+   */
+  const fetchShop = useCallback(async () => {
+    if (!shopId || !user) return;
 
-  const fetchShop = async () => {
-    if (!shopId) return;
-
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('shops')
@@ -78,7 +77,7 @@ const EditShop = () => {
 
       if (error) throw error;
 
-      if (data.merchant_id !== user?.id) {
+      if (data.merchant_id !== user.id) {
         toast({
           title: "Unauthorized",
           description: "You can only edit your own shops.",
@@ -98,8 +97,8 @@ const EditShop = () => {
         accentColor: data.accent_color || "#10B981",
         facadeTemplate: (data.facade_template as ShopFacadeTemplate) || "modern_neon",
         signageFont: (data.signage_font as ShopSignageFont) || "classic",
-        textureTemplate: ((data as any).texture_template as TextureTemplate) || "none",
-        textureUrl: (data as any).texture_url || "",
+        textureTemplate: (data.texture_template as TextureTemplate) || "none",
+        textureUrl: data.texture_url || "",
       });
     } catch (error) {
       console.error('Error fetching shop:', error);
@@ -112,7 +111,11 @@ const EditShop = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate, shopId, user]);
+
+  useEffect(() => {
+    fetchShop();
+  }, [fetchShop]);
 
   const hasChanges = () => {
     if (!originalData) return false;
@@ -162,10 +165,11 @@ const EditShop = () => {
       });
 
       navigate('/merchant/dashboard');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to submit changes.";
       toast({
         title: "Error",
-        description: error.message || "Failed to submit changes.",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -284,11 +288,22 @@ const EditShop = () => {
                   accentColor={formData.accentColor}
                   facadeTemplate={formData.facadeTemplate}
                   logoUrl={formData.logoUrl}
-                  signageFont={formData.signageFont}
-                />
-              </div>
+                signageFont={formData.signageFont}
+              />
             </div>
           </div>
+
+          {shopId && (
+            <div>
+              <h2 className="font-display text-xl font-bold mb-4">Showcase Wall Items</h2>
+              <ShopShowcaseWall
+                shopId={shopId}
+                brandColor={formData.primaryColor}
+                accentColor={formData.accentColor}
+              />
+            </div>
+          )}
+        </div>
         </div>
 
         {/* Actions */}

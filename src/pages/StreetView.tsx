@@ -6,6 +6,7 @@ import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
 import CityScene, { CameraView } from "@/components/3d/CityScene";
 import ShopDetailModal from "@/components/3d/ShopDetailModal";
+import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import { useGameStore } from "@/stores/gameStore";
 
@@ -45,6 +46,8 @@ const StreetView = () => {
   const [showShopModal, setShowShopModal] = useState(false);
   const [show2DMap, setShow2DMap] = useState(false);
   const [showMissions, setShowMissions] = useState(false);
+  const [isInsideShop, setIsInsideShop] = useState(false);
+  const [interiorShop, setInteriorShop] = useState<ShopBranding | null>(null);
 
   // Game state
   const { coins, level, xp } = useGameStore();
@@ -57,6 +60,16 @@ const StreetView = () => {
     setShowShopModal(true);
   };
 
+  const handleEnterShop = (shop: ShopBranding) => {
+    setInteriorShop(shop);
+    setIsInsideShop(true);
+    setShowShopModal(false);
+  };
+
+  const handleExitShop = () => {
+    setIsInsideShop(false);
+  };
+
   // Transform spots data to shop brandings
   const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
 
@@ -64,19 +77,24 @@ const StreetView = () => {
   useEffect(() => {
     const requestFullscreenLandscape = async () => {
       if (!isMaximized) return;
-      
+
       try {
         // First request fullscreen (required for orientation lock on most browsers)
-        const docEl = document.documentElement;
+        const docEl = document.documentElement as HTMLElement & {
+          webkitRequestFullscreen?: () => Promise<void>;
+        };
         if (docEl.requestFullscreen) {
           await docEl.requestFullscreen();
-        } else if ((docEl as any).webkitRequestFullscreen) {
-          await (docEl as any).webkitRequestFullscreen();
+        } else if (docEl.webkitRequestFullscreen) {
+          await docEl.webkitRequestFullscreen();
         }
-        
+
         // Then try to lock to landscape
         if ('screen' in window && 'orientation' in screen) {
-          await (screen.orientation as any).lock?.('landscape');
+          const orientation = screen.orientation as ScreenOrientation & {
+            lock?: (orientation: string) => Promise<void>;
+          };
+          await orientation.lock?.('landscape');
         }
       } catch {
         // Silently fail if not supported
@@ -87,12 +105,18 @@ const StreetView = () => {
       try {
         if (document.fullscreenElement) {
           await document.exitFullscreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          await (document as any).webkitExitFullscreen();
+        } else {
+          const docWithWebkit = document as Document & {
+            webkitExitFullscreen?: () => Promise<void>;
+          };
+          await docWithWebkit.webkitExitFullscreen?.();
         }
-        
+
         if ('screen' in window && 'orientation' in screen) {
-          (screen.orientation as any).unlock?.();
+          const orientation = screen.orientation as ScreenOrientation & {
+            unlock?: () => void;
+          };
+          orientation.unlock?.();
         }
       } catch {
         // Silently fail
@@ -145,7 +169,7 @@ const StreetView = () => {
   }
 
   // Compact overlay panel for game mode
-  const OverlayPanel = ({ 
+  const OverlayPanel = ({
     title, 
     icon: Icon, 
     children,
@@ -171,6 +195,10 @@ const StreetView = () => {
 
   // Game Mode (Maximized) Layout
   if (isMaximized) {
+    const interiorOverlay = isInsideShop && interiorShop ? (
+      <ShopInteriorRoom shop={interiorShop} onExit={handleExitShop} />
+    ) : null;
+
     return (
       <div className="fixed inset-0 z-50 bg-background">
         {/* Full-screen 3D Scene */}
@@ -185,9 +213,10 @@ const StreetView = () => {
           
           {/* Shop Detail Modal */}
           {showShopModal && (
-            <ShopDetailModal 
-              shop={selectedShop} 
-              onClose={() => setShowShopModal(false)} 
+            <ShopDetailModal
+              shop={selectedShop}
+              onClose={() => setShowShopModal(false)}
+              onEnterShop={handleEnterShop}
             />
           )}
           
@@ -401,14 +430,20 @@ const StreetView = () => {
             </OverlayPanel>
           </div>
         </div>
+        {interiorOverlay}
       </div>
     );
   }
 
+  const interiorOverlay = isInsideShop && interiorShop ? (
+    <ShopInteriorRoom shop={interiorShop} onExit={handleExitShop} />
+  ) : null;
+
   // Normal 3-Column Layout
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4">
-      <div className="container mx-auto max-w-7xl">
+    <>
+      <div className="min-h-screen pt-24 pb-12 px-4">
+        <div className="container mx-auto max-w-7xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="icon" asChild>
@@ -529,9 +564,10 @@ const StreetView = () => {
               
               {/* Shop Detail Modal */}
               {showShopModal && (
-                <ShopDetailModal 
-                  shop={selectedShop} 
-                  onClose={() => setShowShopModal(false)} 
+                <ShopDetailModal
+                  shop={selectedShop}
+                  onClose={() => setShowShopModal(false)}
+                  onEnterShop={handleEnterShop}
                 />
               )}
             </div>
@@ -592,8 +628,10 @@ const StreetView = () => {
             </PanelBox>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+      {interiorOverlay}
+    </>
   );
 };
 

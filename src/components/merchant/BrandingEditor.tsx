@@ -123,10 +123,11 @@ const BrandingEditor = ({
         title: "Logo uploaded!",
         description: "Your logo has been uploaded successfully.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to upload logo";
       toast({
         title: "Upload failed",
-        description: error.message || "Failed to upload logo",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -183,10 +184,11 @@ const BrandingEditor = ({
         title: "Texture uploaded!",
         description: "Your custom texture has been uploaded.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to upload texture";
       toast({
         title: "Upload failed",
-        description: error.message || "Failed to upload texture",
+        description: message,
         variant: "destructive",
       });
     } finally {

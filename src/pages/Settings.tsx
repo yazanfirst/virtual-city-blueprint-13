@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
   ArrowLeft, 
@@ -56,15 +56,15 @@ const Settings = () => {
     newFeatures: false,
   });
 
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
+  /**
+   * Refresh the authenticated user's profile so settings stay up to date.
+   */
+  const fetchProfile = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
     }
-  }, [user]);
 
-  const fetchProfile = async () => {
-    if (!user) return;
-    
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -74,7 +74,7 @@ const Settings = () => {
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
-      
+
       if (data) {
         setProfile({
           display_name: data.display_name || "",
@@ -87,7 +87,11 @@ const Settings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -110,10 +114,11 @@ const Settings = () => {
         title: "Profile Updated",
         description: "Your profile has been saved successfully.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to save profile";
       toast({
         title: "Error",
-        description: error.message || "Failed to save profile",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -173,10 +178,11 @@ const Settings = () => {
         title: "Avatar Updated",
         description: "Your profile picture has been updated.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to upload avatar";
       toast({
         title: "Upload Failed",
-        description: error.message || "Failed to upload avatar",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -204,10 +210,11 @@ const Settings = () => {
         title: "Reset Email Sent",
         description: "Check your email for a password reset link.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to send reset email";
       toast({
         title: "Error",
-        description: error.message || "Failed to send reset email",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -235,10 +242,11 @@ const Settings = () => {
       });
       
       navigate('/');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to delete account";
       toast({
         title: "Error",
-        description: error.message || "Failed to delete account",
+        description: message,
         variant: "destructive",
       });
     } finally {
