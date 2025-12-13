@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 interface ShopDetailModalProps {
   shop: ShopBranding | null;
   onClose: () => void;
+  onEnterShop?: (shop: ShopBranding) => void;
 }
 
 const templateLabels: Record<string, string> = {
@@ -24,7 +25,7 @@ const templateLabels: Record<string, string> = {
   nature_organic: "Nature Organic",
 };
 
-const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
+const ShopDetailModal = ({ shop, onClose, onEnterShop }: ShopDetailModalProps) => {
   const navigate = useNavigate();
   const { user, isMerchant } = useAuth();
   const [upgrading, setUpgrading] = useState(false);
@@ -85,16 +86,16 @@ const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
   };
 
   return (
-    <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6"
       onClick={onClose}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" />
       
       {/* Modal */}
-      <div 
-        className="relative w-full max-w-md bg-background border border-border rounded-2xl shadow-2xl overflow-hidden"
+      <div
+        className="relative w-full max-w-md max-h-[90vh] bg-background border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
         style={{
           borderColor: shop.hasShop ? shop.primaryColor : undefined,
@@ -139,7 +140,7 @@ const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
         </div>
         
         {/* Content */}
-        <div className="p-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {shop.hasShop ? (
             <>
               {/* Suspended Badge */}
@@ -163,7 +164,7 @@ const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
               )}
               
               {/* Details */}
-              <div className="space-y-3 mb-6">
+              <div className="space-y-3">
                 {/* Template Badge */}
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground flex items-center gap-2">
@@ -208,26 +209,42 @@ const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
                 </div>
               </div>
               
-              {/* Visit Store Button - disabled for suspended shops */}
-              {shop.externalLink && !shop.isSuspended && (
-                <Button 
-                  className="w-full"
-                  style={{
-                    backgroundColor: shop.primaryColor,
-                    color: '#FFFFFF',
-                  }}
-                  asChild
-                >
-                  <a 
-                    href={shop.externalLink} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                  >
-                    <ShoppingBag className="h-4 w-4 mr-2" />
-                    Visit Store
-                    <ExternalLink className="h-4 w-4 ml-2" />
-                  </a>
-                </Button>
+              {(shop.externalLink || onEnterShop) && (
+                <div className="flex flex-col gap-3 sticky bottom-0 pt-4 pb-1 bg-background/95 backdrop-blur-sm border-t border-border/50">
+                  {/* Visit Store Button - disabled for suspended shops */}
+                  {shop.externalLink && !shop.isSuspended && (
+                    <Button
+                      className="w-full"
+                      style={{
+                        backgroundColor: shop.primaryColor,
+                        color: '#FFFFFF',
+                      }}
+                      asChild
+                    >
+                      <a
+                        href={shop.externalLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ShoppingBag className="h-4 w-4 mr-2" />
+                        Visit Store
+                        <ExternalLink className="h-4 w-4 ml-2" />
+                      </a>
+                    </Button>
+                  )}
+
+                  {/* Enter immersive shop view */}
+                  {onEnterShop && (
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      onClick={() => onEnterShop(shop)}
+                    >
+                      <ShoppingBag className="h-4 w-4 mr-2" />
+                      Enter Virtual Shop
+                    </Button>
+                  )}
+                </div>
               )}
               
               {/* Message for suspended shops */}
@@ -248,12 +265,12 @@ const ShopDetailModal = ({ shop, onClose }: ShopDetailModalProps) => {
                 Location: <span className="text-foreground font-medium">{shop.spotLabel}</span>
               </p>
               
-              <p className="text-center text-muted-foreground text-sm mb-6">
+              <p className="text-center text-muted-foreground text-sm">
                 This prime spot is waiting for your brand. Set up your shop and reach customers in the virtual city!
               </p>
-              
+
               {/* CTA Buttons */}
-              <div className="space-y-3">
+              <div className="space-y-3 sticky bottom-0 pt-2 pb-1 bg-background/95 backdrop-blur-sm border-t border-border/50">
                 {isMerchant ? (
                   <Button className="w-full" onClick={handleRentSpot}>
                     <Store className="h-4 w-4 mr-2" />
