@@ -243,24 +243,24 @@ const InteriorScene = ({
   return (
     <group>
       {/* Optimized ambient lighting - no shadows */}
-      <ambientLight intensity={0.35} color="#fff5e6" />
-      <hemisphereLight args={["#ffeedd", "#2a1810", 0.5]} position={[0, 5, 0]} />
+      <ambientLight intensity={0.55} color="#fff5e6" />
+      <hemisphereLight args={["#ffeedd", "#2a1810", 0.9]} position={[0, 5, 0]} />
       
       {/* Single main ceiling light - efficient */}
-      <pointLight 
-        position={[0, 4.5, 0]} 
-        intensity={1.2} 
-        color="#fff5e6" 
-        distance={15}
+      <pointLight
+        position={[0, 4.5, 0]}
+        intensity={1.6}
+        color="#fff5e6"
+        distance={18}
         decay={2}
       />
 
       {/* Floor - polished concrete look */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[14, 14]} />
-        <meshStandardMaterial 
-          color="#1a1512" 
-          roughness={0.4} 
+        <meshStandardMaterial
+          color="#231b17"
+          roughness={0.4}
           metalness={0.1}
         />
       </mesh>
@@ -268,8 +268,8 @@ const InteriorScene = ({
       {/* Subtle floor reflection lines */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
         <planeGeometry args={[13.5, 13.5]} />
-        <meshStandardMaterial 
-          color="#2a2520" 
+        <meshStandardMaterial
+          color="#332821"
           roughness={0.6}
           transparent
           opacity={0.3}
@@ -314,10 +314,10 @@ const InteriorScene = ({
       </mesh>
       <mesh position={[0, 4.75, 0]}>
         <sphereGeometry args={[0.3, 16, 16]} />
-        <meshStandardMaterial 
-          color="#fff5e6" 
-          emissive="#fff5e6" 
-          emissiveIntensity={0.8}
+        <meshStandardMaterial
+          color="#fff5e6"
+          emissive="#fff5e6"
+          emissiveIntensity={1.05}
         />
       </mesh>
 
@@ -425,13 +425,13 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
       </div>
 
       {/* 3D Canvas */}
-      <Canvas 
-        camera={{ position: [0, 2.2, 3.5], fov: 65 }} 
+      <Canvas
+        camera={{ position: [0, 2.2, 3.5], fov: 65 }}
         className="flex-1 touch-none"
         gl={{ antialias: true, powerPreference: "high-performance" }}
       >
-        <color attach="background" args={["#0f0a08"]} />
-        <fog attach="fog" args={["#0f0a08", 8, 18]} />
+        <color attach="background" args={["#18100d"]} />
+        <fog attach="fog" args={["#18100d", 8, 18]} />
         <React.Suspense fallback={null}>
           <InteriorScene 
             shop={shop} 
