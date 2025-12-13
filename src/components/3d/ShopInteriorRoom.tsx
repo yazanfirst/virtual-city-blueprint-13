@@ -243,29 +243,38 @@ const InteriorScene = ({
   return (
     <group>
       {/* Optimized ambient lighting - no shadows */}
-      <ambientLight intensity={0.85} color="#fff8ef" />
-      <hemisphereLight args={["#fff3e0", "#362016", 1.15]} position={[0, 5, 0]} />
+      <ambientLight intensity={1.15} color="#fffaf1" />
+      <hemisphereLight args={["#fff7eb", "#3f2618", 1.45]} position={[0, 6, 0]} />
+
+      {/* Directional fill for broad brightness without heavy cost */}
+      <directionalLight
+        position={[4, 6, 3]}
+        intensity={1.6}
+        color="#ffeede"
+      >
+        <object3D position={[0, 0, -2]} />
+      </directionalLight>
 
       {/* Single main ceiling light - efficient */}
       <pointLight
-        position={[0, 4.5, 0]}
-        intensity={2.2}
+        position={[0, 4.6, 0]}
+        intensity={3.1}
         color="#fff8ef"
-        distance={20}
+        distance={22}
         decay={2}
       />
 
       {/* Soft corner fills to reduce wall shadows */}
-      {[[-5.2, 3.2, -5.2], [5.2, 3.2, -5.2], [-5.2, 3.2, 5.2], [5.2, 3.2, 5.2]].map((pos, i) => (
-        <pointLight key={i} position={pos as [number, number, number]} intensity={0.85} color="#ffeedd" distance={13} decay={2.2} />
+      {[[-5.2, 3.4, -5.2], [5.2, 3.4, -5.2], [-5.2, 3.4, 5.2], [5.2, 3.4, 5.2]].map((pos, i) => (
+        <pointLight key={i} position={pos as [number, number, number]} intensity={1.2} color="#ffeedd" distance={15} decay={2.1} />
       ))}
 
       {/* Floor - polished concrete look */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[14, 14]} />
         <meshStandardMaterial
-          color="#3a2d24"
-          roughness={0.35}
+          color="#4f4035"
+          roughness={0.32}
           metalness={0.1}
         />
       </mesh>
@@ -274,10 +283,10 @@ const InteriorScene = ({
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
         <planeGeometry args={[13.5, 13.5]} />
         <meshStandardMaterial
-          color="#4a3a2f"
-          roughness={0.55}
+          color="#5a4a3e"
+          roughness={0.5}
           transparent
-          opacity={0.32}
+          opacity={0.36}
         />
       </mesh>
 
@@ -285,31 +294,31 @@ const InteriorScene = ({
       {/* Front Wall */}
       <mesh position={[0, 2.5, -6]}>
         <boxGeometry args={[14, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#4a3327" />
+        <meshStandardMaterial map={brickTexture} color="#5a3d2f" />
       </mesh>
 
       {/* Back Wall */}
       <mesh position={[0, 2.5, 6]}>
         <boxGeometry args={[14, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#443024" />
+        <meshStandardMaterial map={brickTexture} color="#583829" />
       </mesh>
 
       {/* Left Wall */}
       <mesh position={[-7, 2.5, 0]} rotation={[0, Math.PI / 2, 0]}>
         <boxGeometry args={[12, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#4a3327" />
+        <meshStandardMaterial map={brickTexture} color="#5a3d2f" />
       </mesh>
 
       {/* Right Wall */}
       <mesh position={[7, 2.5, 0]} rotation={[0, -Math.PI / 2, 0]}>
         <boxGeometry args={[12, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#4a3327" />
+        <meshStandardMaterial map={brickTexture} color="#5a3d2f" />
       </mesh>
 
       {/* Ceiling - dark wood beams look */}
       <mesh position={[0, 5, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[14, 14]} />
-        <meshStandardMaterial color="#24160e" roughness={0.92} />
+        <meshStandardMaterial color="#2e1c12" roughness={0.9} />
       </mesh>
       
       {/* Ceiling light fixture */}
@@ -320,9 +329,9 @@ const InteriorScene = ({
       <mesh position={[0, 4.75, 0]}>
         <sphereGeometry args={[0.3, 16, 16]} />
         <meshStandardMaterial
-          color="#fff5e6"
-          emissive="#fff5e6"
-          emissiveIntensity={1.05}
+          color="#fff9f0"
+          emissive="#fff9f0"
+          emissiveIntensity={1.5}
         />
       </mesh>
 
@@ -433,10 +442,10 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
       <Canvas
         camera={{ position: [0, 2.2, 3.5], fov: 65 }}
         className="flex-1 touch-none"
-        gl={{ antialias: true, powerPreference: "high-performance" }}
+        gl={{ antialias: true, powerPreference: "high-performance", toneMappingExposure: 1.25 }}
       >
-        <color attach="background" args={["#1f140f"]} />
-        <fog attach="fog" args={["#1f140f", 8, 18]} />
+        <color attach="background" args={["#291b14"]} />
+        <fog attach="fog" args={["#291b14", 8, 18]} />
         <React.Suspense fallback={null}>
           <InteriorScene 
             shop={shop} 
