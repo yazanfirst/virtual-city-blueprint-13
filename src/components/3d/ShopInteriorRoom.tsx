@@ -151,11 +151,6 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
             {shop.shopName || "Virtual Shop"}
           </div>
         </div>
-        <div className="absolute top-3 right-3 z-10 hidden sm:flex gap-2">
-          <Button size="sm" variant="outline" onClick={onExit}>
-            Exit Shop
-          </Button>
-        </div>
         <Canvas shadows camera={{ position: [0, 2.6, 2.2], fov: 55 }}>
           <color attach="background" args={["#0f172a"]} />
           <fog attach="fog" args={["#0f172a", 12, 22]} />
