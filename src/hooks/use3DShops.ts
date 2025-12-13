@@ -82,6 +82,7 @@ export interface ShopBranding {
   spotLabel: string;
   position: Position3D;
   hasShop: boolean;
+  shopId?: string;
   isSuspended?: boolean;
   shopName?: string;
   category?: string | null;
@@ -106,6 +107,7 @@ export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): S
         spotLabel: spot.spot_label,
         position,
         hasShop: true,
+        shopId: spot.shop.id,
         isSuspended: spot.shop.status === 'suspended',
         shopName: spot.shop.name,
         category: spot.shop.category,

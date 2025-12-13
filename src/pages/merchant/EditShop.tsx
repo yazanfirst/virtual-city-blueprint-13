@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import BrandingEditor from "@/components/merchant/BrandingEditor";
 import ShopPreview from "@/components/merchant/ShopPreview";
+import ShopShowcaseWall from "@/components/merchant/ShopShowcaseWall";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -287,11 +288,22 @@ const EditShop = () => {
                   accentColor={formData.accentColor}
                   facadeTemplate={formData.facadeTemplate}
                   logoUrl={formData.logoUrl}
-                  signageFont={formData.signageFont}
-                />
-              </div>
+                signageFont={formData.signageFont}
+              />
             </div>
           </div>
+
+          {shopId && (
+            <div>
+              <h2 className="font-display text-xl font-bold mb-4">Showcase Wall Items</h2>
+              <ShopShowcaseWall
+                shopId={shopId}
+                brandColor={formData.primaryColor}
+                accentColor={formData.accentColor}
+              />
+            </div>
+          )}
+        </div>
         </div>
 
         {/* Actions */}

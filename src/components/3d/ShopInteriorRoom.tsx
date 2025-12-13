@@ -1,14 +1,29 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Html, OrbitControls, Text } from "@react-three/drei";
 import * as THREE from "three";
 import { ShopBranding } from "@/hooks/use3DShops";
 import { Button } from "@/components/ui/button";
+import { ShopItem, useShopItems } from "@/hooks/useShopItems";
 
 interface ShopInteriorRoomProps {
   shop: ShopBranding;
   onExit: () => void;
 }
+
+interface FrameSpotConfig {
+  slot: number;
+  position: [number, number, number];
+  rotation?: [number, number, number];
+}
+
+const FRAME_SPOTS: FrameSpotConfig[] = [
+  { slot: 0, position: [-4.2, 2.3, -5.9] },
+  { slot: 1, position: [-1.4, 2.3, -5.9] },
+  { slot: 2, position: [1.4, 2.3, -5.9] },
+  { slot: 3, position: [4.2, 2.3, -5.9] },
+  { slot: 4, position: [5.9, 2.2, -2.2], rotation: [0, -Math.PI / 2, 0] },
+];
 
 const useBrickTexture = () => {
   return useMemo(() => {
@@ -58,7 +73,86 @@ const Pedestal = ({ position, color }: { position: [number, number, number]; col
   </group>
 );
 
-const InteriorScene = ({ shop }: { shop: ShopBranding }) => {
+const FrameSpot = ({
+  config,
+  item,
+  accent,
+  primary,
+  onSelect,
+}: {
+  config: FrameSpotConfig;
+  item?: ShopItem;
+  accent: string;
+  primary: string;
+  onSelect: (slot: number) => void;
+}) => (
+  <group position={config.position} rotation={config.rotation || [0, 0, 0]}>
+    <mesh position={[0, 0, 0]} castShadow receiveShadow>
+      <boxGeometry args={[1.9, 1.4, 0.08]} />
+      <meshStandardMaterial color="#0c111c" metalness={0.25} roughness={0.55} />
+    </mesh>
+    <mesh position={[0, 0, 0.06]} castShadow>
+      <boxGeometry args={[2, 1.5, 0.04]} />
+      <meshStandardMaterial color={accent} metalness={0.5} roughness={0.25} />
+    </mesh>
+    <mesh position={[0, 0, 0.1]} castShadow>
+      <boxGeometry args={[1.7, 1.25, 0.02]} />
+      <meshStandardMaterial color="#0f172a" metalness={0.2} roughness={0.55} />
+    </mesh>
+    <Html
+      transform
+      position={[0, 0, 0.12]}
+      distanceFactor={12}
+      occlude
+      className="pointer-events-auto"
+    >
+      <button
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelect(config.slot);
+        }}
+        className="group flex flex-col rounded-xl border border-border/70 bg-background/90 shadow-lg backdrop-blur px-3 py-2 w-40"
+        style={{ borderColor: `${accent}55` }}
+      >
+        <div className="relative h-24 w-full overflow-hidden rounded-md bg-muted">
+          {item?.image_url ? (
+            <img src={item.image_url} alt={item.title} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
+          ) : (
+            <div className="flex h-full items-center justify-center text-[11px] text-muted-foreground">
+              Empty frame
+            </div>
+          )}
+          <span
+            className="absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold shadow"
+            style={{ backgroundColor: `${primary}20`, color: primary }}
+          >
+            Spot {config.slot + 1}
+          </span>
+        </div>
+        <div className="mt-2 text-left space-y-1">
+          <p className="text-sm font-semibold text-foreground truncate">{item?.title || "Add your product"}</p>
+          {item?.price !== null && item?.price !== undefined ? (
+            <p className="text-xs font-bold" style={{ color: accent }}>
+              ${item.price.toFixed(2)}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Tap to see details</p>
+          )}
+        </div>
+      </button>
+    </Html>
+  </group>
+);
+
+const InteriorScene = ({
+  shop,
+  items,
+  onSelectItem,
+}: {
+  shop: ShopBranding;
+  items: (ShopItem | undefined)[];
+  onSelectItem: (slot: number) => void;
+}) => {
   const brickTexture = useBrickTexture();
   const accent = shop.accentColor || "#10B981";
   const primary = shop.primaryColor || "#3B82F6";
@@ -120,6 +214,18 @@ const InteriorScene = ({ shop }: { shop: ShopBranding }) => {
       <Pedestal position={[0, 0.2, -2.5]} color={accent} />
       <Pedestal position={[3, 0.2, -1.5]} color={primary} />
 
+      {/* Framed showcase items */}
+      {FRAME_SPOTS.map(config => (
+        <FrameSpot
+          key={config.slot}
+          config={config}
+          item={items[config.slot]}
+          accent={accent}
+          primary={primary}
+          onSelect={onSelectItem}
+        />
+      ))}
+
       {/* Floating brand title */}
       <Text
         position={[0, 3.6, -2]}
@@ -137,6 +243,24 @@ const InteriorScene = ({ shop }: { shop: ShopBranding }) => {
 };
 
 const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
+  const { data: items = [], isLoading } = useShopItems(shop.shopId);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+
+  const wallItems = useMemo(() => {
+    const filled = Array.from({ length: 5 }, () => undefined as ShopItem | undefined);
+    items.forEach(item => {
+      if (item.slot_index >= 0 && item.slot_index < filled.length) {
+        filled[item.slot_index] = item;
+      }
+    });
+    return filled;
+  }, [items]);
+
+  const accent = shop.accentColor || "#10B981";
+  const primary = shop.primaryColor || "#3B82F6";
+  const selectedItem = selectedSlot !== null ? wallItems[selectedSlot] : undefined;
+  const hasItems = wallItems.some(Boolean);
+
   return (
     <div className="fixed inset-0 z-[250] bg-background/90 backdrop-blur-md flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-gradient-to-br from-background/60 via-background/80 to-background/90" />
@@ -155,7 +279,7 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
           <color attach="background" args={["#0f172a"]} />
           <fog attach="fog" args={["#0f172a", 12, 22]} />
           <React.Suspense fallback={null}>
-            <InteriorScene shop={shop} />
+            <InteriorScene shop={shop} items={wallItems} onSelectItem={setSelectedSlot} />
           </React.Suspense>
           <OrbitControls
             enablePan={false}
@@ -168,20 +292,57 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
             minPolarAngle={Math.PI / 4.3}
           />
         </Canvas>
-        <div className="absolute bottom-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground bg-background/85 backdrop-blur-sm px-3 py-2 rounded-lg border border-border/50">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-primary" />
-            Drag or swipe to look around
+        <div className="absolute bottom-3 left-3 right-3 z-20 space-y-2">
+          {(hasItems || selectedItem || isLoading) && (
+            <div className="rounded-lg border border-border/60 bg-background/92 backdrop-blur-sm px-3 py-2 shadow-lg">
+              {isLoading ? (
+                <p className="text-xs text-muted-foreground">Loading showcase items...</p>
+              ) : selectedItem ? (
+                <div className="flex items-start gap-3">
+                  {selectedItem.image_url && (
+                    <img
+                      src={selectedItem.image_url}
+                      alt={selectedItem.title}
+                      className="h-14 w-14 rounded-md object-cover border"
+                    />
+                  )}
+                  <div className="flex-1 space-y-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{selectedItem.title}</p>
+                    {selectedItem.description && (
+                      <p className="text-xs text-muted-foreground leading-snug break-words">
+                        {selectedItem.description}
+                      </p>
+                    )}
+                  </div>
+                  {selectedItem.price !== null && selectedItem.price !== undefined && (
+                    <div className="text-sm font-bold" style={{ color: accent }}>
+                      ${selectedItem.price.toFixed(2)}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {hasItems
+                    ? "Tap any framed item on the wall to read its details."
+                    : "The shop owner hasn’t added showcase items yet."}
+                </p>
+              )}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground bg-background/85 backdrop-blur-sm px-3 py-2 rounded-lg border border-border/50">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-primary" />
+              Drag or swipe to look around
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-primary" />
+              Pinch or scroll to zoom
+            </div>
+            <Button size="sm" variant="secondary" className="ml-auto" onClick={onExit}>
+              Exit Shop
+            </Button>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-primary" />
-            Pinch or scroll to zoom
-          </div>
-          <Button size="sm" variant="secondary" className="ml-auto" onClick={onExit}>
-            Exit Shop
-          </Button>
         </div>
-
       </div>
     </div>
   );
