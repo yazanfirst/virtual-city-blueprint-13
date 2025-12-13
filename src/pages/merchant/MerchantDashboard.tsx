@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { LayoutDashboard, Store, Plus, Clock, CheckCircle, XCircle, Trash2, PauseCircle, PlayCircle, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useMerchantShops } from "@/hooks/useMerchantShops";
+import { useMerchantShops, type ShopWithLocation } from "@/hooks/useMerchantShops";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -151,7 +151,7 @@ const MerchantDashboard = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {shops.map(shop => (
+              {shops.map((shop: ShopWithLocation) => (
                 <div key={shop.id} className="flex items-center justify-between p-4 bg-muted rounded-lg gap-4">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div className="w-10 h-10 rounded bg-primary/20 flex items-center justify-center shrink-0">
@@ -160,7 +160,7 @@ const MerchantDashboard = () => {
                     <div className="min-w-0">
                       <p className="font-medium truncate">{shop.name}</p>
                       <p className="text-sm text-muted-foreground truncate">
-                        {(shop as any).shop_spots?.streets?.name} - Spot {(shop as any).shop_spots?.spot_label}
+                        {shop.shop_spots?.streets?.name} - Spot {shop.shop_spots?.spot_label}
                       </p>
                     </div>
                   </div>

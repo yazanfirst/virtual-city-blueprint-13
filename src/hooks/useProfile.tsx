@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -14,18 +14,17 @@ export function useProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-    } else {
+  /**
+   * Load the signed-in user's profile and reset state if no user is present.
+   */
+  const fetchProfile = useCallback(async () => {
+    if (!user) {
       setProfile(null);
       setLoading(false);
+      return;
     }
-  }, [user]);
 
-  const fetchProfile = async () => {
-    if (!user) return;
-
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -44,11 +43,14 @@ export function useProfile() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   const refetch = () => {
-    setLoading(true);
-    fetchProfile();
+    void fetchProfile();
   };
 
   return { profile, loading, refetch };
