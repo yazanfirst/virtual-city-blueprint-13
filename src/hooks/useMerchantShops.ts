@@ -5,11 +5,21 @@ import { useAuth } from './useAuth';
 
 export type Shop = Tables<'shops'>;
 export type ShopInsert = TablesInsert<'shops'>;
+export type ShopWithLocation = Shop & {
+  shop_spots?: {
+    spot_label?: string | null;
+    street_id?: string | null;
+    streets?: {
+      name?: string | null;
+      slug?: string | null;
+    } | null;
+  } | null;
+};
 
 export function useMerchantShops() {
   const { user } = useAuth();
 
-  return useQuery({
+  return useQuery<ShopWithLocation[]>({
     queryKey: ['merchant-shops', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -31,7 +41,7 @@ export function useMerchantShops() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as ShopWithLocation[];
     },
     enabled: !!user,
   });

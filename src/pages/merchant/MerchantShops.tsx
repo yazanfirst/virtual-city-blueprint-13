@@ -2,7 +2,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Store, AlertCircle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/StatusBadge";
-import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
+import { useStreetBySlug, useSpotsWithShops, type SpotWithShop } from "@/hooks/useStreets";
 
 type SpotStatus = "active" | "coming-soon" | "for-rent" | "taken";
 
@@ -14,7 +14,7 @@ const MerchantShops = () => {
 
   const isLoading = streetLoading || spotsLoading;
 
-  const getSpotStatus = (spot: any): SpotStatus => {
+  const getSpotStatus = (spot: SpotWithShop): SpotStatus => {
     if (!spot.shop) return "for-rent";
     if (spot.shop.status === "active") return "taken";
     if (spot.shop.status === "pending_review") return "coming-soon";

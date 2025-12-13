@@ -98,8 +98,8 @@ const EditShop = () => {
         accentColor: data.accent_color || "#10B981",
         facadeTemplate: (data.facade_template as ShopFacadeTemplate) || "modern_neon",
         signageFont: (data.signage_font as ShopSignageFont) || "classic",
-        textureTemplate: ((data as any).texture_template as TextureTemplate) || "none",
-        textureUrl: (data as any).texture_url || "",
+        textureTemplate: (data.texture_template as TextureTemplate) || "none",
+        textureUrl: data.texture_url || "",
       });
     } catch (error) {
       console.error('Error fetching shop:', error);
@@ -162,10 +162,11 @@ const EditShop = () => {
       });
 
       navigate('/merchant/dashboard');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to submit changes.";
       toast({
         title: "Error",
-        description: error.message || "Failed to submit changes.",
+        description: message,
         variant: "destructive",
       });
     } finally {

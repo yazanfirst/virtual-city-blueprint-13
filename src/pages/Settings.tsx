@@ -110,10 +110,11 @@ const Settings = () => {
         title: "Profile Updated",
         description: "Your profile has been saved successfully.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to save profile";
       toast({
         title: "Error",
-        description: error.message || "Failed to save profile",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -173,10 +174,11 @@ const Settings = () => {
         title: "Avatar Updated",
         description: "Your profile picture has been updated.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to upload avatar";
       toast({
         title: "Upload Failed",
-        description: error.message || "Failed to upload avatar",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -204,10 +206,11 @@ const Settings = () => {
         title: "Reset Email Sent",
         description: "Check your email for a password reset link.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to send reset email";
       toast({
         title: "Error",
-        description: error.message || "Failed to send reset email",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -235,10 +238,11 @@ const Settings = () => {
       });
       
       navigate('/');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to delete account";
       toast({
         title: "Error",
-        description: error.message || "Failed to delete account",
+        description: message,
         variant: "destructive",
       });
     } finally {
