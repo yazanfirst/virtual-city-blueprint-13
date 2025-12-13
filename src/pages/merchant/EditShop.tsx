@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, Save, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,15 +60,13 @@ const EditShop = () => {
     textureUrl: "",
   });
 
-  useEffect(() => {
-    if (shopId && user) {
-      fetchShop();
-    }
-  }, [shopId, user]);
+  /**
+   * Load the shop details for editing while enforcing merchant ownership.
+   */
+  const fetchShop = useCallback(async () => {
+    if (!shopId || !user) return;
 
-  const fetchShop = async () => {
-    if (!shopId) return;
-
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('shops')
@@ -78,7 +76,7 @@ const EditShop = () => {
 
       if (error) throw error;
 
-      if (data.merchant_id !== user?.id) {
+      if (data.merchant_id !== user.id) {
         toast({
           title: "Unauthorized",
           description: "You can only edit your own shops.",
@@ -112,7 +110,11 @@ const EditShop = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate, shopId, user]);
+
+  useEffect(() => {
+    fetchShop();
+  }, [fetchShop]);
 
   const hasChanges = () => {
     if (!originalData) return false;
