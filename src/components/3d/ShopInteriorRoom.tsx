@@ -140,18 +140,18 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
   return (
     <div className="fixed inset-0 z-[140] bg-background/90 backdrop-blur-md flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-gradient-to-br from-background/60 via-background/80 to-background/90" />
-      <div className="relative w-full max-w-6xl h-[70vh] cyber-card overflow-hidden border border-primary/30">
-        <div className="absolute top-3 left-4 z-10">
+      <div className="relative w-full max-w-6xl h-[75vh] sm:h-[80vh] max-h-[calc(100vh-2rem)] cyber-card overflow-hidden border border-primary/30">
+        <div className="absolute top-3 left-4 z-10 hidden sm:block">
           <div className="rounded-full bg-primary/15 px-4 py-2 text-primary text-xs font-semibold uppercase tracking-wide shadow-lg backdrop-blur-sm">
             {shop.shopName || "Shop Interior"}
           </div>
         </div>
-        <div className="absolute top-3 inset-x-0 flex justify-center z-10">
+        <div className="absolute top-3 inset-x-0 flex justify-center z-10 hidden sm:flex">
           <div className="rounded-full bg-background/70 px-5 py-2 text-sm font-semibold text-foreground shadow-lg border border-primary/20 backdrop-blur">
             {shop.shopName || "Virtual Shop"}
           </div>
         </div>
-        <div className="absolute top-3 right-3 z-10 flex gap-2">
+        <div className="absolute top-3 right-3 z-10 hidden sm:flex gap-2">
           <Button size="sm" variant="outline" onClick={onExit}>
             Exit Shop
           </Button>
@@ -173,7 +173,7 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
             minPolarAngle={Math.PI / 4.3}
           />
         </Canvas>
-        <div className="absolute bottom-3 left-4 right-4 z-10 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+        <div className="absolute bottom-3 left-3 right-3 z-10 flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-border/50">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-primary" />
             Drag or swipe to look around
@@ -182,6 +182,9 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
             <span className="h-2 w-2 rounded-full bg-primary" />
             Pinch or scroll to zoom
           </div>
+          <Button size="sm" variant="secondary" className="ml-auto sm:hidden" onClick={onExit}>
+            Exit Shop
+          </Button>
         </div>
       </div>
     </div>
