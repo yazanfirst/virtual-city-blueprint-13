@@ -699,84 +699,15 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
 
       {/* Bottom Panel - Mobile landscape friendly */}
       <div className="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 bg-gradient-to-t from-background via-background/95 to-transparent">
-        <div className="max-w-xl mx-auto">
+        <div className="max-w-xl mx-auto space-y-2">
           {isLoading ? (
             <div className="text-center py-2">
               <p className="text-xs text-muted-foreground">Loading...</p>
             </div>
-          ) : selectedItem ? (
-            <div 
-              className="rounded-xl border bg-card/95 backdrop-blur-xl shadow-xl overflow-hidden"
-              style={{ borderColor: `${accent}30` }}
-            >
-              <div className="flex items-stretch">
-                {/* Image */}
-                {selectedItem.image_url && (
-                  <div className="w-20 sm:w-28 shrink-0 bg-muted">
-                    <img 
-                      src={selectedItem.image_url} 
-                      alt={selectedItem.title}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                )}
-                
-                {/* Info */}
-                <div className="flex-1 p-2 sm:p-3 flex flex-col justify-between min-w-0">
-                  <div className="space-y-0.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">
-                        {selectedItem.title}
-                      </h3>
-                      {selectedItem.price != null && (
-                        <span 
-                          className="shrink-0 px-2 py-0.5 rounded-full text-xs font-bold text-white"
-                          style={{ backgroundColor: accent }}
-                        >
-                          ${Number(selectedItem.price).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                    {selectedItem.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {selectedItem.description}
-                      </p>
-                    )}
-                  </div>
-                  
-                  {/* Navigation */}
-                  {filledSlots.length > 1 && (
-                    <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-border/30">
-                      <span className="text-[10px] text-muted-foreground">
-                        {filledSlots.indexOf(selectedItem) + 1}/{filledSlots.length}
-                      </span>
-                      <div className="flex gap-1">
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          className="h-7 w-7"
-                          onClick={() => navigateItem('prev')}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          className="h-7 w-7"
-                          onClick={() => navigateItem('next')}
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
           ) : filledSlots.length > 0 ? (
             <div className="text-center py-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/50">
               <Package className="h-5 w-5 mx-auto mb-1.5" style={{ color: primary }} />
-              <p className="text-xs text-foreground font-medium">Tap any frame to see details</p>
+              <p className="text-xs text-foreground font-medium">Tap any frame to open the product popup</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">
                 {filledSlots.length} item{filledSlots.length !== 1 ? 's' : ''} on display
               </p>
@@ -787,9 +718,9 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
               <p className="text-xs text-muted-foreground">No items on display yet</p>
             </div>
           )}
-          
+
           {/* Controls hint - compact for mobile */}
-          <div className="flex items-center justify-center gap-3 mt-2 text-[10px] text-muted-foreground/70">
+          <div className="flex items-center justify-center gap-3 text-[10px] text-muted-foreground/70">
             <span>Drag to look</span>
             <span>•</span>
             <span>Pinch to zoom</span>
