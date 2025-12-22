@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+import { mockShopsByStreetSlug, mockSpotsByStreetSlug } from '@/lib/mockStreetContent';
 
 export type ShopSpot = Tables<'shop_spots'>;
 export type Shop = Tables<'shops'>;
@@ -10,10 +11,20 @@ export interface SpotWithActiveShop extends ShopSpot {
 }
 
 // Hook to fetch all spots with their active shops for 3D rendering
-export function useAllSpotsForStreet(streetSlug: string) {
+export function useAllSpotsForStreet(streetSlug: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['all-spots-for-street-3d', streetSlug],
     queryFn: async () => {
+      const mockSpots = mockSpotsByStreetSlug[streetSlug];
+      const mockShops = mockShopsByStreetSlug[streetSlug];
+
+      if (mockSpots && mockShops) {
+        return mockSpots.map(spot => ({
+          ...spot,
+          shop: mockShops.find(shop => shop.spot_id === spot.id) || null,
+        }));
+      }
+
       // First get the street by slug
       const { data: street, error: streetError } = await supabase
         .from('streets')
@@ -51,7 +62,7 @@ export function useAllSpotsForStreet(streetSlug: string) {
 
       return spotsWithShops;
     },
-    enabled: !!streetSlug,
+    enabled: options?.enabled ?? !!streetSlug,
     staleTime: 30000, // Cache for 30 seconds
   });
 }
@@ -97,11 +108,21 @@ export interface ShopBranding {
 }
 
 export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): ShopBranding[] {
+  const brandingDefaults: Pick<ShopBranding, 'primaryColor' | 'accentColor' | 'facadeTemplate' | 'signageFont' | 'textureTemplate' | 'textureUrl'> = {
+    primaryColor: '#3B82F6',
+    accentColor: '#10B981',
+    facadeTemplate: 'modern_neon',
+    signageFont: 'classic',
+    textureTemplate: null,
+    textureUrl: null,
+  };
+
   return spotsWithShops.map(spot => {
     const position = parsePosition3D(spot.position_3d as unknown as string | Position3D);
-    
+
     if (spot.shop) {
       return {
+        ...brandingDefaults,
         spotId: spot.id,
         streetId: spot.street_id,
         spotLabel: spot.spot_label,
@@ -111,14 +132,14 @@ export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): S
         isSuspended: spot.shop.status === 'suspended',
         shopName: spot.shop.name,
         category: spot.shop.category,
-        primaryColor: spot.shop.primary_color || '#3B82F6',
-        accentColor: spot.shop.accent_color || '#10B981',
-        facadeTemplate: spot.shop.facade_template || 'modern_neon',
+        primaryColor: spot.shop.primary_color || brandingDefaults.primaryColor,
+        accentColor: spot.shop.accent_color || brandingDefaults.accentColor,
+        facadeTemplate: spot.shop.facade_template || brandingDefaults.facadeTemplate,
         logoUrl: spot.shop.logo_url,
         externalLink: spot.shop.external_link,
-        signageFont: spot.shop.signage_font || 'classic',
-        textureTemplate: spot.shop.texture_template || null,
-        textureUrl: spot.shop.texture_url || null,
+        signageFont: spot.shop.signage_font || brandingDefaults.signageFont,
+        textureTemplate: spot.shop.texture_template || brandingDefaults.textureTemplate,
+        textureUrl: spot.shop.texture_url || brandingDefaults.textureUrl,
       };
     }
 
