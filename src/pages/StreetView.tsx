@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Map, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
@@ -8,7 +8,9 @@ import CityScene, { CameraView } from "@/components/3d/CityScene";
 import ShopDetailModal from "@/components/3d/ShopDetailModal";
 import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
+import ZoneGateTrigger from "@/components/3d/ZoneGateTrigger";
 import { useGameStore } from "@/stores/gameStore";
+import { ZoneConfig } from "@/config/zones.config";
 
 const PanelBox = ({ 
   title,
@@ -36,9 +38,20 @@ const PanelBox = ({
 
 const StreetView = () => {
   const { streetId } = useParams<{ streetId: string }>();
-  const { data: street, isLoading } = useStreetBySlug(streetId || "");
-  const { data: spotsData } = useAllSpotsForStreet(streetId || "");
-  const { data: spotsWithShops } = useSpotsWithShops(street?.id || "");
+  const navigate = useNavigate();
+  const isFoodStreet = streetId === "food-street";
+  const location = useLocation();
+  const navigationState = (location.state as { outsideEntry?: boolean } | null) || {};
+  const [hasEnteredGate, setHasEnteredGate] = useState(!isFoodStreet || navigationState.outsideEntry);
+
+  // Handle zone gate triggers (for main city)
+  const handleZoneEnter = useCallback((zone: ZoneConfig) => {
+    navigate(zone.route, { state: { outsideEntry: false, fromSource: 'gate' } });
+  }, [navigate]);
+  const { data: street, isLoading } = useStreetBySlug(streetId || "", { enabled: !!streetId });
+  const shouldLoadStreetAssets = !isFoodStreet || hasEnteredGate;
+  const { data: spotsData } = useAllSpotsForStreet(streetId || "", { enabled: shouldLoadStreetAssets && !!streetId });
+  const { data: spotsWithShops } = useSpotsWithShops(street?.id || "", { enabled: shouldLoadStreetAssets && !!street?.id });
   const [isMaximized, setIsMaximized] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
@@ -48,6 +61,10 @@ const StreetView = () => {
   const [showMissions, setShowMissions] = useState(false);
   const [isInsideShop, setIsInsideShop] = useState(false);
   const [interiorShop, setInteriorShop] = useState<ShopBranding | null>(null);
+
+  useEffect(() => {
+    setHasEnteredGate(!isFoodStreet || navigationState.outsideEntry);
+  }, [isFoodStreet, navigationState.outsideEntry]);
 
   // Game state
   const { coins, level, xp } = useGameStore();
@@ -70,8 +87,27 @@ const StreetView = () => {
     setIsInsideShop(false);
   };
 
+  const renderCityScene = () => {
+    const sceneProps = {
+      streetId: street?.id || streetId || "",
+      timeOfDay,
+      cameraView,
+      shopBrandings,
+      shouldLoadAssets: shouldLoadStreetAssets,
+      onGateEnter: () => setHasEnteredGate(true),
+      onShopClick: handleShopClick,
+    } as const;
+    return (
+      <>
+        <CityScene {...sceneProps} />
+        {/* Zone gate trigger for main city - navigates to zones when player walks through gates */}
+        {!isFoodStreet && <ZoneGateTrigger onEnterZone={handleZoneEnter} />}
+      </>
+    );
+  };
+
   // Transform spots data to shop brandings
-  const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
+  const shopBrandings = shouldLoadStreetAssets && spotsData ? transformToShopBranding(spotsData) : [];
 
   // Request fullscreen + landscape orientation when maximized on mobile
   useEffect(() => {
@@ -203,13 +239,7 @@ const StreetView = () => {
       <div className="fixed inset-0 z-50 bg-background">
         {/* Full-screen 3D Scene */}
         <div className="relative h-full w-full">
-          <CityScene 
-            streetId={street.id} 
-            timeOfDay={timeOfDay} 
-            cameraView={cameraView}
-            shopBrandings={shopBrandings}
-            onShopClick={handleShopClick}
-          />
+          {renderCityScene()}
           
           {/* Shop Detail Modal */}
           {showShopModal && (
@@ -352,8 +382,8 @@ const StreetView = () => {
           )}
           
           {/* 2D Map Overlay - Full screen on mobile, positioned on desktop */}
-          {show2DMap && spotsWithShops && (
-            <div 
+          {show2DMap && shouldLoadStreetAssets && spotsWithShops && (
+            <div
               className="absolute inset-0 md:inset-auto md:top-16 md:left-4 flex items-center justify-center md:block pointer-events-auto"
               style={{ zIndex: 200 }}
             >
@@ -554,13 +584,7 @@ const StreetView = () => {
                 </span>
               </div>
               
-              <CityScene 
-                streetId={street.id} 
-                timeOfDay={timeOfDay} 
-                cameraView={cameraView} 
-                shopBrandings={shopBrandings}
-                onShopClick={handleShopClick}
-              />
+              {renderCityScene()}
               
               {/* Shop Detail Modal */}
               {showShopModal && (
