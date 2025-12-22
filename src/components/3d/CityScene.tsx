@@ -22,6 +22,7 @@ type CitySceneProps = {
   shopBrandings?: ShopBranding[];
   shouldLoadAssets?: boolean;
   onGateEnter?: () => void;
+  onZoneChange?: (zoneId: string, spawnPointId?: string) => void;
   onShopClick?: (branding: ShopBranding) => void;
 };
 
@@ -34,6 +35,7 @@ type InnerProps = {
   shopBrandings: ShopBranding[];
   shouldLoadAssets: boolean;
   onGateEnter?: () => void;
+  onZoneChange?: (zoneId: string, spawnPointId?: string) => void;
   onShopClick?: (branding: ShopBranding) => void;
 };
 
@@ -199,6 +201,7 @@ export default function CityScene({
   shopBrandings = [],
   shouldLoadAssets = true,
   onGateEnter,
+  onZoneChange,
   onShopClick,
 }: CitySceneProps) {
   const deviceType = useDeviceType();
@@ -283,6 +286,7 @@ export default function CityScene({
             shopBrandings={shopBrandings}
             shouldLoadAssets={shouldLoadAssets}
             onGateEnter={onGateEnter}
+            onZoneChange={onZoneChange}
             onShopClick={onShopClick}
           />
         </Suspense>
@@ -659,8 +663,29 @@ type FoodStreetSceneProps = {
   shouldLoadAssets: boolean;
   onShopClick?: (branding: ShopBranding) => void;
   onGateEnter?: () => void;
+  onZoneChange?: (zoneId: string, spawnPointId?: string) => void;
   getBrandingAtPosition: (x: number, z: number) => ShopBranding | undefined;
 };
+
+function ZoneTransitionWatcher({
+  playerPosition,
+  hasTriggered,
+  onTrigger,
+}: {
+  playerPosition: [number, number, number];
+  hasTriggered: boolean;
+  onTrigger: () => void;
+}) {
+  useEffect(() => {
+    if (hasTriggered) return;
+    const [x, , z] = playerPosition;
+    if (x <= -72 && Math.abs(z) <= 8) {
+      onTrigger();
+    }
+  }, [playerPosition, hasTriggered, onTrigger]);
+
+  return null;
+}
 
 function FoodStreetScene({
   isNight,
@@ -668,9 +693,15 @@ function FoodStreetScene({
   shouldLoadAssets,
   onShopClick,
   onGateEnter,
+  onZoneChange,
   getBrandingAtPosition,
 }: FoodStreetSceneProps) {
   const playerPosition = usePlayerStore((state) => state.position);
+  const [hasTriggeredExit, setHasTriggeredExit] = useState(false);
+
+  useEffect(() => {
+    setHasTriggeredExit(false);
+  }, [onZoneChange]);
 
   useEffect(() => {
     if (shouldLoadAssets || !onGateEnter) return;
@@ -679,6 +710,15 @@ function FoodStreetScene({
       onGateEnter();
     }
   }, [playerPosition, shouldLoadAssets, onGateEnter]);
+
+  useEffect(() => {
+    if (!onZoneChange || hasTriggeredExit) return;
+    const [x, , z] = playerPosition;
+    if (Math.abs(x) <= 6 && z >= 34) {
+      setHasTriggeredExit(true);
+      onZoneChange('fashion-street', 'spawn_fashion_from_food');
+    }
+  }, [playerPosition, hasTriggeredExit, onZoneChange]);
 
   const roadColor = isNight ? "#2E3138" : COLORS.road;
   const sidewalkColor = isNight ? "#9BA3A8" : COLORS.sidewalk;
@@ -781,11 +821,18 @@ function SceneInner({
   shopBrandings,
   shouldLoadAssets,
   onGateEnter,
+  onZoneChange,
   onShopClick,
 }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
+  const playerPosition = usePlayerStore((state) => state.position);
+  const [hasTriggeredDistrictGate, setHasTriggeredDistrictGate] = useState(false);
+
+  useEffect(() => {
+    setHasTriggeredDistrictGate(false);
+  }, [streetId]);
 
   useEffect(() => {
     scene.background = null;
@@ -829,6 +876,7 @@ function SceneInner({
           shouldLoadAssets={shouldLoadAssets}
           onShopClick={onShopClick}
           onGateEnter={onGateEnter}
+          onZoneChange={onZoneChange}
           getBrandingAtPosition={getBrandingAtPosition}
         />
 
@@ -848,6 +896,17 @@ function SceneInner({
     <>
       <GradientSky isNight={isNight} />
       {!isNight && cloudPositions.map((c, i) => <Cloud key={i} position={[c.x, c.y, c.z]} scale={c.scale} />)}
+
+      {streetId !== "food-street" && onZoneChange && (
+        <ZoneTransitionWatcher
+          playerPosition={playerPosition}
+          hasTriggered={hasTriggeredDistrictGate}
+          onTrigger={() => {
+            setHasTriggeredDistrictGate(true);
+            onZoneChange('food-street', 'spawn_food_from_fashion');
+          }}
+        />
+      )}
 
       {/* Lighting */}
       <ambientLight intensity={isNight ? 1.3 : 1.0} />
