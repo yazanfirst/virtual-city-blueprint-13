@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+import { mockShopsByStreetSlug, mockSpotsByStreetSlug } from '@/lib/mockStreetContent';
 
 export type ShopSpot = Tables<'shop_spots'>;
 export type Shop = Tables<'shops'>;
@@ -10,10 +11,20 @@ export interface SpotWithActiveShop extends ShopSpot {
 }
 
 // Hook to fetch all spots with their active shops for 3D rendering
-export function useAllSpotsForStreet(streetSlug: string) {
+export function useAllSpotsForStreet(streetSlug: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['all-spots-for-street-3d', streetSlug],
     queryFn: async () => {
+      const mockSpots = mockSpotsByStreetSlug[streetSlug];
+      const mockShops = mockShopsByStreetSlug[streetSlug];
+
+      if (mockSpots && mockShops) {
+        return mockSpots.map(spot => ({
+          ...spot,
+          shop: mockShops.find(shop => shop.spot_id === spot.id) || null,
+        }));
+      }
+
       // First get the street by slug
       const { data: street, error: streetError } = await supabase
         .from('streets')
@@ -51,7 +62,7 @@ export function useAllSpotsForStreet(streetSlug: string) {
 
       return spotsWithShops;
     },
-    enabled: !!streetSlug,
+    enabled: options?.enabled ?? !!streetSlug,
     staleTime: 30000, // Cache for 30 seconds
   });
 }

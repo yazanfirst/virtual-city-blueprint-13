@@ -36,9 +36,12 @@ const PanelBox = ({
 
 const StreetView = () => {
   const { streetId } = useParams<{ streetId: string }>();
-  const { data: street, isLoading } = useStreetBySlug(streetId || "");
-  const { data: spotsData } = useAllSpotsForStreet(streetId || "");
-  const { data: spotsWithShops } = useSpotsWithShops(street?.id || "");
+  const isFoodStreet = streetId === "food-street";
+  const [hasEnteredGate, setHasEnteredGate] = useState(!isFoodStreet);
+  const { data: street, isLoading } = useStreetBySlug(streetId || "", { enabled: !!streetId });
+  const shouldLoadStreetAssets = !isFoodStreet || hasEnteredGate;
+  const { data: spotsData } = useAllSpotsForStreet(streetId || "", { enabled: shouldLoadStreetAssets && !!streetId });
+  const { data: spotsWithShops } = useSpotsWithShops(street?.id || "", { enabled: shouldLoadStreetAssets && !!street?.id });
   const [isMaximized, setIsMaximized] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
@@ -48,6 +51,10 @@ const StreetView = () => {
   const [showMissions, setShowMissions] = useState(false);
   const [isInsideShop, setIsInsideShop] = useState(false);
   const [interiorShop, setInteriorShop] = useState<ShopBranding | null>(null);
+
+  useEffect(() => {
+    setHasEnteredGate(!isFoodStreet);
+  }, [isFoodStreet]);
 
   // Game state
   const { coins, level, xp } = useGameStore();
@@ -70,8 +77,46 @@ const StreetView = () => {
     setIsInsideShop(false);
   };
 
+  const renderCityScene = () => {
+    const sceneProps = {
+      streetId: street?.id || streetId || "",
+      timeOfDay,
+      cameraView,
+      shopBrandings,
+      onShopClick: handleShopClick,
+    } as const;
+
+    if (!shouldLoadStreetAssets && isFoodStreet) {
+      return (
+        <div className="relative flex h-full min-h-[420px] items-center justify-center rounded-2xl border border-dashed border-primary/30 bg-gradient-to-br from-amber-950/40 via-background to-amber-900/10 px-6 text-center">
+          <div className="space-y-4 max-w-xl">
+            <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 border border-primary/30">
+              <Map className="h-5 w-5 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-display text-xl font-bold text-foreground">Enter the Food Street gate</h3>
+              <p className="text-muted-foreground">
+                To keep the experience fast, Food Street only loads once you pass through its gate. Step up to the archway and tap the button below to stream in the new stalls and branch lanes.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button variant="cyber" onClick={() => setHasEnteredGate(true)}>
+                Enter Food Street
+              </Button>
+              <Button variant="outline" onClick={() => setHasEnteredGate(true)}>
+                Preview zone layout
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return <CityScene {...sceneProps} />;
+  };
+
   // Transform spots data to shop brandings
-  const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
+  const shopBrandings = shouldLoadStreetAssets && spotsData ? transformToShopBranding(spotsData) : [];
 
   // Request fullscreen + landscape orientation when maximized on mobile
   useEffect(() => {
@@ -203,13 +248,7 @@ const StreetView = () => {
       <div className="fixed inset-0 z-50 bg-background">
         {/* Full-screen 3D Scene */}
         <div className="relative h-full w-full">
-          <CityScene 
-            streetId={street.id} 
-            timeOfDay={timeOfDay} 
-            cameraView={cameraView}
-            shopBrandings={shopBrandings}
-            onShopClick={handleShopClick}
-          />
+          {renderCityScene()}
           
           {/* Shop Detail Modal */}
           {showShopModal && (
@@ -352,8 +391,8 @@ const StreetView = () => {
           )}
           
           {/* 2D Map Overlay - Full screen on mobile, positioned on desktop */}
-          {show2DMap && spotsWithShops && (
-            <div 
+          {show2DMap && shouldLoadStreetAssets && spotsWithShops && (
+            <div
               className="absolute inset-0 md:inset-auto md:top-16 md:left-4 flex items-center justify-center md:block pointer-events-auto"
               style={{ zIndex: 200 }}
             >
@@ -554,13 +593,7 @@ const StreetView = () => {
                 </span>
               </div>
               
-              <CityScene 
-                streetId={street.id} 
-                timeOfDay={timeOfDay} 
-                cameraView={cameraView} 
-                shopBrandings={shopBrandings}
-                onShopClick={handleShopClick}
-              />
+              {renderCityScene()}
               
               {/* Shop Detail Modal */}
               {showShopModal && (
