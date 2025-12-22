@@ -139,4 +139,15 @@
     content: '';
     @apply absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50;
   }
+
+  /* Loading bar animation */
+  @keyframes loading-bar {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+  }
+
+  .animate-loading-bar {
+    width: 50%;
+    animation: loading-bar 1.2s ease-in-out infinite;
+  }
 }

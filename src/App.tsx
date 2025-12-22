@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import CityMap from "./pages/CityMap";
 import StreetView from "./pages/StreetView";
+import FoodStreet from "./pages/FoodStreet";
 import Settings from "./pages/Settings";
 import MerchantDashboard from "./pages/merchant/MerchantDashboard";
 import MerchantStreets from "./pages/merchant/MerchantStreets";
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/city-map" element={<CityMap />} />
             <Route path="/city/:streetId" element={<StreetView />} />
+            <Route path="/food-street" element={<FoodStreet />} />
             
             {/* Settings - requires auth */}
             <Route 
