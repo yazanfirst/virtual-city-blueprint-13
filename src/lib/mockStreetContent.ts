@@ -19,11 +19,11 @@ export const mockStreets: Tables<"streets">[] = [
 ];
 
 const foodStreetPositions: { label: string; position: Position3D; sort: number }[] = [
-  { label: "Spice Gate", position: { x: -6, z: 8, rotation: Math.PI / 2 }, sort: 1 },
-  { label: "Grill House", position: { x: 2, z: 3, rotation: Math.PI / 2 }, sort: 2 },
-  { label: "Dessert Hub", position: { x: 10, z: -2, rotation: 0 }, sort: 3 },
-  { label: "Fresh Market", position: { x: 2, z: -9, rotation: -Math.PI / 2 }, sort: 4 },
-  { label: "Tea Corner", position: { x: -8, z: -4, rotation: -Math.PI }, sort: 5 },
+  { label: "Spice Gate", position: { x: -5.5, z: 22, rotation: Math.PI / 2 }, sort: 1 },
+  { label: "Grill House", position: { x: 5.5, z: 10, rotation: -Math.PI / 2 }, sort: 2 },
+  { label: "Dessert Hub", position: { x: 16, z: 6, rotation: Math.PI }, sort: 3 },
+  { label: "Fresh Market", position: { x: -16, z: -6, rotation: 0 }, sort: 4 },
+  { label: "Tea Corner", position: { x: -5.5, z: -20, rotation: Math.PI / 2 }, sort: 5 },
 ];
 
 export const mockSpotsByStreetSlug: Record<string, Tables<"shop_spots">[]> = {

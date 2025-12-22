@@ -110,12 +110,19 @@ const COLLISION_BOXES = [
   { minX: 50, maxX: 66, minZ: 44, maxZ: 52 },
 ];
 
+const FOOD_STREET_COLLISION_BOXES: BoxPlatform[] = [];
+
+const FOOD_STREET_CYLINDER_COLLIDERS: { x: number; z: number; radius: number; height: number }[] = [];
+
+const FOOD_STREET_PLATFORM_SURFACES: PlatformSurface[] = [];
+
 type PlayerControllerProps = {
   isNight: boolean;
   speed?: number;
   joystickInput?: { x: number; y: number };
   viewMode?: "thirdPerson" | "firstPerson";
   cameraRotation?: { azimuth: number; polar: number };
+  streetId?: string;
 };
 
 const PlayerController = ({
@@ -124,6 +131,7 @@ const PlayerController = ({
   joystickInput = { x: 0, y: 0 },
   viewMode = "thirdPerson",
   cameraRotation = { azimuth: 0, polar: Math.PI / 4 },
+  streetId,
 }: PlayerControllerProps) => {
   const groupRef = useRef<THREE.Group>(null);
   const verticalVelocityRef = useRef(0);
@@ -143,6 +151,11 @@ const PlayerController = ({
 
   const { camera } = useThree();
 
+  const activeCollisionBoxes = streetId === 'food-street' ? FOOD_STREET_COLLISION_BOXES : COLLISION_BOXES;
+  const activeCylinderColliders = streetId === 'food-street' ? FOOD_STREET_CYLINDER_COLLIDERS : CYLINDER_COLLIDERS;
+  const activePlatformSurfaces = streetId === 'food-street' ? FOOD_STREET_PLATFORM_SURFACES : PLATFORM_SURFACES;
+  const benchColliders = streetId === 'food-street' ? [] : BENCH_COLLIDERS;
+
   // Keep position in sync if store updates externally
   useEffect(() => {
     positionRef.current.set(...position);
@@ -159,7 +172,7 @@ const PlayerController = ({
     y: number = positionRef.current.y,
     radius: number = PLAYER_RADIUS,
   ): boolean => {
-    for (const box of COLLISION_BOXES) {
+    for (const box of activeCollisionBoxes) {
       if (
         x + radius > box.minX &&
         x - radius < box.maxX &&
@@ -170,7 +183,7 @@ const PlayerController = ({
       }
     }
 
-    for (const collider of CYLINDER_COLLIDERS) {
+    for (const collider of activeCylinderColliders) {
       const dx = x - collider.x;
       const dz = z - collider.z;
       const distanceSq = dx * dx + dz * dz;
@@ -181,7 +194,7 @@ const PlayerController = ({
       }
     }
 
-    for (const bench of BENCH_COLLIDERS) {
+    for (const bench of benchColliders) {
       if (
         x + radius > bench.minX &&
         x - radius < bench.maxX &&
@@ -201,7 +214,7 @@ const PlayerController = ({
   const getSurfaceHeight = useCallback((x: number, z: number): { height: number; requiresJump: boolean } => {
     let surface = { height: 0.25, requiresJump: false };
 
-    for (const platform of PLATFORM_SURFACES) {
+    for (const platform of activePlatformSurfaces) {
       if (platform.type === 'circle') {
         const dx = x - platform.x;
         const dz = z - platform.z;
@@ -221,7 +234,7 @@ const PlayerController = ({
     }
 
     return surface;
-  }, []);
+  }, [activePlatformSurfaces]);
 
   const attemptJump = useCallback(() => {
     const groundInfo = getSurfaceHeight(positionRef.current.x, positionRef.current.z);

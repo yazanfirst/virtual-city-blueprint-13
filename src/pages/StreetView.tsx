@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Map, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
@@ -37,7 +37,9 @@ const PanelBox = ({
 const StreetView = () => {
   const { streetId } = useParams<{ streetId: string }>();
   const isFoodStreet = streetId === "food-street";
-  const [hasEnteredGate, setHasEnteredGate] = useState(!isFoodStreet);
+  const location = useLocation();
+  const navigationState = (location.state as { outsideEntry?: boolean } | null) || {};
+  const [hasEnteredGate, setHasEnteredGate] = useState(!isFoodStreet || navigationState.outsideEntry);
   const { data: street, isLoading } = useStreetBySlug(streetId || "", { enabled: !!streetId });
   const shouldLoadStreetAssets = !isFoodStreet || hasEnteredGate;
   const { data: spotsData } = useAllSpotsForStreet(streetId || "", { enabled: shouldLoadStreetAssets && !!streetId });
@@ -53,8 +55,8 @@ const StreetView = () => {
   const [interiorShop, setInteriorShop] = useState<ShopBranding | null>(null);
 
   useEffect(() => {
-    setHasEnteredGate(!isFoodStreet);
-  }, [isFoodStreet]);
+    setHasEnteredGate(!isFoodStreet || navigationState.outsideEntry);
+  }, [isFoodStreet, navigationState.outsideEntry]);
 
   // Game state
   const { coins, level, xp } = useGameStore();
@@ -83,35 +85,10 @@ const StreetView = () => {
       timeOfDay,
       cameraView,
       shopBrandings,
+      shouldLoadAssets: shouldLoadStreetAssets,
+      onGateEnter: () => setHasEnteredGate(true),
       onShopClick: handleShopClick,
     } as const;
-
-    if (!shouldLoadStreetAssets && isFoodStreet) {
-      return (
-        <div className="relative flex h-full min-h-[420px] items-center justify-center rounded-2xl border border-dashed border-primary/30 bg-gradient-to-br from-amber-950/40 via-background to-amber-900/10 px-6 text-center">
-          <div className="space-y-4 max-w-xl">
-            <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 border border-primary/30">
-              <Map className="h-5 w-5 text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="font-display text-xl font-bold text-foreground">Enter the Food Street gate</h3>
-              <p className="text-muted-foreground">
-                To keep the experience fast, Food Street only loads once you pass through its gate. Step up to the archway and tap the button below to stream in the new stalls and branch lanes.
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button variant="cyber" onClick={() => setHasEnteredGate(true)}>
-                Enter Food Street
-              </Button>
-              <Button variant="outline" onClick={() => setHasEnteredGate(true)}>
-                Preview zone layout
-              </Button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
     return <CityScene {...sceneProps} />;
   };
 

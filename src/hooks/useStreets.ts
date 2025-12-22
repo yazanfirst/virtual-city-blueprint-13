@@ -12,6 +12,10 @@ export interface SpotWithShop extends ShopSpot {
 }
 
 export function useStreets() {
+  const ensureFoodStreetIsActive = (street: Street) => street.slug === 'food-street'
+    ? { ...street, is_active: true }
+    : street;
+
   return useQuery({
     queryKey: ['streets'],
     queryFn: async () => {
@@ -22,7 +26,7 @@ export function useStreets() {
           .order('name');
 
         if (error) throw error;
-        const merged = [...(data as Street[])];
+        const merged = [...(data as Street[]).map(ensureFoodStreetIsActive)];
 
         mockStreets.forEach(mockStreet => {
           if (!merged.find(street => street.slug === mockStreet.slug)) {
@@ -30,7 +34,7 @@ export function useStreets() {
           }
         });
 
-        return merged;
+        return merged.map(ensureFoodStreetIsActive);
       } catch (err) {
         // If Supabase is unavailable, still expose the mock streets so the zone can be tested
         return mockStreets;
@@ -40,6 +44,10 @@ export function useStreets() {
 }
 
 export function useStreetBySlug(slug: string, options?: { enabled?: boolean }) {
+  const ensureFoodStreetIsActive = (street: Street | null) => (street?.slug === 'food-street'
+    ? { ...street, is_active: true }
+    : street);
+
   return useQuery({
     queryKey: ['street', slug],
     queryFn: async () => {
@@ -53,7 +61,7 @@ export function useStreetBySlug(slug: string, options?: { enabled?: boolean }) {
         .maybeSingle();
 
       if (error) throw error;
-      return data as Street | null;
+      return ensureFoodStreetIsActive(data as Street | null);
     },
     enabled: options?.enabled ?? !!slug,
   });
