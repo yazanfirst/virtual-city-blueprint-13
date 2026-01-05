@@ -8,6 +8,10 @@ import PlayerController from "./PlayerController";
 import MobileControls from "./MobileControls";
 import BrandedShop from "./BrandedShop";
 import CollectibleItem from "./CollectibleItem";
+import MysteryBox from "./MysteryBox";
+import RewardPopup from "./RewardPopup";
+import GameHUD from "@/components/ui/GameHUD";
+import { MYSTERY_BOXES, Reward, BoxRarity } from "@/config/mysteryBoxes.config";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
@@ -28,6 +32,7 @@ type InnerProps = {
   cameraView: CameraView;
   joystickInput: { x: number; y: number };
   cameraRotation: { azimuth: number; polar: number };
+  onBoxCollect: (boxId: string, reward: Reward) => void;
   shopBrandings: ShopBranding[];
   onShopClick?: (branding: ShopBranding) => void;
 };
@@ -198,6 +203,10 @@ export default function CityScene({
   const isMobile = deviceType === 'mobile';
   const [joystickInput, setJoystickInput] = useState({ x: 0, y: 0 });
   
+  // Mystery box reward popup state
+  const [currentReward, setCurrentReward] = useState<{ reward: Reward; rarity: BoxRarity } | null>(null);
+  const combo = useGameStore((state) => state.combo);
+  
   // Use store for camera rotation to persist across game mode changes
   const { cameraRotation, setCameraRotation, incrementJump } = usePlayerStore();
   
@@ -259,8 +268,56 @@ export default function CityScene({
     };
   }, [isMobile, handleCameraMove]);
 
+  // Handle mystery box collection
+  const handleBoxCollect = useCallback((boxId: string, reward: Reward) => {
+    const { addCoins, addGems, addXP, collectBox } = useGameStore.getState();
+    
+    collectBox(boxId);
+    
+    // Apply reward based on type
+    switch (reward.type) {
+      case 'coins':
+        addCoins(reward.amount);
+        break;
+      case 'gems':
+        addGems(reward.amount);
+        break;
+      case 'xp':
+        addXP(reward.amount);
+        break;
+      case 'mystery':
+        // Mystery gives random bonus of everything
+        addCoins(reward.amount * 50);
+        addGems(reward.amount * 10);
+        addXP(reward.amount * 25);
+        break;
+    }
+    
+    // Find the box rarity for popup
+    const boxConfig = MYSTERY_BOXES.find(b => b.id === boxId);
+    if (boxConfig) {
+      setCurrentReward({ reward, rarity: boxConfig.rarity });
+    }
+  }, []);
+
+  const handleRewardPopupComplete = useCallback(() => {
+    setCurrentReward(null);
+  }, []);
+
   return (
     <div className="relative h-full w-full">
+      {/* Game HUD */}
+      <GameHUD combo={combo} />
+      
+      {/* Reward Popup */}
+      {currentReward && (
+        <RewardPopup
+          reward={currentReward.reward}
+          rarity={currentReward.rarity}
+          onComplete={handleRewardPopupComplete}
+        />
+      )}
+      
       <Canvas
         className="h-full w-full"
         camera={{ position: [0, 10, 50], fov: 50 }}
@@ -274,6 +331,7 @@ export default function CityScene({
             cameraRotation={cameraRotation}
             shopBrandings={shopBrandings}
             onShopClick={onShopClick}
+            onBoxCollect={handleBoxCollect}
           />
         </Suspense>
       </Canvas>
@@ -634,7 +692,7 @@ function LaneMarking({ position, rotation = 0 }: { position: [number, number, nu
   );
 }
 
-function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick }: InnerProps) {
+function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onBoxCollect }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
@@ -786,6 +844,16 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           type={coin.type}
           isNight={isNight}
           onCollect={handleCollectItem}
+        />
+      ))}
+
+      {/* === MYSTERY BOXES === */}
+      {MYSTERY_BOXES.map((boxConfig) => (
+        <MysteryBox
+          key={boxConfig.id}
+          config={boxConfig}
+          onCollect={onBoxCollect}
+          isNight={isNight}
         />
       ))}
 
