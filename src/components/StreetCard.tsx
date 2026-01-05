@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Shirt, UtensilsCrossed, Cpu, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/StatusBadge";
+import { ZONES_CONFIG } from "@/config/zones.config";
 
 interface StreetCardProps {
   id: string;
@@ -19,6 +20,11 @@ const categoryIcons: Record<string, React.ComponentType<{ className?: string }>>
   tech: Cpu,
 };
 
+// Map street IDs to zone IDs for special zone handling
+const streetToZoneMap: Record<string, string> = {
+  'food-street': 'food_street',
+};
+
 const StreetCard = ({ 
   id, 
   name, 
@@ -29,6 +35,20 @@ const StreetCard = ({
   actionLabel = "Enter"
 }: StreetCardProps) => {
   const Icon = categoryIcons[id] || Shirt;
+  
+  // Check if this street is a special zone with dedicated route
+  const zoneId = streetToZoneMap[id];
+  const zoneConfig = zoneId ? ZONES_CONFIG[zoneId] : null;
+  
+  // Determine the correct route
+  const getRoute = () => {
+    // If it's a zone with a dedicated route, use that
+    if (zoneConfig && zoneConfig.isActive) {
+      return zoneConfig.route;
+    }
+    // Default to city/:streetId
+    return `/city/${id}`;
+  };
 
   return (
     <div className="cyber-card group">
@@ -59,7 +79,7 @@ const StreetCard = ({
             </Button>
           ) : (
             <Button variant="cyber" className="w-full" asChild>
-              <Link to={`/city/${id}`}>
+              <Link to={getRoute()} state={{ outsideEntry: true, fromSource: 'map' }}>
                 {actionLabel}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
