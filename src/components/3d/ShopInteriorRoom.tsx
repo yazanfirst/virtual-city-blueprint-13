@@ -5,7 +5,14 @@ import * as THREE from "three";
 import { ShopBranding } from "@/hooks/use3DShops";
 import { Button } from "@/components/ui/button";
 import { ShopItem, useShopItems } from "@/hooks/useShopItems";
-import { X, ExternalLink, ChevronLeft, ChevronRight, Package } from "lucide-react";
+import { X, ExternalLink, ChevronLeft, ChevronRight, Package, ShoppingBag } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 interface ShopInteriorRoomProps {
   shop: ShopBranding;
@@ -346,6 +353,7 @@ const InteriorScene = ({
 const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
   const { data: items = [], isLoading } = useShopItems(shop.shopId);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const wallItems = useMemo(() => {
     const filled = Array.from({ length: 5 }, () => undefined as ShopItem | undefined);
@@ -362,6 +370,14 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
   const selectedItem = selectedSlot !== null ? wallItems[selectedSlot] : undefined;
   const filledSlots = wallItems.filter(Boolean);
   
+  const handleFrameClick = (slot: number) => {
+    const item = wallItems[slot];
+    if (item) {
+      setSelectedSlot(slot);
+      setIsModalOpen(true);
+    }
+  };
+
   const navigateItem = (direction: 'prev' | 'next') => {
     const filledIndices = wallItems.map((item, i) => item ? i : -1).filter(i => i !== -1);
     if (filledIndices.length === 0) return;
@@ -430,7 +446,7 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
             shop={shop} 
             items={wallItems} 
             selectedSlot={selectedSlot}
-            onSelectItem={setSelectedSlot} 
+            onSelectItem={handleFrameClick} 
           />
         </React.Suspense>
         <OrbitControls
@@ -442,85 +458,18 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
           target={[0, 2, -2]}
           maxPolarAngle={Math.PI / 2.1}
           minPolarAngle={Math.PI / 5}
+          minAzimuthAngle={-Math.PI / 2.5}
+          maxAzimuthAngle={Math.PI / 2.5}
           rotateSpeed={0.5}
         />
       </Canvas>
 
-      {/* Bottom Panel - Mobile landscape friendly */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 landscape:p-1.5 max-h-[35vh] landscape:max-h-[40vh] bg-gradient-to-t from-background via-background/95 to-transparent">
+      {/* Bottom hint panel */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 landscape:p-1.5 bg-gradient-to-t from-background via-background/95 to-transparent">
         <div className="max-w-xl mx-auto">
           {isLoading ? (
             <div className="text-center py-2">
               <p className="text-xs text-muted-foreground">Loading...</p>
-            </div>
-          ) : selectedItem ? (
-            <div 
-              className="rounded-xl border bg-card/95 backdrop-blur-xl shadow-xl overflow-hidden"
-              style={{ borderColor: `${accent}30` }}
-            >
-              <div className="flex items-stretch">
-                {/* Image */}
-                {selectedItem.image_url && (
-                  <div className="w-20 sm:w-28 shrink-0 bg-muted">
-                    <img 
-                      src={selectedItem.image_url} 
-                      alt={selectedItem.title}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                )}
-                
-                {/* Info */}
-                <div className="flex-1 p-2 sm:p-3 flex flex-col justify-between min-w-0">
-                  <div className="space-y-0.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">
-                        {selectedItem.title}
-                      </h3>
-                      {selectedItem.price != null && (
-                        <span 
-                          className="shrink-0 px-2 py-0.5 rounded-full text-xs font-bold text-white"
-                          style={{ backgroundColor: accent }}
-                        >
-                          ${Number(selectedItem.price).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                    {selectedItem.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {selectedItem.description}
-                      </p>
-                    )}
-                  </div>
-                  
-                  {/* Navigation */}
-                  {filledSlots.length > 1 && (
-                    <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-border/30">
-                      <span className="text-[10px] text-muted-foreground">
-                        {filledSlots.indexOf(selectedItem) + 1}/{filledSlots.length}
-                      </span>
-                      <div className="flex gap-1">
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          className="h-7 w-7"
-                          onClick={() => navigateItem('prev')}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          className="h-7 w-7"
-                          onClick={() => navigateItem('next')}
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           ) : filledSlots.length > 0 ? (
             <div className="text-center py-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/50">
@@ -537,7 +486,7 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
             </div>
           )}
           
-          {/* Controls hint - compact for mobile */}
+          {/* Controls hint */}
           <div className="flex items-center justify-center gap-3 mt-2 text-[10px] text-muted-foreground/70">
             <span>Drag to look</span>
             <span>•</span>
@@ -545,6 +494,107 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
           </div>
         </div>
       </div>
+
+      {/* Product Detail Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-md p-0 overflow-hidden max-h-[90vh]">
+          {selectedItem && (
+            <>
+              {/* Large Product Image */}
+              <div className="relative w-full aspect-[4/3] bg-muted">
+                {selectedItem.image_url ? (
+                  <img 
+                    src={selectedItem.image_url} 
+                    alt={selectedItem.title}
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <div 
+                    className="h-full w-full flex items-center justify-center"
+                    style={{ background: `linear-gradient(135deg, ${primary}30, ${accent}20)` }}
+                  >
+                    <Package className="h-16 w-16 text-muted-foreground/40" />
+                  </div>
+                )}
+                
+                {/* Price badge */}
+                {selectedItem.price != null && (
+                  <div 
+                    className="absolute top-4 right-4 px-3 py-1.5 rounded-full text-sm font-bold text-white shadow-lg"
+                    style={{ backgroundColor: accent }}
+                  >
+                    ${Number(selectedItem.price).toFixed(2)}
+                  </div>
+                )}
+              </div>
+              
+              {/* Content */}
+              <div className="p-4 space-y-3">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-bold">
+                    {selectedItem.title}
+                  </DialogTitle>
+                  {selectedItem.description && (
+                    <DialogDescription className="text-sm text-muted-foreground pt-1">
+                      {selectedItem.description}
+                    </DialogDescription>
+                  )}
+                </DialogHeader>
+                
+                {/* Navigation between items */}
+                {filledSlots.length > 1 && (
+                  <div className="flex items-center justify-between py-2 border-t border-border/50">
+                    <span className="text-xs text-muted-foreground">
+                      Item {filledSlots.indexOf(selectedItem) + 1} of {filledSlots.length}
+                    </span>
+                    <div className="flex gap-1">
+                      <Button 
+                        size="icon" 
+                        variant="outline" 
+                        className="h-8 w-8"
+                        onClick={() => navigateItem('prev')}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="outline" 
+                        className="h-8 w-8"
+                        onClick={() => navigateItem('next')}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Action buttons */}
+                <div className="flex gap-2 pt-2">
+                  {shop.externalLink && (
+                    <Button 
+                      className="flex-1 text-white" 
+                      style={{ backgroundColor: accent }} 
+                      asChild
+                    >
+                      <a href={shop.externalLink} target="_blank" rel="noopener noreferrer">
+                        <ShoppingBag className="h-4 w-4 mr-2" />
+                        Buy Now
+                      </a>
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    className={shop.externalLink ? "" : "flex-1"}
+                    onClick={() => setIsModalOpen(false)}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
