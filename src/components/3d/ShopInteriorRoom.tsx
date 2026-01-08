@@ -41,8 +41,8 @@ const createBrickTexture = () => {
 
   if (!ctx) return null;
 
-  // Dark brick base
-  ctx.fillStyle = "#2a1810";
+  // Warm brick base - brighter
+  ctx.fillStyle = "#4a3025";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const brickWidth = 64;
@@ -53,24 +53,24 @@ const createBrickTexture = () => {
     for (let x = -brickWidth; x < canvas.width + brickWidth; x += brickWidth) {
       const offset = Math.floor(y / brickHeight) % 2 === 0 ? 0 : brickWidth / 2;
       
-      // Brick variations
+      // Brick variations - brighter reds
       const shade = 0.85 + Math.random() * 0.3;
-      const r = Math.floor(58 * shade);
-      const g = Math.floor(32 * shade);
-      const b = Math.floor(22 * shade);
+      const r = Math.floor(90 * shade);
+      const g = Math.floor(55 * shade);
+      const b = Math.floor(40 * shade);
       
       ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
       ctx.fillRect(x + offset + mortar, y + mortar, brickWidth - mortar * 2, brickHeight - mortar * 2);
       
       // Subtle highlight
-      ctx.fillStyle = `rgba(255, 200, 150, 0.05)`;
+      ctx.fillStyle = `rgba(255, 220, 180, 0.08)`;
       ctx.fillRect(x + offset + mortar, y + mortar, brickWidth - mortar * 2, 2);
     }
   }
 
-  // Mortar color
+  // Mortar color - warmer
   ctx.globalCompositeOperation = 'destination-over';
-  ctx.fillStyle = "#1a0f0a";
+  ctx.fillStyle = "#2a1f18";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -242,69 +242,73 @@ const InteriorScene = ({
 
   return (
     <group>
-      {/* Optimized ambient lighting - no shadows */}
-      <ambientLight intensity={0.35} color="#fff5e6" />
-      <hemisphereLight args={["#ffeedd", "#2a1810", 0.5]} position={[0, 5, 0]} />
+      {/* Brighter ambient lighting */}
+      <ambientLight intensity={0.6} color="#fff8f0" />
+      <hemisphereLight args={["#fffaf5", "#8b7355", 0.7]} position={[0, 5, 0]} />
       
-      {/* Single main ceiling light - efficient */}
+      {/* Main ceiling light - brighter */}
       <pointLight 
         position={[0, 4.5, 0]} 
-        intensity={1.2} 
+        intensity={1.8} 
         color="#fff5e6" 
-        distance={15}
-        decay={2}
+        distance={20}
+        decay={1.5}
       />
+      
+      {/* Corner accent lights for depth */}
+      <pointLight position={[-5, 4, -4]} intensity={0.4} color="#ffd7a8" distance={8} />
+      <pointLight position={[5, 4, -4]} intensity={0.4} color="#ffd7a8" distance={8} />
 
-      {/* Floor - polished concrete look */}
+      {/* Floor - warmer wood tone */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[14, 14]} />
         <meshStandardMaterial 
-          color="#1a1512" 
+          color="#3a3530" 
           roughness={0.4} 
           metalness={0.1}
         />
       </mesh>
       
-      {/* Subtle floor reflection lines */}
+      {/* Subtle floor reflection */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
         <planeGeometry args={[13.5, 13.5]} />
         <meshStandardMaterial 
-          color="#2a2520" 
+          color="#4a4540" 
           roughness={0.6}
           transparent
-          opacity={0.3}
+          opacity={0.25}
         />
       </mesh>
 
-      {/* Walls with brick texture */}
+      {/* Walls with brick texture - brighter colors */}
       {/* Front Wall */}
       <mesh position={[0, 2.5, -6]}>
         <boxGeometry args={[14, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#3a2820" />
+        <meshStandardMaterial map={brickTexture} color="#5a4035" />
       </mesh>
 
       {/* Back Wall */}
       <mesh position={[0, 2.5, 6]}>
         <boxGeometry args={[14, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#352318" />
+        <meshStandardMaterial map={brickTexture} color="#4a3830" />
       </mesh>
 
       {/* Left Wall */}
       <mesh position={[-7, 2.5, 0]} rotation={[0, Math.PI / 2, 0]}>
         <boxGeometry args={[12, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#3a2820" />
+        <meshStandardMaterial map={brickTexture} color="#5a4035" />
       </mesh>
 
       {/* Right Wall */}
       <mesh position={[7, 2.5, 0]} rotation={[0, -Math.PI / 2, 0]}>
         <boxGeometry args={[12, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#3a2820" />
+        <meshStandardMaterial map={brickTexture} color="#5a4035" />
       </mesh>
 
-      {/* Ceiling - dark wood beams look */}
+      {/* Ceiling - visible dark wood */}
       <mesh position={[0, 5, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[14, 14]} />
-        <meshStandardMaterial color="#1a0f0a" roughness={0.95} />
+        <meshStandardMaterial color="#2a2520" roughness={0.95} />
       </mesh>
       
       {/* Ceiling light fixture */}
@@ -388,8 +392,8 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
 
   return (
     <div className="fixed inset-0 z-[250] bg-background flex flex-col">
-      {/* Header - mobile optimized */}
-      <div className="absolute top-0 left-0 right-0 z-20 px-3 py-2 sm:p-4 flex items-center justify-between bg-gradient-to-b from-background via-background/90 to-transparent">
+      {/* Header - compact for mobile landscape */}
+      <div className="absolute top-0 left-0 right-0 z-20 px-3 py-1.5 sm:p-4 landscape:py-1 flex items-center justify-between bg-gradient-to-b from-background via-background/90 to-transparent">
         <div className="flex items-center gap-2 min-w-0">
           {shop.logoUrl && (
             <img 
@@ -430,8 +434,8 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
         className="flex-1 touch-none"
         gl={{ antialias: true, powerPreference: "high-performance" }}
       >
-        <color attach="background" args={["#0f0a08"]} />
-        <fog attach="fog" args={["#0f0a08", 8, 18]} />
+        <color attach="background" args={["#1a1512"]} />
+        <fog attach="fog" args={["#1a1512", 12, 25]} />
         <React.Suspense fallback={null}>
           <InteriorScene 
             shop={shop} 
@@ -454,7 +458,7 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
       </Canvas>
 
       {/* Bottom Panel - Mobile landscape friendly */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 bg-gradient-to-t from-background via-background/95 to-transparent">
+      <div className="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 landscape:p-1.5 max-h-[35vh] landscape:max-h-[40vh] bg-gradient-to-t from-background via-background/95 to-transparent">
         <div className="max-w-xl mx-auto">
           {isLoading ? (
             <div className="text-center py-2">
