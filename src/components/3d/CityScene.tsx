@@ -8,13 +8,10 @@ import PlayerController from "./PlayerController";
 import MobileControls from "./MobileControls";
 import BrandedShop from "./BrandedShop";
 import CollectibleItem from "./CollectibleItem";
-import MysteryBox from "./MysteryBox";
-import MysteryIndicator from "./MysteryIndicator";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
 import { ShopBranding } from "@/hooks/use3DShops";
-import { MissionIndicator } from "@/stores/missionStore";
 
 export type CameraView = "thirdPerson" | "firstPerson";
 
@@ -26,10 +23,6 @@ type CitySceneProps = {
   shouldLoadAssets?: boolean;
   onGateEnter?: () => void;
   onShopClick?: (branding: ShopBranding) => void;
-  // Mystery Box mission props
-  mysteryBoxPosition?: { x: number; y: number; z: number } | null;
-  mysteryIndicators?: MissionIndicator[];
-  onMysteryBoxCollect?: () => void;
 };
 
 type InnerProps = {
@@ -42,10 +35,6 @@ type InnerProps = {
   shouldLoadAssets: boolean;
   onGateEnter?: () => void;
   onShopClick?: (branding: ShopBranding) => void;
-  // Mystery Box props
-  mysteryBoxPosition?: { x: number; y: number; z: number } | null;
-  mysteryIndicators?: MissionIndicator[];
-  onMysteryBoxCollect?: () => void;
 };
 
 // Pastel color palette
@@ -211,9 +200,6 @@ export default function CityScene({
   shouldLoadAssets = true,
   onGateEnter,
   onShopClick,
-  mysteryBoxPosition,
-  mysteryIndicators = [],
-  onMysteryBoxCollect,
 }: CitySceneProps) {
   const deviceType = useDeviceType();
   const isMobile = deviceType === 'mobile';
@@ -298,9 +284,6 @@ export default function CityScene({
             shouldLoadAssets={shouldLoadAssets}
             onGateEnter={onGateEnter}
             onShopClick={onShopClick}
-            mysteryBoxPosition={mysteryBoxPosition}
-            mysteryIndicators={mysteryIndicators}
-            onMysteryBoxCollect={onMysteryBoxCollect}
           />
         </Suspense>
       </Canvas>
@@ -799,9 +782,6 @@ function SceneInner({
   shouldLoadAssets,
   onGateEnter,
   onShopClick,
-  mysteryBoxPosition,
-  mysteryIndicators = [],
-  onMysteryBoxCollect,
 }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
@@ -997,24 +977,6 @@ function SceneInner({
           type={coin.type}
           isNight={isNight}
           onCollect={handleCollectItem}
-        />
-      ))}
-
-      {/* === MYSTERY BOX (when mission active) === */}
-      {mysteryBoxPosition && onMysteryBoxCollect && (
-        <MysteryBox
-          position={mysteryBoxPosition}
-          onCollect={onMysteryBoxCollect}
-          isNight={isNight}
-        />
-      )}
-
-      {/* === MYSTERY INDICATORS === */}
-      {mysteryIndicators.map((indicator) => (
-        <MysteryIndicator
-          key={indicator.shopId}
-          indicator={indicator}
-          isNight={isNight}
         />
       ))}
 

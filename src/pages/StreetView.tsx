@@ -9,9 +9,7 @@ import ShopDetailModal from "@/components/3d/ShopDetailModal";
 import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import ZoneGateTrigger from "@/components/3d/ZoneGateTrigger";
-import MissionPanel from "@/components/ui/MissionPanel";
 import { useGameStore } from "@/stores/gameStore";
-import { useMysteryBoxMission } from "@/hooks/useMysteryBox";
 import { ZoneConfig } from "@/config/zones.config";
 
 const PanelBox = ({ 
@@ -71,9 +69,6 @@ const StreetView = () => {
   // Game state
   const { coins, level, xp } = useGameStore();
 
-  // Mystery Box mission
-  const mission = useMysteryBoxMission(streetId || "");
-
   // Find the spot ID for the selected shop (to highlight in 2D map)
   const selectedSpotId = selectedShop?.spotId || "";
 
@@ -101,9 +96,6 @@ const StreetView = () => {
       shouldLoadAssets: shouldLoadStreetAssets,
       onGateEnter: () => setHasEnteredGate(true),
       onShopClick: handleShopClick,
-      mysteryBoxPosition: mission.missionActive ? mission.boxPosition : null,
-      mysteryIndicators: mission.missionActive ? mission.indicators : [],
-      onMysteryBoxCollect: mission.handleCollectBox,
     } as const;
     return (
       <>
@@ -380,20 +372,11 @@ const StreetView = () => {
                   </button>
                 </div>
                 
-                <MissionPanel
-                  isActive={mission.missionActive}
-                  clues={mission.clues}
-                  visitsRemaining={mission.visitsRemaining}
-                  visitsUsed={mission.shopsVisitedThisMission.length}
-                  boxCollected={mission.boxCollected}
-                  missionFailed={mission.missionFailed}
-                  unrevealedCount={mission.unrevealedClueCount}
-                  onStartMission={mission.initMission}
-                  onRevealClue={mission.revealNextClue}
-                  onClose={() => setShowMissions(false)}
-                  onReset={mission.resetMission}
-                  eligibleShopCount={mission.eligibleShopCount}
-                />
+                <div className="text-center py-8 text-muted-foreground">
+                  <Target className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p className="text-sm">Missions coming soon!</p>
+                  <p className="text-xs mt-2">Check back later for exciting challenges.</p>
+                </div>
               </div>
             </div>
           )}
