@@ -168,47 +168,48 @@ const OrnateFrame = ({
           }}
           className="group transition-transform duration-200 hover:scale-[1.02] focus:outline-none"
           style={{ 
-            width: '170px',
-            height: '115px',
+            width: '160px',
+            height: '110px',
             borderRadius: '4px',
             overflow: 'hidden',
             boxShadow: isSelected ? `0 0 20px ${accent}50` : 'none',
           }}
         >
           {hasItem && item ? (
-            <div className="relative h-full w-full bg-card/95 backdrop-blur-sm border border-border/30 overflow-hidden">
-              {/* Product image */}
-              <div className="relative h-[70px] w-full overflow-hidden bg-muted">
-                {item.image_url ? (
-                  <img 
-                    src={item.image_url} 
-                    alt={item.title} 
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" 
-                  />
-                ) : (
-                  <div 
-                    className="h-full w-full flex items-center justify-center"
-                    style={{ background: `linear-gradient(135deg, ${primary}30, ${accent}20)` }}
-                  >
-                    <Package className="h-6 w-6 text-muted-foreground/50" />
-                  </div>
-                )}
-                
-                {/* Price badge */}
-                {item.price != null && (
-                  <div 
-                    className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-white shadow"
-                    style={{ backgroundColor: accent }}
-                  >
-                    ${Number(item.price).toFixed(2)}
-                  </div>
-                )}
-              </div>
+            <div className="relative h-full w-full overflow-hidden">
+              {/* Full frame product image - covers entire frame */}
+              {item.image_url ? (
+                <img 
+                  src={item.image_url} 
+                  alt={item.title} 
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                />
+              ) : (
+                <div 
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ background: `linear-gradient(135deg, ${primary}40, ${accent}30)` }}
+                >
+                  <Package className="h-8 w-8 text-white/60" />
+                </div>
+              )}
               
-              {/* Product title */}
-              <div className="p-1.5 bg-background/80">
-                <p className="text-[11px] font-medium text-foreground truncate">{item.title}</p>
-                <p className="text-[9px] text-muted-foreground">Tap to view</p>
+              {/* Overlay gradient for text readability */}
+              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+              
+              {/* Price badge */}
+              {item.price != null && (
+                <div 
+                  className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold text-white shadow-lg"
+                  style={{ backgroundColor: accent }}
+                >
+                  ${Number(item.price).toFixed(2)}
+                </div>
+              )}
+              
+              {/* Product title overlay */}
+              <div className="absolute inset-x-0 bottom-0 p-1.5">
+                <p className="text-[11px] font-semibold text-white truncate drop-shadow-lg">{item.title}</p>
+                <p className="text-[9px] text-white/70">Tap to view</p>
               </div>
             </div>
           ) : (
