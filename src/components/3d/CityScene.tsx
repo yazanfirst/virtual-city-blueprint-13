@@ -8,7 +8,7 @@ import PlayerController from "./PlayerController";
 import MobileControls from "./MobileControls";
 import BrandedShop from "./BrandedShop";
 import CollectibleItem from "./CollectibleItem";
-import MysteryBox from "./MysteryBox";
+// MysteryBox is now rendered inside ShopInteriorRoom
 import MissionIndicator from "./MissionIndicator";
 import NightModeEffects from "./NightModeEffects";
 import { useDeviceType } from "@/hooks/useDeviceType";
@@ -796,18 +796,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
         />
       ))}
 
-      {/* === MYSTERY BOX MISSION === */}
-      {missionActive && !missionComplete && boxPosition && (
-        <MysteryBox
-          position={boxPosition}
-          isNight={isNight}
-          onAttempt={() => {
-            if (targetShopBranding?.shopId) {
-              attemptBox(targetShopBranding.shopId);
-            }
-          }}
-        />
-      )}
+      {/* Mystery Box is now rendered inside ShopInteriorRoom, not here */}
 
       {/* Mission Indicators */}
       {missionActive && indicators.map((indicator) => (
