@@ -8,9 +8,13 @@ import PlayerController from "./PlayerController";
 import MobileControls from "./MobileControls";
 import BrandedShop from "./BrandedShop";
 import CollectibleItem from "./CollectibleItem";
+import MysteryBox from "./MysteryBox";
+import MissionIndicator from "./MissionIndicator";
+import NightModeEffects from "./NightModeEffects";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
+import { useMissionStore } from "@/stores/missionStore";
 import { ShopBranding } from "@/hooks/use3DShops";
 
 export type CameraView = "thirdPerson" | "firstPerson";
@@ -638,6 +642,9 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
+  
+  // Mission state
+  const { boxPosition, indicators, targetShopBranding, attemptBox, missionActive, missionComplete } = useMissionStore();
 
   useEffect(() => {
     scene.background = null;
@@ -788,6 +795,37 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           onCollect={handleCollectItem}
         />
       ))}
+
+      {/* === MYSTERY BOX MISSION === */}
+      {missionActive && !missionComplete && boxPosition && (
+        <MysteryBox
+          position={boxPosition}
+          isNight={isNight}
+          onAttempt={() => {
+            if (targetShopBranding?.shopId) {
+              attemptBox(targetShopBranding.shopId);
+            }
+          }}
+        />
+      )}
+
+      {/* Mission Indicators */}
+      {missionActive && indicators.map((indicator) => (
+        <MissionIndicator
+          key={indicator.id}
+          data={indicator}
+          isNight={isNight}
+        />
+      ))}
+
+      {/* Night Mode Effects */}
+      {missionActive && (
+        <NightModeEffects
+          indicators={indicators}
+          targetShopPosition={targetShopBranding?.position || null}
+          isNight={isNight}
+        />
+      )}
 
       {/* === PLAYER CHARACTER === */}
       <PlayerController 
