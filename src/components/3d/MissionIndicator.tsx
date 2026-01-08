@@ -20,12 +20,12 @@ export default function MissionIndicator({ data, isNight }: MissionIndicatorProp
   const dz = playerPosition[2] - data.position[2];
   const distance = Math.sqrt(dx * dx + dz * dz);
 
-  // Handle visibility based on night mode
-  if (data.visibleAtNight === true && !isNight) return null;
-  if (data.visibleAtNight === false && isNight) return null;
+  // Check visibility based on night mode (computed, not early return)
+  const isVisible = !(data.visibleAtNight === true && !isNight) && 
+                    !(data.visibleAtNight === false && isNight);
 
   useFrame((state) => {
-    if (!meshRef.current) return;
+    if (!meshRef.current || !isVisible) return;
 
     // Fade on approach for decoys
     if (data.fadeOnApproach && data.isDecoy) {
@@ -45,6 +45,9 @@ export default function MissionIndicator({ data, isNight }: MissionIndicatorProp
       meshRef.current.visible = flicker;
     }
   });
+
+  // Early return AFTER all hooks
+  if (!isVisible) return null;
 
   const baseColor = data.isDecoy ? '#FF6B6B' : '#66FF66';
   const glowColor = data.isDecoy ? '#AA4444' : '#44AA44';
