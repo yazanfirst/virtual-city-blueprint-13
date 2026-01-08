@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { ShopBranding } from "@/hooks/use3DShops";
 import { Button } from "@/components/ui/button";
 import { ShopItem, useShopItems } from "@/hooks/useShopItems";
-import { X, ExternalLink, ChevronLeft, ChevronRight, Package, ShoppingBag } from "lucide-react";
+import { X, ExternalLink, ChevronLeft, ChevronRight, Package, ShoppingBag, Gift } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,11 +13,67 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { useMissionStore } from "@/stores/missionStore";
+import { toast } from "sonner";
 
 interface ShopInteriorRoomProps {
   shop: ShopBranding;
   onExit: () => void;
 }
+
+// Mystery Box inside the shop room
+const InteriorMysteryBox = ({ 
+  onCollect 
+}: { 
+  onCollect: () => void;
+}) => {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const glowRef = useRef<THREE.PointLight>(null);
+  const [collected, setCollected] = useState(false);
+
+  useFrame((state) => {
+    if (!meshRef.current || collected) return;
+    meshRef.current.rotation.y += 0.02;
+    meshRef.current.position.y = 0.8 + Math.sin(state.clock.elapsedTime * 2) * 0.1;
+    if (glowRef.current) {
+      glowRef.current.intensity = 2 + Math.sin(state.clock.elapsedTime * 3) * 0.5;
+    }
+  });
+
+  const handleClick = () => {
+    if (collected) return;
+    setCollected(true);
+    onCollect();
+  };
+
+  if (collected) return null;
+
+  return (
+    <group position={[0, 0, 2]}>
+      <mesh ref={meshRef} onClick={handleClick}>
+        <boxGeometry args={[0.6, 0.6, 0.6]} />
+        <meshStandardMaterial
+          color="#9966FF"
+          emissive="#6633CC"
+          emissiveIntensity={1.2}
+          metalness={0.6}
+          roughness={0.2}
+        />
+      </mesh>
+      {/* Question marks on faces */}
+      <Text position={[0, 0.8, 0.31]} fontSize={0.25} color="#FFFF00">?</Text>
+      <Text position={[0, 0.8, -0.31]} fontSize={0.25} color="#FFFF00" rotation={[0, Math.PI, 0]}>?</Text>
+      <Text position={[0.31, 0.8, 0]} fontSize={0.25} color="#FFFF00" rotation={[0, Math.PI / 2, 0]}>?</Text>
+      <Text position={[-0.31, 0.8, 0]} fontSize={0.25} color="#FFFF00" rotation={[0, -Math.PI / 2, 0]}>?</Text>
+      <pointLight ref={glowRef} intensity={2} distance={5} color="#9966FF" />
+      <Html center position={[0, 1.3, 0]} style={{ pointerEvents: 'none' }}>
+        <div className="bg-background/90 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-primary/50 shadow-lg whitespace-nowrap animate-pulse">
+          <span className="text-primary font-bold text-sm">✦ Tap to Collect! ✦</span>
+        </div>
+      </Html>
+    </group>
+  );
+};
 
 interface FrameSpotConfig {
   slot: number;
@@ -389,6 +445,27 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Mission state - check if this is the target shop
+  const { 
+    missionActive, 
+    missionComplete, 
+    targetShopId, 
+    attemptBox 
+  } = useMissionStore();
+  
+  const isTargetShop = missionActive && !missionComplete && targetShopId === shop.shopId;
+
+  const handleMysteryBoxCollect = () => {
+    const result = attemptBox(shop.shopId);
+    if (result.success) {
+      toast.success("🎉 " + result.message, {
+        description: "You earned 50 coins and 100 XP!",
+      });
+    } else {
+      toast.error(result.message);
+    }
+  };
+
   const wallItems = useMemo(() => {
     const filled = Array.from({ length: 5 }, () => undefined as ShopItem | undefined);
     items.forEach(item => {
@@ -482,6 +559,10 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
             selectedSlot={selectedSlot}
             onSelectItem={handleFrameClick} 
           />
+          {/* Mystery Box - only in target shop */}
+          {isTargetShop && (
+            <InteriorMysteryBox onCollect={handleMysteryBoxCollect} />
+          )}
         </React.Suspense>
 
         <RoomCameraClamp controlsRef={controlsRef} />
