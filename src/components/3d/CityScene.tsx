@@ -8,6 +8,8 @@ import PlayerController from "./PlayerController";
 import MobileControls from "./MobileControls";
 import BrandedShop from "./BrandedShop";
 import CollectibleItem from "./CollectibleItem";
+import BehavioralCar from "./BehavioralCar";
+import IndicatorFlag from "./IndicatorFlag";
 // MysteryBox is now rendered inside ShopInteriorRoom
 import MissionIndicator from "./MissionIndicator";
 import NightModeEffects from "./NightModeEffects";
@@ -806,6 +808,63 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           isNight={isNight}
         />
       ))}
+
+      {/* Behavioral Cars - Indicator system */}
+      {missionActive && targetShopBranding && (
+        <>
+          {/* True indicator car - main boulevard route */}
+          <BehavioralCar
+            startPosition={[0, 0, 60]}
+            endPosition={[0, 0, -70]}
+            targetShopPosition={targetShopBranding.position}
+            speed={0.015}
+            carColor="#4A7FB5"
+            isNight={isNight}
+            isIndicator={true}
+            isDecoy={false}
+          />
+          {/* Decoy car - different route, wrong behavior */}
+          <BehavioralCar
+            startPosition={[80, 0, 0]}
+            endPosition={[-80, 0, 0]}
+            targetShopPosition={{ x: targetShopBranding.position.x + 20, z: targetShopBranding.position.z }}
+            speed={0.018}
+            carColor="#8B5A3A"
+            isNight={isNight}
+            isIndicator={true}
+            isDecoy={true}
+          />
+        </>
+      )}
+
+      {/* Indicator Flags at roundabout */}
+      {missionActive && targetShopBranding && (
+        <>
+          {/* True flag - points toward target */}
+          <IndicatorFlag
+            position={[5, 0, 5]}
+            targetPosition={targetShopBranding.position}
+            isTrue={true}
+            isNight={isNight}
+            color="#E8C547"
+          />
+          {/* Decoy flags - random flutter */}
+          <IndicatorFlag
+            position={[-5, 0, -5]}
+            targetPosition={null}
+            isTrue={false}
+            isNight={isNight}
+            color="#D98BB5"
+          />
+          <IndicatorFlag
+            position={[-5, 0, 5]}
+            targetPosition={null}
+            isTrue={false}
+            isNight={isNight}
+            color="#5BBAA5"
+          />
+        </>
+      )}
 
       {/* Night Mode Effects */}
       {missionActive && (

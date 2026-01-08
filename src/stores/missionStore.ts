@@ -2,15 +2,14 @@ import { create } from 'zustand';
 import { ShopBranding } from '@/hooks/use3DShops';
 import {
   EligibleShop,
-  Clue,
   IndicatorData,
   createSeededRandom,
   getSessionSeed,
   selectTargetShop,
   calculateBoxPosition,
-  generateClues,
-  generateIndicators,
 } from '@/lib/mission';
+import { generateClues, Clue } from '@/lib/mission/clueGenerator';
+import { generateIndicators } from '@/lib/mission/indicatorGenerator';
 import { useGameStore } from './gameStore';
 
 type MissionState = {
@@ -31,11 +30,18 @@ type MissionState = {
   // Indicators
   indicators: IndicatorData[];
 
-  // Progress
+  // Progress - box attempts (deprecated, kept for compatibility)
   attemptsUsed: number;
   maxAttempts: number;
+  
+  // Shop visit tracking (NEW)
+  shopsEnteredThisMission: string[];
+  maxShopVisits: number;
+  
+  // Mission state
   missionComplete: boolean;
   missionSuccess: boolean;
+  missionFailed: boolean;
 
   // Environment
   environmentMode: 'day' | 'night';
@@ -44,6 +50,7 @@ type MissionState = {
   initMission: (eligibleShops: EligibleShop[]) => void;
   revealClue: (clueIndex: number) => void;
   attemptBox: (shopId: string) => { success: boolean; message: string };
+  enterShop: (shopId: string) => { allowed: boolean; isTarget: boolean; message: string; visitsLeft: number };
   completeMission: (success: boolean) => void;
   resetMission: () => void;
   setEnvironmentMode: (mode: 'day' | 'night') => void;
@@ -65,12 +72,18 @@ export const useMissionStore = create<MissionState>((set, get) => ({
 
   attemptsUsed: 0,
   maxAttempts: 3,
+  
+  // Shop visit tracking
+  shopsEnteredThisMission: [],
+  maxShopVisits: 3,
+  
   missionComplete: false,
   missionSuccess: false,
+  missionFailed: false,
 
   environmentMode: 'day',
 
-  initMission: (eligibleShops: EligibleShop[]) => {
+  initMission: async (eligibleShops: EligibleShop[]) => {
     const state = get();
     
     // Don't reinitialize if already done this session
@@ -94,10 +107,10 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     // Calculate box position
     const boxPos = calculateBoxPosition(targetShop.position3d, random);
 
-    // Generate clues
-    const clues = generateClues(targetShop, eligibleShops, random);
+    // Generate evidence-based clues (async)
+    const clues = await generateClues(targetShop, eligibleShops, random);
 
-    // Generate indicators
+    // Generate indicators with session-based preset
     const indicators = generateIndicators(targetShop, eligibleShops, random);
 
     set({
@@ -111,8 +124,10 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       revealedClues: [0], // First clue revealed by default
       indicators,
       attemptsUsed: 0,
+      shopsEnteredThisMission: [],
       missionComplete: false,
       missionSuccess: false,
+      missionFailed: false,
     });
 
     console.log('Mission initialized:', {
@@ -132,6 +147,78 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     });
   },
 
+  // New shop entry action - tracks visits and determines outcome
+  enterShop: (shopId: string) => {
+    const state = get();
+
+    // If mission already complete/failed, allow entry but no mission impact
+    if (state.missionComplete || state.missionFailed || !state.missionActive) {
+      return { 
+        allowed: true, 
+        isTarget: false, 
+        message: 'Mission not active - browsing mode.',
+        visitsLeft: 0,
+      };
+    }
+
+    // Check if this is the target shop
+    if (shopId === state.targetShopId) {
+      // SUCCESS! Player found the correct shop
+      get().completeMission(true);
+      return { 
+        allowed: true, 
+        isTarget: true, 
+        message: 'You found the Mystery Box!',
+        visitsLeft: state.maxShopVisits,
+      };
+    }
+
+    // Check if already visited this shop (don't count twice)
+    if (state.shopsEnteredThisMission.includes(shopId)) {
+      return { 
+        allowed: true, 
+        isTarget: false, 
+        message: 'You already visited this shop.',
+        visitsLeft: state.maxShopVisits - state.shopsEnteredThisMission.length,
+      };
+    }
+
+    // Wrong shop - add to visited list
+    const newVisits = [...state.shopsEnteredThisMission, shopId];
+    const visitsLeft = state.maxShopVisits - newVisits.length;
+
+    // Check if out of attempts
+    if (visitsLeft <= 0) {
+      // Mission failed
+      set({
+        shopsEnteredThisMission: newVisits,
+        missionFailed: true,
+        missionActive: false,
+        missionComplete: true,
+        missionSuccess: false,
+      });
+      return { 
+        allowed: true, 
+        isTarget: false, 
+        message: 'No more attempts! Mission failed.',
+        visitsLeft: 0,
+      };
+    }
+
+    // Wrong shop but still have attempts
+    set({
+      shopsEnteredThisMission: newVisits,
+    });
+
+    return { 
+      allowed: true, 
+      isTarget: false, 
+      message: `Wrong shop! ${visitsLeft} ${visitsLeft === 1 ? 'visit' : 'visits'} remaining.`,
+      visitsLeft,
+    };
+  },
+
+  // Legacy attemptBox function (kept for compatibility)
   attemptBox: (shopId: string) => {
     const state = get();
 
@@ -164,6 +251,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     set({
       missionComplete: true,
       missionSuccess: success,
+      missionFailed: !success,
       missionActive: false,
     });
 
@@ -186,8 +274,10 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       revealedClues: [],
       indicators: [],
       attemptsUsed: 0,
+      shopsEnteredThisMission: [],
       missionComplete: false,
       missionSuccess: false,
+      missionFailed: false,
     });
   },
 

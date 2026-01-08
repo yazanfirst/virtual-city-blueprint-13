@@ -14,7 +14,36 @@ export interface IndicatorData {
   fadeOnApproach?: boolean;
   glitchy?: boolean;
   flickering?: boolean;
+  delayed?: boolean;
 }
+
+// Session-based indicator presets for variety
+const INDICATOR_PRESETS = [
+  {
+    name: 'billboard_heavy',
+    trueTypes: ['billboard', 'banner'] as IndicatorType[],
+    decoyTypes: ['poster', 'arrow'] as IndicatorType[],
+    nightBias: 0.3,
+  },
+  {
+    name: 'subtle_ground',
+    trueTypes: ['graffiti', 'glow'] as IndicatorType[],
+    decoyTypes: ['graffiti', 'arrow'] as IndicatorType[],
+    nightBias: 0.8, // 80% chance night-only
+  },
+  {
+    name: 'directional',
+    trueTypes: ['arrow', 'banner'] as IndicatorType[],
+    decoyTypes: ['arrow', 'poster'] as IndicatorType[],
+    nightBias: 0.5,
+  },
+  {
+    name: 'mixed_signals',
+    trueTypes: ['billboard', 'poster', 'arrow', 'glow'] as IndicatorType[],
+    decoyTypes: ['billboard', 'arrow', 'graffiti'] as IndicatorType[],
+    nightBias: 0.4,
+  },
+];
 
 const INDICATOR_CONTENTS = {
   true: [
@@ -23,6 +52,8 @@ const INDICATOR_CONTENTS = {
     '★ MYSTERY ★',
     '◆ SEEK ◆',
     '✧ TREASURE ✧',
+    '⬇ LOOK DOWN ⬇',
+    '◉ TARGET ◉',
   ],
   decoy: [
     '? MAYBE ?',
@@ -30,8 +61,26 @@ const INDICATOR_CONTENTS = {
     '○ PERHAPS ○',
     '◇ LOOK ◇',
     '~ CLOSE ~',
+    '⬆ TRY UP ⬆',
+    '◌ SEARCH ◌',
   ],
 };
+
+// All possible decoy "tells"
+type DecoyTell = 'fadeOnApproach' | 'glitchy' | 'reversed' | 'dayOnly' | 'flickering' | 'delayed';
+
+const DECOY_TELLS: DecoyTell[] = [
+  'fadeOnApproach',
+  'glitchy',
+  'reversed',
+  'dayOnly',
+  'flickering',
+  'delayed',
+];
+
+function selectIndicatorPreset(random: () => number) {
+  return seededChoice(INDICATOR_PRESETS, random);
+}
 
 function calculateIndicatorPosition(
   shopPosition: { x: number; z: number; rotation: number },
@@ -63,9 +112,10 @@ function calculateIndicatorPosition(
 
 function createTrueIndicator(
   shop: EligibleShop,
+  preset: typeof INDICATOR_PRESETS[0],
   random: () => number
 ): IndicatorData {
-  const type = seededChoice(['billboard', 'poster', 'arrow', 'banner'] as IndicatorType[], random);
+  const type = seededChoice(preset.trueTypes, random);
 
   return {
     id: `true-${shop.shopId}`,
@@ -74,45 +124,51 @@ function createTrueIndicator(
     rotation: shop.position3d.rotation,
     isDecoy: false,
     content: seededChoice(INDICATOR_CONTENTS.true, random),
-    visibleAtNight: random() > 0.5, // 50% chance night-only
+    visibleAtNight: random() < preset.nightBias,
   };
 }
 
 function createDecoyIndicator(
   shop: EligibleShop,
-  random: () => number
+  preset: typeof INDICATOR_PRESETS[0],
+  random: () => number,
+  decoyIndex: number
 ): IndicatorData {
-  const type = seededChoice(['arrow', 'poster', 'banner'] as IndicatorType[], random);
+  const type = seededChoice(preset.decoyTypes, random);
 
-  // Fair deception tells
-  const tellType = Math.floor(random() * 5);
+  // Each decoy gets a different tell for variety
+  const tell = DECOY_TELLS[decoyIndex % DECOY_TELLS.length];
   const tells: Partial<IndicatorData> = {};
 
-  switch (tellType) {
-    case 0:
+  switch (tell) {
+    case 'fadeOnApproach':
       tells.fadeOnApproach = true;
       break;
-    case 1:
+    case 'glitchy':
       tells.glitchy = true;
       break;
-    case 2:
-      // Reversed arrow - handled via rotation
+    case 'reversed':
+      // Rotation is reversed - handled below
       break;
-    case 3:
-      tells.visibleAtNight = false; // Only visible in day (opposite of some true ones)
+    case 'dayOnly':
+      tells.visibleAtNight = false;
       break;
-    case 4:
+    case 'flickering':
       tells.flickering = true;
+      break;
+    case 'delayed':
+      tells.delayed = true;
       break;
   }
 
   return {
-    id: `decoy-${shop.shopId}`,
+    id: `decoy-${shop.shopId}-${decoyIndex}`,
     type,
     position: calculateIndicatorPosition(shop.position3d, type, random),
-    rotation: shop.position3d.rotation + (tellType === 2 ? Math.PI : 0), // Reversed
+    rotation: shop.position3d.rotation + (tell === 'reversed' ? Math.PI : 0),
     isDecoy: true,
     content: seededChoice(INDICATOR_CONTENTS.decoy, random),
+    visibleAtNight: tells.visibleAtNight ?? (random() < preset.nightBias),
     ...tells,
   };
 }
@@ -124,19 +180,27 @@ export function generateIndicators(
 ): IndicatorData[] {
   const indicators: IndicatorData[] = [];
 
+  // Select preset for this session
+  const preset = selectIndicatorPreset(random);
+
   // 1 TRUE indicator - tied to correct shop
-  const trueIndicator = createTrueIndicator(targetShop, random);
+  const trueIndicator = createTrueIndicator(targetShop, preset, random);
   indicators.push(trueIndicator);
 
-  // 0-2 DECOY indicators
-  const decoyCount = Math.floor(random() * 3); // 0, 1, or 2
+  // 1-3 DECOY indicators (variable count for unpredictability)
+  const decoyCount = Math.floor(random() * 3) + 1; // 1, 2, or 3
   const otherShops = allEligible.filter((s) => s.shopId !== targetShop.shopId);
   const shuffledOthers = seededShuffle(otherShops, random);
 
   for (let i = 0; i < Math.min(decoyCount, shuffledOthers.length); i++) {
-    const decoy = createDecoyIndicator(shuffledOthers[i], random);
+    const decoy = createDecoyIndicator(shuffledOthers[i], preset, random, i);
     indicators.push(decoy);
   }
 
   return indicators;
+}
+
+// Export preset info for debugging/UI
+export function getIndicatorPresetName(random: () => number): string {
+  return selectIndicatorPreset(random).name;
 }

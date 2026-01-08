@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, Target, Eye, EyeOff, Gift, X } from 'lucide-react';
+import { Sun, Moon, Target, Eye, EyeOff, Gift, X, AlertCircle, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useMissionStore } from '@/stores/missionStore';
@@ -13,10 +13,11 @@ export default function MissionPanel({ onClose }: MissionPanelProps) {
     missionActive,
     missionComplete,
     missionSuccess,
+    missionFailed,
     clues,
     revealedClues,
-    attemptsUsed,
-    maxAttempts,
+    shopsEnteredThisMission,
+    maxShopVisits,
     environmentMode,
     targetShopBranding,
     revealClue,
@@ -24,7 +25,9 @@ export default function MissionPanel({ onClose }: MissionPanelProps) {
     resetMission,
   } = useMissionStore();
 
-  // Mission complete state
+  const visitsLeft = maxShopVisits - shopsEnteredThisMission.length;
+
+  // Mission complete state (success or failure)
   if (missionComplete) {
     return (
       <div className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-full max-w-sm">
@@ -38,12 +41,11 @@ export default function MissionPanel({ onClose }: MissionPanelProps) {
                   : 'bg-red-500/10 border-red-500/30'
               )}
             >
-              <Gift
-                className={cn(
-                  'h-5 w-5',
-                  missionSuccess ? 'text-green-500' : 'text-red-500'
-                )}
-              />
+              {missionSuccess ? (
+                <Gift className="h-5 w-5 text-green-500" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-red-500" />
+              )}
             </div>
             <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
               {missionSuccess ? 'Success!' : 'Mission Failed'}
@@ -82,6 +84,9 @@ export default function MissionPanel({ onClose }: MissionPanelProps) {
                 </span>
               </p>
               <p className="text-sm text-muted-foreground">
+                You visited {shopsEnteredThisMission.length} wrong shops.
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
                 Better luck next time!
               </p>
             </>
@@ -95,7 +100,7 @@ export default function MissionPanel({ onClose }: MissionPanelProps) {
     );
   }
 
-  // No active mission
+  // No active mission (loading)
   if (!missionActive) {
     return (
       <div className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-full max-w-sm">
@@ -141,7 +146,7 @@ export default function MissionPanel({ onClose }: MissionPanelProps) {
               Mystery Box Hunt
             </h3>
             <p className="text-xs text-muted-foreground">
-              {maxAttempts - attemptsUsed} attempts left
+              Find the hidden shop!
             </p>
           </div>
         </div>
@@ -155,8 +160,43 @@ export default function MissionPanel({ onClose }: MissionPanelProps) {
         )}
       </div>
 
+      {/* Shop Visit Counter */}
+      <div className="mb-4 p-3 rounded-lg bg-card border border-border">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Store className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-foreground">Shop Visits</span>
+          </div>
+          <span className="text-sm font-bold text-foreground">
+            {shopsEnteredThisMission.length} / {maxShopVisits}
+          </span>
+        </div>
+        {/* Visual dots */}
+        <div className="flex gap-2 justify-center">
+          {Array.from({ length: maxShopVisits }).map((_, i) => (
+            <div
+              key={i}
+              className={cn(
+                'w-4 h-4 rounded-full transition-all',
+                i < shopsEnteredThisMission.length
+                  ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
+                  : 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]'
+              )}
+            />
+          ))}
+        </div>
+        <p className="text-xs text-center text-muted-foreground mt-2">
+          {visitsLeft === 0
+            ? 'No visits left!'
+            : `${visitsLeft} ${visitsLeft === 1 ? 'visit' : 'visits'} remaining`}
+        </p>
+      </div>
+
       {/* Clues */}
       <div className="space-y-2 mb-4">
+        <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+          Evidence Clues
+        </h4>
         {clues.map((clue, i) => (
           <div
             key={clue.id}
@@ -176,7 +216,7 @@ export default function MissionPanel({ onClose }: MissionPanelProps) {
                     Clue {i + 1}: {clue.type}
                   </span>
                 </div>
-                <p className="text-sm text-foreground italic">"{clue.text}"</p>
+                <p className="text-sm text-foreground">{clue.text}</p>
               </>
             ) : (
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -212,7 +252,7 @@ export default function MissionPanel({ onClose }: MissionPanelProps) {
           </div>
         </div>
         <p className="text-xs text-muted-foreground">
-          💡 Some hints only appear at night!
+          💡 Some indicators only appear at night!
         </p>
       </div>
     </div>
