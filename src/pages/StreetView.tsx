@@ -12,6 +12,7 @@ import MissionPanel from "@/components/mission/MissionPanel";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { getEligibleShops } from "@/lib/mission/eligibility";
+import { toast } from "sonner";
 
 const PanelBox = ({
   title,
@@ -85,6 +86,22 @@ const StreetView = () => {
   };
 
   const handleEnterShop = (shop: ShopBranding) => {
+    // Check with mission store first
+    const { enterShop } = useMissionStore.getState();
+    const result = enterShop(shop.shopId || '');
+    
+    if (result.isTarget) {
+      // Player found the target!
+      toast.success("🎉 " + result.message);
+    } else if (result.visitsLeft === 0 && !result.isTarget) {
+      // Mission failed
+      toast.error("❌ " + result.message);
+    } else if (result.message.includes('Wrong')) {
+      // Wrong shop but still have attempts
+      toast.warning("⚠️ " + result.message);
+    }
+    
+    // Always allow entering the shop (for browsing)
     setInteriorShop(shop);
     setIsInsideShop(true);
     setShowShopModal(false);

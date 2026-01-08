@@ -1,132 +1,169 @@
 import { EligibleShop } from './eligibility';
 import { seededChoice } from './seededRandom';
+import {
+  analyzeShopContext,
+  ShopEvidence,
+  getNeighborRelationships,
+  getLandmarkProximity,
+  getStreetPosition,
+} from './evidenceAnalyzer';
 
 export interface Clue {
   id: number;
-  type: 'symbolic' | 'spatial' | 'exclusionary';
+  type: 'positional' | 'item' | 'exclusionary';
   text: string;
 }
 
-// Clue templates - NO easy answers
-const SYMBOLIC_TEMPLATES = [
-  { pattern: 'Where the {creature} meets {element}, secrets hide in plain sight', vars: ['creature', 'element'] },
-  { pattern: 'The {adjective} path leads through {material} halls', vars: ['adjective', 'material'] },
-  { pattern: 'Seekers of {virtue} find refuge beneath the {symbol}', vars: ['virtue', 'symbol'] },
-  { pattern: 'When {creature} dreams of {element}, treasure awaits', vars: ['creature', 'element'] },
-  { pattern: 'The {symbol} whispers to those who understand {virtue}', vars: ['symbol', 'virtue'] },
+// Positional clue templates using real data
+const POSITIONAL_TEMPLATES = [
+  (e: ShopEvidence) => e.neighbors.hasEmptySide 
+    ? 'The target has an empty spot on one side.' 
+    : null,
+  (e: ShopEvidence) => e.neighbors.differentCategories.length > 0 
+    ? `Look near a shop that sells something different - not ${e.neighbors.differentCategories[0]}.`
+    : null,
+  (e: ShopEvidence) => e.landmarks[0]?.distance < 30 
+    ? `The target is ${e.landmarks[0].direction} of the ${e.landmarks[0].name}.`
+    : null,
+  (e: ShopEvidence) => e.isCornerShop 
+    ? 'The target is near the main intersection.'
+    : 'The target is NOT near the intersection.',
+  (e: ShopEvidence) => e.streetPosition === 'main_boulevard'
+    ? 'Search along the main boulevard, not the cross street.'
+    : 'Search along the cross street, not the main boulevard.',
+  (e: ShopEvidence) => e.streetSide === 'east' || e.streetSide === 'west'
+    ? `The target faces the ${e.streetSide} side of the street.`
+    : `The target is on the ${e.streetSide} section.`,
+  (e: ShopEvidence) => e.neighbors.leftNeighbor && e.neighbors.rightNeighbor
+    ? 'The target has shops on both sides - no empty neighbors.'
+    : null,
 ];
 
-const SPATIAL_TEMPLATES = [
-  { pattern: 'Stand where the {landmark} casts its longest shadow', vars: ['landmark'] },
-  { pattern: 'Between {count} steps and the {direction} wind', vars: ['count', 'direction'] },
-  { pattern: 'Where echoes of the {street_feature} fade to silence', vars: ['street_feature'] },
-  { pattern: 'Face the {direction}, walk until {landmark} appears', vars: ['direction', 'landmark'] },
-  { pattern: 'The prize rests where {street_feature} meets the crowd', vars: ['street_feature'] },
+// Item-based clue templates
+const ITEM_TEMPLATES = [
+  (keywords: string[]) => keywords.length > 0
+    ? `Inside, you'll find something with "${keywords[0]}" in its name.`
+    : null,
+  (keywords: string[]) => keywords.includes('cold') || keywords.includes('warm')
+    ? 'The shop sells items for temperature comfort.'
+    : null,
+  (keywords: string[]) => keywords.some(k => k.includes('shirt') || k.includes('wear'))
+    ? 'Look for a shop selling wearable items.'
+    : null,
+  (keywords: string[]) => keywords.length >= 3
+    ? `One item description mentions "${keywords[Math.floor(keywords.length / 2)]}".`
+    : null,
+  (keywords: string[]) => keywords.length > 0
+    ? `Seek where "${keywords[keywords.length - 1]}" can be found.`
+    : null,
 ];
 
+// Exclusionary clue templates
 const EXCLUSIONARY_TEMPLATES = [
-  { pattern: 'Not where {color} flags fly, nor where {other_category} thrives', vars: ['color', 'other_category'] },
-  { pattern: 'The truth hides not in {facade_type}, but in its opposite', vars: ['facade_type'] },
-  { pattern: 'Ignore the {decoy_feature} - it leads only to empty promises', vars: ['decoy_feature'] },
-  { pattern: 'Avoid the glow of {color}, seek the subtle instead', vars: ['color'] },
-  { pattern: 'Where {other_category} fears to tread, your answer waits', vars: ['other_category'] },
+  (target: EligibleShop, others: EligibleShop[]) => {
+    const otherCategories = [...new Set(others.map(s => s.category))].filter(c => c !== target.category);
+    return otherCategories.length > 0
+      ? `The target is NOT in the ${otherCategories[0]} category.`
+      : null;
+  },
+  (target: EligibleShop, others: EligibleShop[]) => {
+    const otherFacades = [...new Set(others.map(s => s.metadata.facadeTemplate))].filter(f => f !== target.metadata.facadeTemplate);
+    return otherFacades.length > 0
+      ? `Avoid shops with ${otherFacades[0].replace('_', ' ')} facade.`
+      : null;
+  },
+  (target: EligibleShop, _others: EligibleShop[]) => {
+    return target.metadata.hasLogo
+      ? 'The target shop HAS a logo displayed.'
+      : 'The target shop has NO logo - just text signage.';
+  },
+  (target: EligibleShop, _others: EligibleShop[]) => {
+    return target.metadata.hasExternalLink
+      ? 'The target has an external website link.'
+      : 'The target has NO external website.';
+  },
+  (target: EligibleShop, others: EligibleShop[]) => {
+    const shopsWithSameCategory = others.filter(s => s.category === target.category);
+    return shopsWithSameCategory.length === 0
+      ? `Only one shop sells ${target.category} items - that's your target.`
+      : null;
+  },
 ];
 
-// Category to thematic mappings
-const CATEGORY_THEMES: Record<string, Record<string, string>> = {
-  Fashion: { creature: 'silk moth', element: 'mirror', virtue: 'elegance', symbol: 'needle', adjective: 'woven', material: 'velvet' },
-  Accessories: { creature: 'magpie', element: 'crystal', virtue: 'adornment', symbol: 'clasp', adjective: 'shimmering', material: 'silver' },
-  Jewelry: { creature: 'dragon', element: 'gold', virtue: 'treasure', symbol: 'gem', adjective: 'radiant', material: 'platinum' },
-  Clothing: { creature: 'peacock', element: 'fabric', virtue: 'style', symbol: 'thread', adjective: 'flowing', material: 'silk' },
-  Electronics: { creature: 'firefly', element: 'lightning', virtue: 'innovation', symbol: 'circuit', adjective: 'pulsing', material: 'chrome' },
-  Food: { creature: 'bee', element: 'fire', virtue: 'nourishment', symbol: 'flame', adjective: 'warm', material: 'copper' },
-  Art: { creature: 'phoenix', element: 'color', virtue: 'creation', symbol: 'brush', adjective: 'vivid', material: 'canvas' },
-  Books: { creature: 'owl', element: 'ink', virtue: 'wisdom', symbol: 'quill', adjective: 'ancient', material: 'leather' },
-  Sports: { creature: 'eagle', element: 'wind', virtue: 'victory', symbol: 'trophy', adjective: 'swift', material: 'steel' },
-  Beauty: { creature: 'butterfly', element: 'light', virtue: 'grace', symbol: 'rose', adjective: 'delicate', material: 'pearl' },
-  Home: { creature: 'dove', element: 'earth', virtue: 'comfort', symbol: 'hearth', adjective: 'cozy', material: 'wood' },
-  default: { creature: 'raven', element: 'shadow', virtue: 'mystery', symbol: 'star', adjective: 'hidden', material: 'stone' },
-};
-
-const SPATIAL_VARS: Record<string, string[]> = {
-  landmark: ['fountain', 'tall tower', 'green tree', 'old lamp', 'stone bench'],
-  count: ['seven', 'twelve', 'twenty', 'thirty'],
-  direction: ['north', 'east', 'south', 'west'],
-  street_feature: ['busy corner', 'quiet alley', 'main boulevard', 'crossing'],
-};
-
-const EXCLUSIONARY_VARS: Record<string, string[]> = {
-  color: ['neon pink', 'bright gold', 'electric blue', 'crimson'],
-  other_category: ['food vendors', 'tech dealers', 'book traders', 'art galleries'],
-  facade_type: ['glass facades', 'brick walls', 'modern chrome', 'vintage wood'],
-  decoy_feature: ['flashing signs', 'loud music', 'crowded entrance', 'tall banners'],
-};
-
-function fillTemplate(
-  template: { pattern: string; vars: string[] },
-  categoryTheme: Record<string, string>,
-  random: () => number
-): string {
-  let result = template.pattern;
-
-  for (const varName of template.vars) {
-    let replacement: string;
-
-    if (categoryTheme[varName]) {
-      replacement = categoryTheme[varName];
-    } else if (SPATIAL_VARS[varName]) {
-      replacement = seededChoice(SPATIAL_VARS[varName], random);
-    } else if (EXCLUSIONARY_VARS[varName]) {
-      replacement = seededChoice(EXCLUSIONARY_VARS[varName], random);
-    } else {
-      replacement = varName;
-    }
-
-    result = result.replace(`{${varName}}`, replacement);
-  }
-
-  return result;
-}
-
-export function generateClues(
+export async function generateClues(
   targetShop: EligibleShop,
   allEligible: EligibleShop[],
   random: () => number
-): Clue[] {
+): Promise<Clue[]> {
   const clues: Clue[] = [];
-  const theme = CATEGORY_THEMES[targetShop.category] || CATEGORY_THEMES.default;
+  const others = allEligible.filter(s => s.shopId !== targetShop.shopId);
+  
+  // Analyze shop context
+  const evidence = await analyzeShopContext(targetShop, allEligible);
 
-  // Clue 1: Symbolic/Poetic
-  const symbolic = seededChoice(SYMBOLIC_TEMPLATES, random);
-  clues.push({
-    id: 1,
-    type: 'symbolic',
-    text: fillTemplate(symbolic, theme, random),
-  });
+  // Clue 1: Positional (uses real position data)
+  const validPositionalClues = POSITIONAL_TEMPLATES
+    .map(fn => fn(evidence))
+    .filter((text): text is string => text !== null);
+  
+  if (validPositionalClues.length > 0) {
+    clues.push({
+      id: 1,
+      type: 'positional',
+      text: seededChoice(validPositionalClues, random),
+    });
+  } else {
+    // Fallback
+    clues.push({
+      id: 1,
+      type: 'positional',
+      text: `The target is on the ${evidence.streetPosition.replace('_', ' ')}.`,
+    });
+  }
 
-  // Clue 2: Spatial/Environmental
-  const spatial = seededChoice(SPATIAL_TEMPLATES, random);
-  clues.push({
-    id: 2,
-    type: 'spatial',
-    text: fillTemplate(spatial, theme, random),
-  });
+  // Clue 2: Item-based (uses real shop_items)
+  const validItemClues = ITEM_TEMPLATES
+    .map(fn => fn(evidence.itemKeywords))
+    .filter((text): text is string => text !== null);
+  
+  if (validItemClues.length > 0) {
+    clues.push({
+      id: 2,
+      type: 'item',
+      text: seededChoice(validItemClues, random),
+    });
+  } else if (evidence.itemKeywords.length > 0) {
+    clues.push({
+      id: 2,
+      type: 'item',
+      text: `The shop contains items related to "${evidence.itemKeywords[0]}".`,
+    });
+  } else {
+    clues.push({
+      id: 2,
+      type: 'item',
+      text: 'Enter the shop to examine its items for the Mystery Box.',
+    });
+  }
 
-  // Clue 3: Exclusionary/Narrowing - use other categories to exclude
-  const otherCategories = [...new Set(allEligible.map((s) => s.category))].filter(
-    (c) => c !== targetShop.category
-  );
-  const exclusionTheme = {
-    ...theme,
-    other_category: otherCategories.length > 0 ? seededChoice(otherCategories, random) : 'common wares',
-  };
-
-  const exclusionary = seededChoice(EXCLUSIONARY_TEMPLATES, random);
-  clues.push({
-    id: 3,
-    type: 'exclusionary',
-    text: fillTemplate(exclusionary, exclusionTheme, random),
-  });
+  // Clue 3: Exclusionary (what the target is NOT)
+  const validExclusionaryClues = EXCLUSIONARY_TEMPLATES
+    .map(fn => fn(targetShop, others))
+    .filter((text): text is string => text !== null);
+  
+  if (validExclusionaryClues.length > 0) {
+    clues.push({
+      id: 3,
+      type: 'exclusionary',
+      text: seededChoice(validExclusionaryClues, random),
+    });
+  } else {
+    clues.push({
+      id: 3,
+      type: 'exclusionary',
+      text: 'Process of elimination is your friend.',
+    });
+  }
 
   return clues;
 }
