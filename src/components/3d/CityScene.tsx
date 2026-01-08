@@ -42,6 +42,10 @@ type InnerProps = {
   shouldLoadAssets: boolean;
   onGateEnter?: () => void;
   onShopClick?: (branding: ShopBranding) => void;
+  // Mystery Box props
+  mysteryBoxPosition?: { x: number; y: number; z: number } | null;
+  mysteryIndicators?: MissionIndicator[];
+  onMysteryBoxCollect?: () => void;
 };
 
 // Pastel color palette
@@ -294,6 +298,9 @@ export default function CityScene({
             shouldLoadAssets={shouldLoadAssets}
             onGateEnter={onGateEnter}
             onShopClick={onShopClick}
+            mysteryBoxPosition={mysteryBoxPosition}
+            mysteryIndicators={mysteryIndicators}
+            onMysteryBoxCollect={onMysteryBoxCollect}
           />
         </Suspense>
       </Canvas>
@@ -792,6 +799,9 @@ function SceneInner({
   shouldLoadAssets,
   onGateEnter,
   onShopClick,
+  mysteryBoxPosition,
+  mysteryIndicators = [],
+  onMysteryBoxCollect,
 }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
