@@ -41,8 +41,8 @@ const createBrickTexture = () => {
 
   if (!ctx) return null;
 
-  // Warm brick base - brighter
-  ctx.fillStyle = "#4a3025";
+  // Light cream mortar base
+  ctx.fillStyle = "#d4c4a8";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const brickWidth = 64;
@@ -53,24 +53,24 @@ const createBrickTexture = () => {
     for (let x = -brickWidth; x < canvas.width + brickWidth; x += brickWidth) {
       const offset = Math.floor(y / brickHeight) % 2 === 0 ? 0 : brickWidth / 2;
       
-      // Brick variations - brighter reds
-      const shade = 0.85 + Math.random() * 0.3;
-      const r = Math.floor(90 * shade);
-      const g = Math.floor(55 * shade);
-      const b = Math.floor(40 * shade);
+      // Bright terracotta bricks
+      const shade = 0.9 + Math.random() * 0.2;
+      const r = Math.floor(180 * shade);
+      const g = Math.floor(110 * shade);
+      const b = Math.floor(80 * shade);
       
       ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
       ctx.fillRect(x + offset + mortar, y + mortar, brickWidth - mortar * 2, brickHeight - mortar * 2);
       
-      // Subtle highlight
-      ctx.fillStyle = `rgba(255, 220, 180, 0.08)`;
-      ctx.fillRect(x + offset + mortar, y + mortar, brickWidth - mortar * 2, 2);
+      // Highlight
+      ctx.fillStyle = `rgba(255, 240, 220, 0.15)`;
+      ctx.fillRect(x + offset + mortar, y + mortar, brickWidth - mortar * 2, 3);
     }
   }
 
-  // Mortar color - warmer
+  // Mortar already set as background
   ctx.globalCompositeOperation = 'destination-over';
-  ctx.fillStyle = "#2a1f18";
+  ctx.fillStyle = "#c4b49a";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -242,73 +242,61 @@ const InteriorScene = ({
 
   return (
     <group>
-      {/* Brighter ambient lighting */}
-      <ambientLight intensity={0.6} color="#fff8f0" />
-      <hemisphereLight args={["#fffaf5", "#8b7355", 0.7]} position={[0, 5, 0]} />
+      {/* Strong ambient lighting */}
+      <ambientLight intensity={1.2} color="#ffffff" />
+      <hemisphereLight args={["#ffffff", "#c4a882", 1.0]} position={[0, 5, 0]} />
       
-      {/* Main ceiling light - brighter */}
+      {/* Main ceiling lights - very bright */}
       <pointLight 
         position={[0, 4.5, 0]} 
-        intensity={1.8} 
-        color="#fff5e6" 
-        distance={20}
-        decay={1.5}
+        intensity={2.5} 
+        color="#fffaf0" 
+        distance={25}
+        decay={1}
       />
-      
-      {/* Corner accent lights for depth */}
-      <pointLight position={[-5, 4, -4]} intensity={0.4} color="#ffd7a8" distance={8} />
-      <pointLight position={[5, 4, -4]} intensity={0.4} color="#ffd7a8" distance={8} />
+      <pointLight position={[-3, 4, -3]} intensity={1.2} color="#fff5e6" distance={12} />
+      <pointLight position={[3, 4, -3]} intensity={1.2} color="#fff5e6" distance={12} />
+      <pointLight position={[0, 4, 3]} intensity={0.8} color="#fff5e6" distance={10} />
 
-      {/* Floor - warmer wood tone */}
+      {/* Floor - light wood */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[14, 14]} />
         <meshStandardMaterial 
-          color="#3a3530" 
-          roughness={0.4} 
-          metalness={0.1}
-        />
-      </mesh>
-      
-      {/* Subtle floor reflection */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
-        <planeGeometry args={[13.5, 13.5]} />
-        <meshStandardMaterial 
-          color="#4a4540" 
-          roughness={0.6}
-          transparent
-          opacity={0.25}
+          color="#8b7355" 
+          roughness={0.5} 
+          metalness={0.05}
         />
       </mesh>
 
-      {/* Walls with brick texture - brighter colors */}
+      {/* Walls - NO texture tint, full brightness */}
       {/* Front Wall */}
       <mesh position={[0, 2.5, -6]}>
         <boxGeometry args={[14, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#5a4035" />
+        <meshStandardMaterial map={brickTexture} color="#ffffff" />
       </mesh>
 
       {/* Back Wall */}
       <mesh position={[0, 2.5, 6]}>
         <boxGeometry args={[14, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#4a3830" />
+        <meshStandardMaterial map={brickTexture} color="#ffffff" />
       </mesh>
 
       {/* Left Wall */}
       <mesh position={[-7, 2.5, 0]} rotation={[0, Math.PI / 2, 0]}>
         <boxGeometry args={[12, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#5a4035" />
+        <meshStandardMaterial map={brickTexture} color="#ffffff" />
       </mesh>
 
       {/* Right Wall */}
       <mesh position={[7, 2.5, 0]} rotation={[0, -Math.PI / 2, 0]}>
         <boxGeometry args={[12, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#5a4035" />
+        <meshStandardMaterial map={brickTexture} color="#ffffff" />
       </mesh>
 
-      {/* Ceiling - visible dark wood */}
+      {/* Ceiling - cream color */}
       <mesh position={[0, 5, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[14, 14]} />
-        <meshStandardMaterial color="#2a2520" roughness={0.95} />
+        <meshStandardMaterial color="#d4c4a8" roughness={0.9} />
       </mesh>
       
       {/* Ceiling light fixture */}
@@ -434,8 +422,8 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
         className="flex-1 touch-none"
         gl={{ antialias: true, powerPreference: "high-performance" }}
       >
-        <color attach="background" args={["#1a1512"]} />
-        <fog attach="fog" args={["#1a1512", 12, 25]} />
+        <color attach="background" args={["#e8dcc8"]} />
+        <fog attach="fog" args={["#e8dcc8", 15, 30]} />
         <React.Suspense fallback={null}>
           <InteriorScene 
             shop={shop} 
