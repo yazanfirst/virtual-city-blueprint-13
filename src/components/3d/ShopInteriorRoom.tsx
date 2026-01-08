@@ -1,19 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import React, { useMemo, useState } from "react";
+import { Canvas } from "@react-three/fiber";
 import { Html, OrbitControls, Text } from "@react-three/drei";
 import * as THREE from "three";
-import { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { ShopBranding } from "@/hooks/use3DShops";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ShopItem, useShopItems } from "@/hooks/useShopItems";
 import { X, ExternalLink, ChevronLeft, ChevronRight, Package } from "lucide-react";
-
-type DeviceOrientation = "portrait" | "landscape";
-interface DeviceViewportState {
-  isMobile: boolean;
-  orientation: DeviceOrientation;
-}
 
 interface ShopInteriorRoomProps {
   shop: ShopBranding;
@@ -26,13 +18,6 @@ interface FrameSpotConfig {
   rotation: [number, number, number];
   wall: 'front' | 'left' | 'right' | 'back';
 }
-
-const FRAME_DIMENSIONS = {
-  outer: { width: 2, height: 2.5, depth: 0.12 },
-  inner: { width: 1.78, height: 2.28, depth: 0.08 },
-  mat: { width: 1.6, height: 2.05, depth: 0.02 },
-  content: { width: 180, height: 225 },
-};
 
 // 5 frames: 2 front wall, 1 left, 1 right, 1 back
 const FRAME_SPOTS: FrameSpotConfig[] = [
@@ -99,117 +84,6 @@ const useBrickTexture = () => {
   return useMemo(() => createBrickTexture(), []);
 };
 
-const useDeviceViewport = (): DeviceViewportState => {
-  const [state, setState] = useState<DeviceViewportState>({
-    isMobile: false,
-    orientation: "portrait",
-  });
-
-  useEffect(() => {
-    const computeState = (): DeviceViewportState => {
-      if (typeof window === "undefined") {
-        return { isMobile: false, orientation: "portrait" };
-      }
-
-      const mobileQuery = window.matchMedia("(max-width: 768px)");
-      const portraitQuery = window.matchMedia("(orientation: portrait)");
-
-      const isMobile = mobileQuery.matches;
-      const isPortrait = portraitQuery.matches || window.innerHeight >= window.innerWidth;
-
-      return {
-        isMobile,
-        orientation: isPortrait ? "portrait" : "landscape",
-      };
-    };
-
-    const handleChange = () => setState(computeState());
-
-    const mobileQuery = window.matchMedia("(max-width: 768px)");
-    const portraitQuery = window.matchMedia("(orientation: portrait)");
-
-    handleChange();
-
-    mobileQuery.addEventListener("change", handleChange);
-    portraitQuery.addEventListener("change", handleChange);
-    window.addEventListener("resize", handleChange);
-
-    return () => {
-      mobileQuery.removeEventListener("change", handleChange);
-      portraitQuery.removeEventListener("change", handleChange);
-      window.removeEventListener("resize", handleChange);
-    };
-  }, []);
-
-  return state;
-};
-
-const ROOM_PIVOT = new THREE.Vector3(0, 2, -1.5);
-const ROOM_BOUNDS = {
-  minX: -5.6,
-  maxX: 5.6,
-  minY: 1.2,
-  maxY: 3.6,
-  minZ: -4.8,
-  maxZ: 4.2,
-};
-
-const RoomCameraController = () => {
-  const { camera, gl } = useThree();
-  const controlsRef = useRef<OrbitControlsImpl>(null);
-
-  useEffect(() => {
-    const controls = controlsRef.current;
-    if (!controls) return;
-
-    controls.enablePan = false;
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.minDistance = 1.8;
-    controls.maxDistance = 4.6;
-    controls.minPolarAngle = Math.PI / 5;
-    controls.maxPolarAngle = Math.PI / 1.9;
-    controls.rotateSpeed = 0.55;
-    controls.target.copy(ROOM_PIVOT);
-
-    const clampCamera = () => {
-      const position = camera.position;
-
-      position.x = THREE.MathUtils.clamp(position.x, ROOM_BOUNDS.minX, ROOM_BOUNDS.maxX);
-      position.y = THREE.MathUtils.clamp(position.y, ROOM_BOUNDS.minY, ROOM_BOUNDS.maxY);
-      position.z = THREE.MathUtils.clamp(position.z, ROOM_BOUNDS.minZ, ROOM_BOUNDS.maxZ);
-
-      const offset = position.clone().sub(ROOM_PIVOT);
-      const clampedRadius = THREE.MathUtils.clamp(offset.length(), controls.minDistance, controls.maxDistance);
-
-      if (Math.abs(clampedRadius - offset.length()) > 1e-3) {
-        offset.setLength(clampedRadius);
-        position.copy(ROOM_PIVOT).add(offset);
-      }
-
-      camera.lookAt(ROOM_PIVOT);
-      controls.target.copy(ROOM_PIVOT);
-    };
-
-    clampCamera();
-    controls.addEventListener("change", clampCamera);
-
-    return () => {
-      controls.removeEventListener("change", clampCamera);
-    };
-  }, [camera]);
-
-  useFrame(() => {
-    const controls = controlsRef.current;
-    if (!controls) return;
-
-    controls.target.copy(ROOM_PIVOT);
-    controls.update();
-  });
-
-  return <OrbitControls ref={controlsRef} args={[camera, gl.domElement]} />;
-};
-
 // Beautiful ornate frame component
 const OrnateFrame = ({
   config,
@@ -224,13 +98,11 @@ const OrnateFrame = ({
   accent: string;
   primary: string;
   isSelected: boolean;
-  onSelect: (slot: number, item?: ShopItem) => void;
+  onSelect: (slot: number) => void;
 }) => {
   const hasItem = Boolean(item?.title);
   const frameColor = hasItem ? "#c9a227" : "#4a3f35";
   const innerColor = hasItem ? "#1a1510" : "#0f0d0a";
-  const cornerOffsetX = FRAME_DIMENSIONS.outer.width / 2 - 0.1;
-  const cornerOffsetY = FRAME_DIMENSIONS.outer.height / 2 - 0.15;
   
   return (
     <group position={config.position} rotation={config.rotation}>
@@ -247,10 +119,8 @@ const OrnateFrame = ({
       
       {/* Outer ornate frame */}
       <mesh position={[0, 0, 0.02]}>
-        <boxGeometry
-          args={[FRAME_DIMENSIONS.outer.width, FRAME_DIMENSIONS.outer.height, FRAME_DIMENSIONS.outer.depth]}
-        />
-        <meshStandardMaterial
+        <boxGeometry args={[2.4, 1.8, 0.12]} />
+        <meshStandardMaterial 
           color={frameColor}
           metalness={0.6}
           roughness={0.35}
@@ -261,8 +131,8 @@ const OrnateFrame = ({
       
       {/* Frame inner border */}
       <mesh position={[0, 0, 0.06]}>
-        <boxGeometry args={[FRAME_DIMENSIONS.inner.width, FRAME_DIMENSIONS.inner.height, FRAME_DIMENSIONS.inner.depth]} />
-        <meshStandardMaterial
+        <boxGeometry args={[2.1, 1.5, 0.08]} />
+        <meshStandardMaterial 
           color={hasItem ? "#8b7355" : "#3a3028"}
           metalness={0.4}
           roughness={0.5}
@@ -271,17 +141,12 @@ const OrnateFrame = ({
       
       {/* Frame mat/passepartout */}
       <mesh position={[0, 0, 0.1]}>
-        <boxGeometry args={[FRAME_DIMENSIONS.mat.width, FRAME_DIMENSIONS.mat.height, FRAME_DIMENSIONS.mat.depth]} />
+        <boxGeometry args={[1.9, 1.3, 0.02]} />
         <meshStandardMaterial color={innerColor} roughness={0.9} />
       </mesh>
       
       {/* Corner decorations */}
-      {[
-        [-cornerOffsetX, cornerOffsetY],
-        [cornerOffsetX, cornerOffsetY],
-        [-cornerOffsetX, -cornerOffsetY],
-        [cornerOffsetX, -cornerOffsetY],
-      ].map(([x, y], i) => (
+      {[[-0.95, 0.65], [0.95, 0.65], [-0.95, -0.65], [0.95, -0.65]].map(([x, y], i) => (
         <mesh key={i} position={[x, y, 0.08]}>
           <sphereGeometry args={[0.08, 8, 8]} />
           <meshStandardMaterial color={frameColor} metalness={0.7} roughness={0.3} />
@@ -299,12 +164,12 @@ const OrnateFrame = ({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onSelect(config.slot, item);
+            onSelect(config.slot);
           }}
           className="group transition-transform duration-200 hover:scale-[1.02] focus:outline-none"
-          style={{
-            width: `${FRAME_DIMENSIONS.content.width}px`,
-            height: `${FRAME_DIMENSIONS.content.height}px`,
+          style={{ 
+            width: '170px',
+            height: '115px',
             borderRadius: '4px',
             overflow: 'hidden',
             boxShadow: isSelected ? `0 0 20px ${accent}50` : 'none',
@@ -313,25 +178,25 @@ const OrnateFrame = ({
           {hasItem && item ? (
             <div className="relative h-full w-full bg-card/95 backdrop-blur-sm border border-border/30 overflow-hidden">
               {/* Product image */}
-              <div className="relative h-[65%] w-full overflow-hidden bg-muted">
+              <div className="relative h-[70px] w-full overflow-hidden bg-muted">
                 {item.image_url ? (
-                  <img
-                    src={item.image_url}
-                    alt={item.title}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  <img 
+                    src={item.image_url} 
+                    alt={item.title} 
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" 
                   />
                 ) : (
-                  <div
+                  <div 
                     className="h-full w-full flex items-center justify-center"
                     style={{ background: `linear-gradient(135deg, ${primary}30, ${accent}20)` }}
                   >
                     <Package className="h-6 w-6 text-muted-foreground/50" />
                   </div>
                 )}
-
+                
                 {/* Price badge */}
                 {item.price != null && (
-                  <div
+                  <div 
                     className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-white shadow"
                     style={{ backgroundColor: accent }}
                   >
@@ -339,15 +204,15 @@ const OrnateFrame = ({
                   </div>
                 )}
               </div>
-
+              
               {/* Product title */}
-              <div className="p-1.5 bg-background/85">
-                <p className="text-[12px] font-medium text-foreground truncate">{item.title}</p>
-                <p className="text-[10px] text-muted-foreground">Tap to view</p>
+              <div className="p-1.5 bg-background/80">
+                <p className="text-[11px] font-medium text-foreground truncate">{item.title}</p>
+                <p className="text-[9px] text-muted-foreground">Tap to view</p>
               </div>
             </div>
           ) : (
-            <div
+            <div 
               className="h-full w-full flex flex-col items-center justify-center gap-2 bg-background/40 backdrop-blur-sm border border-dashed border-muted-foreground/20 rounded"
             >
               <Package className="h-6 w-6 text-muted-foreground/30" />
@@ -369,7 +234,7 @@ const InteriorScene = ({
   shop: ShopBranding;
   items: (ShopItem | undefined)[];
   selectedSlot: number | null;
-  onSelectItem: (slot: number, item?: ShopItem) => void;
+  onSelectItem: (slot: number) => void;
 }) => {
   const brickTexture = useBrickTexture();
   const accent = shop.accentColor || "#10B981";
@@ -378,50 +243,36 @@ const InteriorScene = ({
   return (
     <group>
       {/* Optimized ambient lighting - no shadows */}
-      <ambientLight intensity={1.15} color="#fffaf1" />
-      <hemisphereLight args={["#fff7eb", "#3f2618", 1.45]} position={[0, 6, 0]} />
-
-      {/* Directional fill for broad brightness without heavy cost */}
-      <directionalLight
-        position={[4, 6, 3]}
-        intensity={1.6}
-        color="#ffeede"
-      >
-        <object3D position={[0, 0, -2]} />
-      </directionalLight>
-
+      <ambientLight intensity={0.35} color="#fff5e6" />
+      <hemisphereLight args={["#ffeedd", "#2a1810", 0.5]} position={[0, 5, 0]} />
+      
       {/* Single main ceiling light - efficient */}
-      <pointLight
-        position={[0, 4.6, 0]}
-        intensity={3.1}
-        color="#fff8ef"
-        distance={22}
+      <pointLight 
+        position={[0, 4.5, 0]} 
+        intensity={1.2} 
+        color="#fff5e6" 
+        distance={15}
         decay={2}
       />
-
-      {/* Soft corner fills to reduce wall shadows */}
-      {[[-5.2, 3.4, -5.2], [5.2, 3.4, -5.2], [-5.2, 3.4, 5.2], [5.2, 3.4, 5.2]].map((pos, i) => (
-        <pointLight key={i} position={pos as [number, number, number]} intensity={1.2} color="#ffeedd" distance={15} decay={2.1} />
-      ))}
 
       {/* Floor - polished concrete look */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[14, 14]} />
-        <meshStandardMaterial
-          color="#4f4035"
-          roughness={0.32}
+        <meshStandardMaterial 
+          color="#1a1512" 
+          roughness={0.4} 
           metalness={0.1}
         />
       </mesh>
-
+      
       {/* Subtle floor reflection lines */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
         <planeGeometry args={[13.5, 13.5]} />
-        <meshStandardMaterial
-          color="#5a4a3e"
-          roughness={0.5}
+        <meshStandardMaterial 
+          color="#2a2520" 
+          roughness={0.6}
           transparent
-          opacity={0.36}
+          opacity={0.3}
         />
       </mesh>
 
@@ -429,31 +280,31 @@ const InteriorScene = ({
       {/* Front Wall */}
       <mesh position={[0, 2.5, -6]}>
         <boxGeometry args={[14, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#5a3d2f" />
+        <meshStandardMaterial map={brickTexture} color="#3a2820" />
       </mesh>
 
       {/* Back Wall */}
       <mesh position={[0, 2.5, 6]}>
         <boxGeometry args={[14, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#583829" />
+        <meshStandardMaterial map={brickTexture} color="#352318" />
       </mesh>
 
       {/* Left Wall */}
       <mesh position={[-7, 2.5, 0]} rotation={[0, Math.PI / 2, 0]}>
         <boxGeometry args={[12, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#5a3d2f" />
+        <meshStandardMaterial map={brickTexture} color="#3a2820" />
       </mesh>
 
       {/* Right Wall */}
       <mesh position={[7, 2.5, 0]} rotation={[0, -Math.PI / 2, 0]}>
         <boxGeometry args={[12, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#5a3d2f" />
+        <meshStandardMaterial map={brickTexture} color="#3a2820" />
       </mesh>
 
       {/* Ceiling - dark wood beams look */}
       <mesh position={[0, 5, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[14, 14]} />
-        <meshStandardMaterial color="#2e1c12" roughness={0.9} />
+        <meshStandardMaterial color="#1a0f0a" roughness={0.95} />
       </mesh>
       
       {/* Ceiling light fixture */}
@@ -463,10 +314,10 @@ const InteriorScene = ({
       </mesh>
       <mesh position={[0, 4.75, 0]}>
         <sphereGeometry args={[0.3, 16, 16]} />
-        <meshStandardMaterial
-          color="#fff9f0"
-          emissive="#fff9f0"
-          emissiveIntensity={1.5}
+        <meshStandardMaterial 
+          color="#fff5e6" 
+          emissive="#fff5e6" 
+          emissiveIntensity={0.8}
         />
       </mesh>
 
@@ -502,8 +353,6 @@ const InteriorScene = ({
 const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
   const { data: items = [], isLoading } = useShopItems(shop.shopId);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
-  const { isMobile, orientation } = useDeviceViewport();
 
   const wallItems = useMemo(() => {
     const filled = Array.from({ length: 5 }, () => undefined as ShopItem | undefined);
@@ -519,29 +368,6 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
   const primary = shop.primaryColor || "#3B82F6";
   const selectedItem = selectedSlot !== null ? wallItems[selectedSlot] : undefined;
   const filledSlots = wallItems.filter(Boolean);
-  const isMobilePortrait = isMobile && orientation === "portrait";
-  const isMobileLandscape = isMobile && orientation === "landscape";
-  const dialogSizeClasses = [
-    isMobilePortrait ? "max-w-[calc(100vw-1.25rem)] w-[calc(100vw-1.25rem)]" : "",
-    isMobileLandscape ? "max-w-[calc(100vw-1rem)] w-[calc(100vw-1rem)]" : "",
-    !isMobile ? "max-w-3xl w-[calc(100vw-4rem)]" : "",
-    "max-h-[calc(100vh-1.25rem)] overflow-y-auto p-4 sm:p-6",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  const handleSelectFrame = (slot: number, item?: ShopItem) => {
-    setSelectedSlot(slot);
-    if (item) {
-      setShowDetails(true);
-    }
-  };
-
-  useEffect(() => {
-    if (!selectedItem) {
-      setShowDetails(false);
-    }
-  }, [selectedItem]);
   
   const navigateItem = (direction: 'prev' | 'next') => {
     const filledIndices = wallItems.map((item, i) => item ? i : -1).filter(i => i !== -1);
@@ -599,115 +425,114 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
       </div>
 
       {/* 3D Canvas */}
-      <Canvas
-        camera={{ position: [0, 2.2, 3.5], fov: 65 }}
+      <Canvas 
+        camera={{ position: [0, 2.2, 3.5], fov: 65 }} 
         className="flex-1 touch-none"
-        gl={{ antialias: true, powerPreference: "high-performance", toneMappingExposure: 1.25 }}
+        gl={{ antialias: true, powerPreference: "high-performance" }}
       >
-        <color attach="background" args={["#291b14"]} />
-        <fog attach="fog" args={["#291b14", 8, 18]} />
+        <color attach="background" args={["#0f0a08"]} />
+        <fog attach="fog" args={["#0f0a08", 8, 18]} />
         <React.Suspense fallback={null}>
-          <InteriorScene
-            shop={shop}
-            items={wallItems}
+          <InteriorScene 
+            shop={shop} 
+            items={wallItems} 
             selectedSlot={selectedSlot}
-            onSelectItem={handleSelectFrame}
+            onSelectItem={setSelectedSlot} 
           />
         </React.Suspense>
-        <RoomCameraController />
+        <OrbitControls
+          enablePan={false}
+          enableDamping
+          dampingFactor={0.08}
+          maxDistance={5}
+          minDistance={1.5}
+          target={[0, 2, -2]}
+          maxPolarAngle={Math.PI / 2.1}
+          minPolarAngle={Math.PI / 5}
+          rotateSpeed={0.5}
+        />
       </Canvas>
-
-      <Dialog open={showDetails && Boolean(selectedItem)} onOpenChange={setShowDetails}>
-        <DialogContent className={dialogSizeClasses}>
-          {selectedItem && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-start justify-between gap-3 text-foreground">
-                  <span className="text-lg sm:text-xl font-semibold leading-tight">
-                    {selectedItem.title}
-                  </span>
-                  {selectedItem.price != null && (
-                    <span
-                      className="shrink-0 px-3 py-1 rounded-full text-sm font-bold text-white"
-                      style={{ backgroundColor: accent }}
-                    >
-                      ${Number(selectedItem.price).toFixed(2)}
-                    </span>
-                  )}
-                </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground">
-                  Full product details
-                </DialogDescription>
-              </DialogHeader>
-
-              <div
-                className={`grid gap-4 items-start ${
-                  isMobilePortrait
-                    ? "grid-cols-1"
-                    : isMobileLandscape
-                      ? "grid-cols-[1.05fr_1fr]"
-                      : "sm:grid-cols-[1.05fr_1fr]"
-                }`}
-              >
-                <div
-                  className={`relative w-full overflow-hidden rounded-xl border border-border/50 bg-muted aspect-[4/5] ${
-                    isMobilePortrait ? "max-h-[55vh]" : "max-h-[65vh]"
-                  }`}
-                >
-                  {selectedItem.image_url ? (
-                    <img
-                      src={selectedItem.image_url}
-                      alt={selectedItem.title}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div
-                      className="flex aspect-[4/5] h-full w-full items-center justify-center text-muted-foreground/60"
-                      style={{ background: `linear-gradient(135deg, ${primary}25, ${accent}20)` }}
-                    >
-                      <Package className="h-10 w-10" />
-                    </div>
-                  )}
-                  {selectedItem.price != null && (
-                    <div
-                      className="absolute bottom-3 right-3 rounded-lg px-3 py-1 text-sm font-semibold text-white shadow-lg"
-                      style={{ backgroundColor: accent }}
-                    >
-                      ${Number(selectedItem.price).toFixed(2)}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  {selectedItem.description ? (
-                    <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-line">
-                      {selectedItem.description}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No description provided.</p>
-                  )}
-
-                  <div className="rounded-lg border border-border/60 bg-card/70 p-3 text-xs text-muted-foreground">
-                    Displayed in slot {selectedSlot !== null ? selectedSlot + 1 : "-"}. Tap other frames to view their details.
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Bottom Panel - Mobile landscape friendly */}
       <div className="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 bg-gradient-to-t from-background via-background/95 to-transparent">
-        <div className="max-w-xl mx-auto space-y-2">
+        <div className="max-w-xl mx-auto">
           {isLoading ? (
             <div className="text-center py-2">
               <p className="text-xs text-muted-foreground">Loading...</p>
             </div>
+          ) : selectedItem ? (
+            <div 
+              className="rounded-xl border bg-card/95 backdrop-blur-xl shadow-xl overflow-hidden"
+              style={{ borderColor: `${accent}30` }}
+            >
+              <div className="flex items-stretch">
+                {/* Image */}
+                {selectedItem.image_url && (
+                  <div className="w-20 sm:w-28 shrink-0 bg-muted">
+                    <img 
+                      src={selectedItem.image_url} 
+                      alt={selectedItem.title}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                )}
+                
+                {/* Info */}
+                <div className="flex-1 p-2 sm:p-3 flex flex-col justify-between min-w-0">
+                  <div className="space-y-0.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">
+                        {selectedItem.title}
+                      </h3>
+                      {selectedItem.price != null && (
+                        <span 
+                          className="shrink-0 px-2 py-0.5 rounded-full text-xs font-bold text-white"
+                          style={{ backgroundColor: accent }}
+                        >
+                          ${Number(selectedItem.price).toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                    {selectedItem.description && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {selectedItem.description}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {/* Navigation */}
+                  {filledSlots.length > 1 && (
+                    <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-border/30">
+                      <span className="text-[10px] text-muted-foreground">
+                        {filledSlots.indexOf(selectedItem) + 1}/{filledSlots.length}
+                      </span>
+                      <div className="flex gap-1">
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-7 w-7"
+                          onClick={() => navigateItem('prev')}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-7 w-7"
+                          onClick={() => navigateItem('next')}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           ) : filledSlots.length > 0 ? (
             <div className="text-center py-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/50">
               <Package className="h-5 w-5 mx-auto mb-1.5" style={{ color: primary }} />
-              <p className="text-xs text-foreground font-medium">Tap any frame to open the product popup</p>
+              <p className="text-xs text-foreground font-medium">Tap any frame to see details</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">
                 {filledSlots.length} item{filledSlots.length !== 1 ? 's' : ''} on display
               </p>
@@ -718,9 +543,9 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
               <p className="text-xs text-muted-foreground">No items on display yet</p>
             </div>
           )}
-
+          
           {/* Controls hint - compact for mobile */}
-          <div className="flex items-center justify-center gap-3 text-[10px] text-muted-foreground/70">
+          <div className="flex items-center justify-center gap-3 mt-2 text-[10px] text-muted-foreground/70">
             <span>Drag to look</span>
             <span>•</span>
             <span>Pinch to zoom</span>
