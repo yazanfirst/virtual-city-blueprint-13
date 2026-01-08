@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import React, { useMemo, useRef, useState } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, OrbitControls, Text } from "@react-three/drei";
 import * as THREE from "three";
 import { ShopBranding } from "@/hooks/use3DShops";
@@ -350,8 +350,42 @@ const InteriorScene = ({
   );
 };
 
+const ROOM_BOUNDS = {
+  x: 6.2,
+  z: 5.2,
+  yMin: 1.1,
+  yMax: 4.7,
+} as const;
+
+function RoomCameraClamp({
+  controlsRef,
+}: {
+  controlsRef: React.MutableRefObject<any>;
+}) {
+  const { camera } = useThree();
+
+  useFrame(() => {
+    const p = camera.position;
+
+    p.x = THREE.MathUtils.clamp(p.x, -ROOM_BOUNDS.x, ROOM_BOUNDS.x);
+    p.z = THREE.MathUtils.clamp(p.z, -ROOM_BOUNDS.z, ROOM_BOUNDS.z);
+    p.y = THREE.MathUtils.clamp(p.y, ROOM_BOUNDS.yMin, ROOM_BOUNDS.yMax);
+
+    const controls = controlsRef.current;
+    if (controls?.target) {
+      controls.target.x = THREE.MathUtils.clamp(controls.target.x, -2, 2);
+      controls.target.z = THREE.MathUtils.clamp(controls.target.z, -2, 2);
+      controls.target.y = THREE.MathUtils.clamp(controls.target.y, 1.6, 2.6);
+      controls.update?.();
+    }
+  });
+
+  return null;
+}
+
 const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
   const { data: items = [], isLoading } = useShopItems(shop.shopId);
+  const controlsRef = useRef<any>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -435,7 +469,7 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
 
       {/* 3D Canvas */}
       <Canvas 
-        camera={{ position: [0, 2.2, 3.5], fov: 65 }} 
+        camera={{ position: [0, 2.2, 4.2], fov: 65 }} 
         className="flex-1 touch-none"
         gl={{ antialias: true, powerPreference: "high-performance" }}
       >
@@ -449,17 +483,19 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
             onSelectItem={handleFrameClick} 
           />
         </React.Suspense>
+
+        <RoomCameraClamp controlsRef={controlsRef} />
+
         <OrbitControls
+          ref={controlsRef}
           enablePan={false}
           enableDamping
           dampingFactor={0.08}
-          maxDistance={5}
-          minDistance={1.5}
-          target={[0, 2, -2]}
-          maxPolarAngle={Math.PI / 2.1}
+          maxDistance={4.5}
+          minDistance={1.6}
+          target={[0, 2, 0]}
+          maxPolarAngle={Math.PI / 2.05}
           minPolarAngle={Math.PI / 5}
-          minAzimuthAngle={-Math.PI / 2.5}
-          maxAzimuthAngle={Math.PI / 2.5}
           rotateSpeed={0.5}
         />
       </Canvas>
