@@ -8,13 +8,9 @@ import CityScene, { CameraView } from "@/components/3d/CityScene";
 import ShopDetailModal from "@/components/3d/ShopDetailModal";
 import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
-import MissionPanel from "@/components/mission/MissionPanel";
 import { useGameStore } from "@/stores/gameStore";
-import { useMissionStore } from "@/stores/missionStore";
-import { getEligibleShops } from "@/lib/mission/eligibility";
-import { toast } from "sonner";
 
-const PanelBox = ({
+const PanelBox = ({ 
   title,
   icon: Icon, 
   children 
@@ -55,27 +51,6 @@ const StreetView = () => {
 
   // Game state
   const { coins, level, xp } = useGameStore();
-  
-  // Mission state
-  const { missionActive, initMission, environmentMode, setEnvironmentMode, missionInitialized } = useMissionStore();
-
-  // Initialize mission when data is ready
-  useEffect(() => {
-    if (spotsData && spotsData.length > 0 && !missionInitialized) {
-      getEligibleShops(spotsData).then(eligible => {
-        if (eligible.length > 0) {
-          initMission(eligible);
-        }
-      });
-    }
-  }, [spotsData, missionInitialized, initMission]);
-
-  // Sync environment mode with timeOfDay
-  useEffect(() => {
-    if (missionActive) {
-      setTimeOfDay(environmentMode);
-    }
-  }, [environmentMode, missionActive]);
 
   // Find the spot ID for the selected shop (to highlight in 2D map)
   const selectedSpotId = selectedShop?.spotId || "";
@@ -86,22 +61,6 @@ const StreetView = () => {
   };
 
   const handleEnterShop = (shop: ShopBranding) => {
-    // Check with mission store first
-    const { enterShop } = useMissionStore.getState();
-    const result = enterShop(shop.shopId || '');
-    
-    if (result.isTarget) {
-      // Player found the target!
-      toast.success("🎉 " + result.message);
-    } else if (result.visitsLeft === 0 && !result.isTarget) {
-      // Mission failed
-      toast.error("❌ " + result.message);
-    } else if (result.message.includes('Wrong')) {
-      // Wrong shop but still have attempts
-      toast.warning("⚠️ " + result.message);
-    }
-    
-    // Always allow entering the shop (for browsing)
     setInteriorShop(shop);
     setIsInsideShop(true);
     setShowShopModal(false);
@@ -356,14 +315,38 @@ const StreetView = () => {
           </div>
           
           {/* Mission Popup */}
-                {showMissions && (
+          {showMissions && (
             <div 
               className="absolute inset-0 flex items-center justify-center pointer-events-auto"
               style={{ zIndex: 200 }}
               onClick={() => setShowMissions(false)}
             >
-              <div onClick={(e) => e.stopPropagation()}>
-                <MissionPanel onClose={() => setShowMissions(false)} />
+              <div 
+                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/30">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/30">
+                      <Target className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
+                      Missions
+                    </h3>
+                  </div>
+                  <button 
+                    onClick={() => setShowMissions(false)} 
+                    className="text-muted-foreground hover:text-foreground p-1"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                
+                <div className="text-center py-8 text-muted-foreground">
+                  <Target className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p className="text-sm">Missions coming soon!</p>
+                  <p className="text-xs mt-2">Check back later for exciting challenges.</p>
+                </div>
               </div>
             </div>
           )}
