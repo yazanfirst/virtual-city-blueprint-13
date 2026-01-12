@@ -92,7 +92,7 @@ export const useNotifications = () => {
   };
 };
 
-// Helper function to create notifications (used by admin actions)
+// Helper function to create notifications via secure Edge Function (used by admin actions)
 export const createNotification = async (
   userId: string,
   title: string,
@@ -100,15 +100,15 @@ export const createNotification = async (
   type: 'success' | 'error' | 'info' | 'warning' = 'info',
   link?: string
 ) => {
-  const { error } = await supabase
-    .from('notifications')
-    .insert({
+  const { error } = await supabase.functions.invoke('send-notification', {
+    body: {
       user_id: userId,
       title,
       message,
       type,
       link,
-    });
+    },
+  });
 
   if (error) {
     console.error('Failed to create notification:', error);
