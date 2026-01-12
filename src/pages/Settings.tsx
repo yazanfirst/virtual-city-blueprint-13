@@ -67,9 +67,10 @@ const Settings = () => {
 
     setLoading(true);
     try {
+      // Explicitly select only safe profile fields
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, display_name, avatar_url, business_name')
         .eq('id', user.id)
         .single();
 

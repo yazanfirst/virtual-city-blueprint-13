@@ -4,10 +4,11 @@ import { Tables } from '@/integrations/supabase/types';
 
 export type Street = Tables<'streets'>;
 export type ShopSpot = Tables<'shop_spots'>;
-export type Shop = Tables<'shops'>;
+// Safe shop type excluding internal admin_notes field
+export type SafeShop = Omit<Tables<'shops'>, 'admin_notes'>;
 
 export interface SpotWithShop extends ShopSpot {
-  shop?: Shop | null;
+  shop?: SafeShop | null;
 }
 
 export function useStreets() {
@@ -74,9 +75,30 @@ export function useSpotsWithShops(streetId: string) {
 
       // Then get all shops for these spots
       const spotIds = spots.map(s => s.id);
+      // Explicitly select fields to exclude admin_notes (internal admin field)
       const { data: shops, error: shopsError } = await supabase
         .from('shops')
-        .select('*')
+        .select(`
+          id,
+          merchant_id,
+          spot_id,
+          name,
+          category,
+          external_link,
+          logo_url,
+          primary_color,
+          accent_color,
+          facade_template,
+          signage_font,
+          texture_template,
+          texture_url,
+          status,
+          duplicate_brand,
+          branch_label,
+          branch_justification,
+          created_at,
+          updated_at
+        `)
         .in('spot_id', spotIds);
 
       if (shopsError) throw shopsError;
@@ -106,9 +128,30 @@ export function useActiveShopsForStreet(streetId: string) {
       if (spotsError) throw spotsError;
 
       const spotIds = spots.map(s => s.id);
+      // Explicitly select fields to exclude admin_notes (internal admin field)
       const { data: shops, error: shopsError } = await supabase
         .from('shops')
-        .select('*')
+        .select(`
+          id,
+          merchant_id,
+          spot_id,
+          name,
+          category,
+          external_link,
+          logo_url,
+          primary_color,
+          accent_color,
+          facade_template,
+          signage_font,
+          texture_template,
+          texture_url,
+          status,
+          duplicate_brand,
+          branch_label,
+          branch_justification,
+          created_at,
+          updated_at
+        `)
         .in('spot_id', spotIds)
         .eq('status', 'active');
 
