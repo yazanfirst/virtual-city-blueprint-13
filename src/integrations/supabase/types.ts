@@ -113,6 +113,13 @@ export type Database = {
             foreignKeyName: "shop_items_shop_id_fkey"
             columns: ["shop_id"]
             isOneToOne: false
+            referencedRelation: "public_shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_items_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
             referencedRelation: "shops"
             referencedColumns: ["id"]
           },
@@ -144,6 +151,13 @@ export type Database = {
           shop_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "shop_reviews_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "public_shops"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shop_reviews_shop_id_fkey"
             columns: ["shop_id"]
@@ -322,9 +336,93 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_shops: {
+        Row: {
+          accent_color: string | null
+          admin_notes: string | null
+          branch_justification: string | null
+          branch_label: string | null
+          category: string | null
+          created_at: string | null
+          duplicate_brand: boolean | null
+          external_link: string | null
+          facade_template: Database["public"]["Enums"]["facade_template"] | null
+          id: string | null
+          logo_url: string | null
+          merchant_id: string | null
+          name: string | null
+          primary_color: string | null
+          signage_font: string | null
+          spot_id: string | null
+          status: Database["public"]["Enums"]["shop_status"] | null
+          texture_template: string | null
+          texture_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          admin_notes?: never
+          branch_justification?: string | null
+          branch_label?: string | null
+          category?: string | null
+          created_at?: string | null
+          duplicate_brand?: boolean | null
+          external_link?: string | null
+          facade_template?:
+            | Database["public"]["Enums"]["facade_template"]
+            | null
+          id?: string | null
+          logo_url?: string | null
+          merchant_id?: never
+          name?: string | null
+          primary_color?: string | null
+          signage_font?: string | null
+          spot_id?: string | null
+          status?: Database["public"]["Enums"]["shop_status"] | null
+          texture_template?: string | null
+          texture_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          admin_notes?: never
+          branch_justification?: string | null
+          branch_label?: string | null
+          category?: string | null
+          created_at?: string | null
+          duplicate_brand?: boolean | null
+          external_link?: string | null
+          facade_template?:
+            | Database["public"]["Enums"]["facade_template"]
+            | null
+          id?: string | null
+          logo_url?: string | null
+          merchant_id?: never
+          name?: string | null
+          primary_color?: string | null
+          signage_font?: string | null
+          spot_id?: string | null
+          status?: Database["public"]["Enums"]["shop_status"] | null
+          texture_template?: string | null
+          texture_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shops_spot_id_fkey"
+            columns: ["spot_id"]
+            isOneToOne: true
+            referencedRelation: "shop_spots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      can_view_shop_sensitive_data: {
+        Args: { shop_merchant_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
