@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Map, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
@@ -9,6 +9,18 @@ import ShopDetailModal from "@/components/3d/ShopDetailModal";
 import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import { useGameStore } from "@/stores/gameStore";
+import { usePlayerStore } from "@/stores/playerStore";
+
+const spawnPointPositions: Record<string, Record<string, [number, number, number]>> = {
+  "food-street": {
+    spawn_food_from_fashion: [0, 0.25, 22],
+    default: [0, 0.25, 18],
+  },
+  "fashion-street": {
+    spawn_fashion_from_food: [-68, 0.25, 0],
+    default: [0, 0.25, 35],
+  },
+};
 
 const PanelBox = ({ 
   title,
@@ -36,9 +48,23 @@ const PanelBox = ({
 
 const StreetView = () => {
   const { streetId } = useParams<{ streetId: string }>();
-  const { data: street, isLoading } = useStreetBySlug(streetId || "");
-  const { data: spotsData } = useAllSpotsForStreet(streetId || "");
-  const { data: spotsWithShops } = useSpotsWithShops(street?.id || "");
+  const isFoodStreet = streetId === "food-street";
+  const location = useLocation();
+  const navigate = useNavigate();
+  const navigationState = useMemo(
+    () => (location.state as { outsideEntry?: boolean; spawnPointId?: string } | null) || {},
+    [location.state]
+  );
+  const outsideEntry = navigationState.outsideEntry;
+  const spawnPointFromState = navigationState.spawnPointId;
+  const [hasEnteredGate, setHasEnteredGate] = useState(!isFoodStreet || outsideEntry);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const initialSpawnAppliedRef = useRef<string | null>(null);
+  const { setPosition, setCameraRotation } = usePlayerStore();
+  const { data: street, isLoading } = useStreetBySlug(streetId || "", { enabled: !!streetId });
+  const shouldLoadStreetAssets = !isFoodStreet || hasEnteredGate;
+  const { data: spotsData } = useAllSpotsForStreet(streetId || "", { enabled: shouldLoadStreetAssets && !!streetId });
+  const { data: spotsWithShops } = useSpotsWithShops(street?.id || "", { enabled: shouldLoadStreetAssets && !!street?.id });
   const [isMaximized, setIsMaximized] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
@@ -48,6 +74,52 @@ const StreetView = () => {
   const [showMissions, setShowMissions] = useState(false);
   const [isInsideShop, setIsInsideShop] = useState(false);
   const [interiorShop, setInteriorShop] = useState<ShopBranding | null>(null);
+
+  const resolveSpawnPosition = useCallback((targetZoneId: string, spawnPointId?: string) => {
+    const zoneSpawns = spawnPointPositions[targetZoneId] || {};
+    const fallbackSpawn = spawnPointPositions["fashion-street"]?.default || [0, 0.25, 35];
+    return (spawnPointId ? zoneSpawns[spawnPointId] : undefined) || zoneSpawns.default || fallbackSpawn;
+  }, []);
+
+  const applySpawnPoint = useCallback((targetZoneId: string, spawnPointId?: string) => {
+    const spawn = resolveSpawnPosition(targetZoneId, spawnPointId);
+    setPosition(spawn);
+    setCameraRotation({ azimuth: 0, polar: Math.PI / 4 });
+  }, [resolveSpawnPosition, setCameraRotation, setPosition]);
+
+  const loadZone = useCallback((targetZoneId: string, spawnPointId?: string) => {
+    if (!targetZoneId) return;
+    setIsTransitioning(true);
+    applySpawnPoint(targetZoneId, spawnPointId);
+    if (targetZoneId === "food-street") {
+      setHasEnteredGate(true);
+    }
+
+    if (targetZoneId !== streetId) {
+      navigate(`/city/${targetZoneId}`, { state: { outsideEntry: true, spawnPointId } });
+    } else {
+      setIsTransitioning(false);
+    }
+  }, [applySpawnPoint, navigate, streetId]);
+
+  useEffect(() => {
+    setHasEnteredGate(!isFoodStreet || outsideEntry);
+  }, [isFoodStreet, outsideEntry]);
+
+  useEffect(() => {
+    if (!streetId || !outsideEntry) return;
+    const spawnPointId = spawnPointFromState;
+    const key = `${streetId}-${spawnPointId ?? "default"}`;
+    if (initialSpawnAppliedRef.current === key) return;
+    initialSpawnAppliedRef.current = key;
+    loadZone(streetId, spawnPointId);
+  }, [streetId, outsideEntry, spawnPointFromState, loadZone]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setIsTransitioning(false);
+    }
+  }, [isLoading]);
 
   // Game state
   const { coins, level, xp } = useGameStore();
@@ -70,8 +142,22 @@ const StreetView = () => {
     setIsInsideShop(false);
   };
 
+  const renderCityScene = () => {
+    const sceneProps = {
+      streetId: street?.id || streetId || "",
+      timeOfDay,
+      cameraView,
+      shopBrandings,
+      shouldLoadAssets: shouldLoadStreetAssets,
+      onGateEnter: () => setHasEnteredGate(true),
+      onZoneChange: loadZone,
+      onShopClick: handleShopClick,
+    } as const;
+    return <CityScene {...sceneProps} />;
+  };
+
   // Transform spots data to shop brandings
-  const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
+  const shopBrandings = shouldLoadStreetAssets && spotsData ? transformToShopBranding(spotsData) : [];
 
   // Request fullscreen + landscape orientation when maximized on mobile
   useEffect(() => {
@@ -170,8 +256,8 @@ const StreetView = () => {
 
   // Compact overlay panel for game mode
   const OverlayPanel = ({
-    title, 
-    icon: Icon, 
+    title,
+    icon: Icon,
     children,
     className = ""
   }: { 
@@ -193,6 +279,15 @@ const StreetView = () => {
     </div>
   );
 
+  const transitionOverlay = isTransitioning ? (
+    <div className="fixed inset-0 z-[500] flex items-center justify-center bg-background/80 backdrop-blur">
+      <div className="cyber-card px-6 py-4 flex items-center gap-3">
+        <div className="h-3 w-3 rounded-full bg-primary animate-pulse" />
+        <span className="font-display text-sm uppercase tracking-wider text-foreground">Loading next street...</span>
+      </div>
+    </div>
+  ) : null;
+
   // Game Mode (Maximized) Layout
   if (isMaximized) {
     const interiorOverlay = isInsideShop && interiorShop ? (
@@ -201,15 +296,10 @@ const StreetView = () => {
 
     return (
       <div className="fixed inset-0 z-50 bg-background">
+        {transitionOverlay}
         {/* Full-screen 3D Scene */}
         <div className="relative h-full w-full">
-          <CityScene 
-            streetId={street.id} 
-            timeOfDay={timeOfDay} 
-            cameraView={cameraView}
-            shopBrandings={shopBrandings}
-            onShopClick={handleShopClick}
-          />
+          {renderCityScene()}
           
           {/* Shop Detail Modal */}
           {showShopModal && (
@@ -352,8 +442,8 @@ const StreetView = () => {
           )}
           
           {/* 2D Map Overlay - Full screen on mobile, positioned on desktop */}
-          {show2DMap && spotsWithShops && (
-            <div 
+          {show2DMap && shouldLoadStreetAssets && spotsWithShops && (
+            <div
               className="absolute inset-0 md:inset-auto md:top-16 md:left-4 flex items-center justify-center md:block pointer-events-auto"
               style={{ zIndex: 200 }}
             >
@@ -442,6 +532,7 @@ const StreetView = () => {
   // Normal 3-Column Layout
   return (
     <>
+      {transitionOverlay}
       <div className="min-h-screen pt-24 pb-12 px-4">
         <div className="container mx-auto max-w-7xl">
         {/* Header */}
@@ -554,13 +645,7 @@ const StreetView = () => {
                 </span>
               </div>
               
-              <CityScene 
-                streetId={street.id} 
-                timeOfDay={timeOfDay} 
-                cameraView={cameraView} 
-                shopBrandings={shopBrandings}
-                onShopClick={handleShopClick}
-              />
+              {renderCityScene()}
               
               {/* Shop Detail Modal */}
               {showShopModal && (

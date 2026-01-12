@@ -20,15 +20,22 @@ type CitySceneProps = {
   timeOfDay?: "day" | "night";
   cameraView?: CameraView;
   shopBrandings?: ShopBranding[];
+  shouldLoadAssets?: boolean;
+  onGateEnter?: () => void;
+  onZoneChange?: (zoneId: string, spawnPointId?: string) => void;
   onShopClick?: (branding: ShopBranding) => void;
 };
 
 type InnerProps = {
+  streetId: string;
   timeOfDay: "day" | "night";
   cameraView: CameraView;
   joystickInput: { x: number; y: number };
   cameraRotation: { azimuth: number; polar: number };
   shopBrandings: ShopBranding[];
+  shouldLoadAssets: boolean;
+  onGateEnter?: () => void;
+  onZoneChange?: (zoneId: string, spawnPointId?: string) => void;
   onShopClick?: (branding: ShopBranding) => void;
 };
 
@@ -148,8 +155,8 @@ const lakes = [
 
 // District Gates
 const districtGates = [
-  { x: 78, z: 0, rotation: -Math.PI / 2, name: "ELECTRONICS", color: "#4A7FB5" },
-  { x: -78, z: 0, rotation: Math.PI / 2, name: "FOOD STREET", color: "#8B6B4A" },
+  { x: 78, z: 0, rotation: -Math.PI / 2, name: "ELECTRONICS", color: "#4A7FB5", status: "coming-soon" as const },
+  { x: -78, z: 0, rotation: Math.PI / 2, name: "FOOD STREET", color: "#8B6B4A", status: "open" as const },
 ];
 
 // Billboards
@@ -192,6 +199,9 @@ export default function CityScene({
   timeOfDay = "day",
   cameraView = "thirdPerson",
   shopBrandings = [],
+  shouldLoadAssets = true,
+  onGateEnter,
+  onZoneChange,
   onShopClick,
 }: CitySceneProps) {
   const deviceType = useDeviceType();
@@ -267,12 +277,16 @@ export default function CityScene({
         gl={{ antialias: false, powerPreference: "high-performance" }}
       >
         <Suspense fallback={null}>
-          <SceneInner 
-            timeOfDay={timeOfDay} 
+          <SceneInner
+            streetId={streetId}
+            timeOfDay={timeOfDay}
             cameraView={cameraView}
             joystickInput={joystickInput}
             cameraRotation={cameraRotation}
             shopBrandings={shopBrandings}
+            shouldLoadAssets={shouldLoadAssets}
+            onGateEnter={onGateEnter}
+            onZoneChange={onZoneChange}
             onShopClick={onShopClick}
           />
         </Suspense>
@@ -539,11 +553,12 @@ function Lake({ position, scaleX, scaleZ }: { position: [number, number, number]
 }
 
 // District Gate - proper arch at street end
-function DistrictGate({ position, rotation, name, color }: { 
-  position: [number, number, number]; 
-  rotation: number; 
+function DistrictGate({ position, rotation, name, color, status = "coming-soon" }: {
+  position: [number, number, number];
+  rotation: number;
   name: string;
   color: string;
+  status?: "coming-soon" | "open";
 }) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
@@ -558,9 +573,17 @@ function DistrictGate({ position, rotation, name, color }: {
       {/* Sign board */}
       <mesh position={[0, 10.5, 0.5]}><boxGeometry args={[7, 1.5, 0.3]} /><meshLambertMaterial color={color} /></mesh>
       <Text position={[0, 10.5, 0.7]} fontSize={0.6} color="#FFFFFF" anchorX="center" anchorY="middle">{name}</Text>
-      {/* Coming Soon */}
-      <mesh position={[0, 1.5, 0]}><boxGeometry args={[6, 1.2, 0.2]} /><meshLambertMaterial color="#2A4A6A" /></mesh>
-      <Text position={[0, 1.5, 0.15]} fontSize={0.4} color="#FFCC00" anchorX="center" anchorY="middle">COMING SOON</Text>
+      {status === "coming-soon" ? (
+        <>
+          <mesh position={[0, 1.5, 0]}><boxGeometry args={[6, 1.2, 0.2]} /><meshLambertMaterial color="#2A4A6A" /></mesh>
+          <Text position={[0, 1.5, 0.15]} fontSize={0.4} color="#FFCC00" anchorX="center" anchorY="middle">COMING SOON</Text>
+        </>
+      ) : (
+        <>
+          <mesh position={[0, 2, 0]}><boxGeometry args={[6.5, 0.8, 0.2]} /><meshLambertMaterial color="#35664A" /></mesh>
+          <Text position={[0, 2, 0.15]} fontSize={0.45} color="#B7F0C4" anchorX="center" anchorY="middle">OPEN GATE</Text>
+        </>
+      )}
     </group>
   );
 }
@@ -634,24 +657,200 @@ function LaneMarking({ position, rotation = 0 }: { position: [number, number, nu
   );
 }
 
-function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick }: InnerProps) {
+type FoodStreetSceneProps = {
+  isNight: boolean;
+  shopBrandings: ShopBranding[];
+  shouldLoadAssets: boolean;
+  onShopClick?: (branding: ShopBranding) => void;
+  onGateEnter?: () => void;
+  onZoneChange?: (zoneId: string, spawnPointId?: string) => void;
+  getBrandingAtPosition: (x: number, z: number) => ShopBranding | undefined;
+};
+
+function ZoneTransitionWatcher({
+  playerPosition,
+  hasTriggered,
+  onTrigger,
+}: {
+  playerPosition: [number, number, number];
+  hasTriggered: boolean;
+  onTrigger: () => void;
+}) {
+  useEffect(() => {
+    if (hasTriggered) return;
+    const [x, , z] = playerPosition;
+    if (x <= -72 && Math.abs(z) <= 8) {
+      onTrigger();
+    }
+  }, [playerPosition, hasTriggered, onTrigger]);
+
+  return null;
+}
+
+function FoodStreetScene({
+  isNight,
+  shopBrandings,
+  shouldLoadAssets,
+  onShopClick,
+  onGateEnter,
+  onZoneChange,
+  getBrandingAtPosition,
+}: FoodStreetSceneProps) {
+  const playerPosition = usePlayerStore((state) => state.position);
+  const [hasTriggeredExit, setHasTriggeredExit] = useState(false);
+
+  useEffect(() => {
+    setHasTriggeredExit(false);
+  }, [onZoneChange]);
+
+  useEffect(() => {
+    if (shouldLoadAssets || !onGateEnter) return;
+    const [x, , z] = playerPosition;
+    if (Math.abs(x) <= 7 && z <= 26 && z >= 16) {
+      onGateEnter();
+    }
+  }, [playerPosition, shouldLoadAssets, onGateEnter]);
+
+  useEffect(() => {
+    if (!onZoneChange || hasTriggeredExit) return;
+    const [x, , z] = playerPosition;
+    if (Math.abs(x) <= 6 && z >= 34) {
+      setHasTriggeredExit(true);
+      onZoneChange('fashion-street', 'spawn_fashion_from_food');
+    }
+  }, [playerPosition, hasTriggeredExit, onZoneChange]);
+
+  const roadColor = isNight ? "#2E3138" : COLORS.road;
+  const sidewalkColor = isNight ? "#9BA3A8" : COLORS.sidewalk;
+
+  const renderShop = (x: number, z: number, rotation: number, fallbackColor: string) => {
+    const branding = getBrandingAtPosition(x, z);
+    if (branding) {
+      return (
+        <BrandedShop
+          key={`${x}-${z}`}
+          branding={branding}
+          isNight={isNight}
+          onClick={() => onShopClick?.(branding)}
+        />
+      );
+    }
+    return <Shop key={`${x}-${z}`} position={[x, 0, z]} color={fallbackColor} rotation={rotation} isNight={isNight} />;
+  };
+
+  const lamps = [
+    { x: -4, z: 24 },
+    { x: 4, z: 24 },
+    { x: -4, z: 8 },
+    { x: 4, z: 8 },
+    { x: -4, z: -8 },
+    { x: 4, z: -8 },
+    { x: 14, z: 6 },
+    { x: -14, z: -6 },
+  ];
+
+  return (
+    <>
+      {/* Ground pad */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
+        <planeGeometry args={[120, 120]} />
+        <meshLambertMaterial color={isNight ? "#243027" : COLORS.grass} />
+      </mesh>
+
+      {/* Main road */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <planeGeometry args={[14, 78]} />
+        <meshLambertMaterial color={roadColor} />
+      </mesh>
+      {/* Branch roads */}
+      <mesh rotation={[-Math.PI / 2, 0, Math.PI / 2]} position={[16, 0.01, 6]}>
+        <planeGeometry args={[12, 24]} />
+        <meshLambertMaterial color={roadColor} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, Math.PI / 2]} position={[-16, 0.01, -6]}>
+        <planeGeometry args={[12, 24]} />
+        <meshLambertMaterial color={roadColor} />
+      </mesh>
+
+      {/* Sidewalks */}
+      <mesh position={[0, 0.12, 9]}><boxGeometry args={[14, 0.24, 6]} /><meshLambertMaterial color={sidewalkColor} /></mesh>
+      <mesh position={[0, 0.12, -9]}><boxGeometry args={[14, 0.24, 6]} /><meshLambertMaterial color={sidewalkColor} /></mesh>
+      <mesh position={[0, 0.12, 27]}><boxGeometry args={[14, 0.24, 6]} /><meshLambertMaterial color={sidewalkColor} /></mesh>
+      <mesh position={[0, 0.12, -27]}><boxGeometry args={[14, 0.24, 6]} /><meshLambertMaterial color={sidewalkColor} /></mesh>
+      <mesh position={[16, 0.12, 6]}><boxGeometry args={[12, 0.24, 5]} /><meshLambertMaterial color={sidewalkColor} /></mesh>
+      <mesh position={[-16, 0.12, -6]}><boxGeometry args={[12, 0.24, 5]} /><meshLambertMaterial color={sidewalkColor} /></mesh>
+
+      {/* Lane markings */}
+      {Array.from({ length: 12 }).map((_, i) => (
+        <LaneMarking key={`main-${i}`} position={[0, 0.03, 30 - i * 6]} />
+      ))}
+      {Array.from({ length: 4 }).map((_, i) => (
+        <LaneMarking key={`east-${i}`} position={[9 + i * 4, 0.03, 6]} rotation={Math.PI / 2} />
+      ))}
+      {Array.from({ length: 4 }).map((_, i) => (
+        <LaneMarking key={`west-${i}`} position={[-9 - i * 4, 0.03, -6]} rotation={Math.PI / 2} />
+      ))}
+
+      {/* Entry arch */}
+      <DistrictGate position={[0, 0, 32]} rotation={0} name="FOOD STREET" color="#8B6B4A" status="open" />
+      <Text position={[0, 3.2, 24]} fontSize={1} color="#FDE68A" anchorX="center" anchorY="middle">Taste Lane</Text>
+      <Text position={[14, 3, 10]} fontSize={0.7} color="#FDE68A" anchorX="center" anchorY="middle">Sweet Branch</Text>
+      <Text position={[-14, 3, -10]} fontSize={0.7} color="#FDE68A" anchorX="center" anchorY="middle">Harvest Branch</Text>
+
+      {/* Shops & stalls */}
+      {shouldLoadAssets && shopBrandings.length > 0 && (
+        <>
+          {shopBrandings.map((branding) => renderShop(branding.position.x, branding.position.z, branding.position.rotation, COLORS.teal))}
+        </>
+      )}
+
+      {/* Lamps */}
+      {lamps.map((lamp, idx) => (
+        <Lamp key={`lamp-food-${idx}`} position={[lamp.x, 0, lamp.z]} isNight={isNight} />
+      ))}
+    </>
+  );
+}
+
+function SceneInner({
+  streetId,
+  timeOfDay,
+  cameraView,
+  joystickInput,
+  cameraRotation,
+  shopBrandings,
+  shouldLoadAssets,
+  onGateEnter,
+  onZoneChange,
+  onShopClick,
+}: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
+  const playerPosition = usePlayerStore((state) => state.position);
+  const [hasTriggeredDistrictGate, setHasTriggeredDistrictGate] = useState(false);
+
+  useEffect(() => {
+    setHasTriggeredDistrictGate(false);
+  }, [streetId]);
 
   useEffect(() => {
     scene.background = null;
   }, [scene]);
 
+  const effectiveBrandings = useMemo(() => (
+    streetId === "food-street" && !shouldLoadAssets ? [] : shopBrandings
+  ), [streetId, shouldLoadAssets, shopBrandings]);
+
   // Create a map for quick lookup of shop brandings by position
   const brandingsByPosition = useMemo(() => {
     const map = new Map<string, ShopBranding>();
-    shopBrandings.forEach(b => {
+    effectiveBrandings.forEach(b => {
       const key = `${b.position.x},${b.position.z}`;
       map.set(key, b);
     });
     return map;
-  }, [shopBrandings]);
+  }, [effectiveBrandings]);
 
   // Helper to check if there's branding data at a position
   const getBrandingAtPosition = (x: number, z: number): ShopBranding | undefined => {
@@ -662,10 +861,52 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
     collectCoin(id);
   }, [collectCoin]);
 
+  if (streetId === "food-street") {
+    return (
+      <>
+        <GradientSky isNight={isNight} />
+        {!isNight && cloudPositions.map((c, i) => <Cloud key={i} position={[c.x, c.y, c.z]} scale={c.scale} />)}
+        <ambientLight intensity={isNight ? 1.2 : 1.0} />
+        <hemisphereLight color={isNight ? "#8090B0" : "#ffffff"} groundColor={isNight ? "#4A5A6A" : "#88AA88"} intensity={isNight ? 1.1 : 0.7} />
+        <directionalLight position={[32, 50, 24]} intensity={isNight ? 0.8 : 1.4} color={isNight ? "#8090B0" : "#FFF8E8"} />
+
+        <FoodStreetScene
+          isNight={isNight}
+          shopBrandings={effectiveBrandings}
+          shouldLoadAssets={shouldLoadAssets}
+          onShopClick={onShopClick}
+          onGateEnter={onGateEnter}
+          onZoneChange={onZoneChange}
+          getBrandingAtPosition={getBrandingAtPosition}
+        />
+
+        <PlayerController
+          isNight={isNight}
+          speed={0.2}
+          joystickInput={joystickInput}
+          viewMode={cameraView}
+          cameraRotation={cameraRotation}
+          streetId={streetId}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <GradientSky isNight={isNight} />
       {!isNight && cloudPositions.map((c, i) => <Cloud key={i} position={[c.x, c.y, c.z]} scale={c.scale} />)}
+
+      {streetId !== "food-street" && onZoneChange && (
+        <ZoneTransitionWatcher
+          playerPosition={playerPosition}
+          hasTriggered={hasTriggeredDistrictGate}
+          onTrigger={() => {
+            setHasTriggeredDistrictGate(true);
+            onZoneChange('food-street', 'spawn_food_from_fashion');
+          }}
+        />
+      )}
 
       {/* Lighting */}
       <ambientLight intensity={isNight ? 1.3 : 1.0} />
@@ -768,7 +1009,16 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {lakes.map((lake, i) => <Lake key={`lake-${i}`} position={[lake.x, 0, lake.z]} scaleX={lake.scaleX} scaleZ={lake.scaleZ} />)}
 
       {/* === DISTRICT GATES (at street ends) === */}
-      {districtGates.map((gate, i) => <DistrictGate key={`gate-${i}`} position={[gate.x, 0, gate.z]} rotation={gate.rotation} name={gate.name} color={gate.color} />)}
+      {districtGates.map((gate, i) => (
+        <DistrictGate
+          key={`gate-${i}`}
+          position={[gate.x, 0, gate.z]}
+          rotation={gate.rotation}
+          name={gate.name}
+          color={gate.color}
+          status={gate.status}
+        />
+      ))}
 
       {/* === BILLBOARDS === */}
       {billboards.map((bb, i) => <Billboard key={`bb-${i}`} position={[bb.x, 0, bb.z]} rotation={bb.rotation} isNight={isNight} />)}

@@ -37,6 +37,8 @@ const fontStyles = {
   playful: { fontFamily: "'Pacifico', cursive, sans-serif", fontWeight: 400, letterSpacing: '0px' },
 };
 
+const defaultFontStyle = { fontFamily: 'Arial, sans-serif', fontWeight: 400, letterSpacing: '1px' };
+
 // Texture tint colors to apply over textures
 const textureColors: Record<string, string> = {
   wood: "#8B6914",
@@ -71,10 +73,11 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
   const { position, hasShop, isSuspended, shopName, primaryColor, accentColor, facadeTemplate, logoUrl, signageFont, textureTemplate, textureUrl } = branding;
   const [hovered, setHovered] = useState(false);
   const [textureError, setTextureError] = useState(false);
-  
+
   const template = (facadeTemplate as keyof typeof templateColors) || 'modern_neon';
   const colors = templateColors[template] || templateColors.modern_neon;
-  const font = fontStyles[(signageFont as keyof typeof fontStyles) || 'classic'];
+  const signageKey = (signageFont as keyof typeof fontStyles) || 'classic';
+  const font = fontStyles[signageKey] || defaultFontStyle;
   
   const primaryHex = primaryColor || '#3B82F6';
   const accentHex = accentColor || '#10B981';
@@ -230,9 +233,9 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
             {/* Shop Name */}
             <div
               style={{
-                fontFamily: font.fontFamily,
-                fontWeight: font.fontWeight,
-                letterSpacing: font.letterSpacing,
+                fontFamily: font?.fontFamily ?? defaultFontStyle.fontFamily,
+                fontWeight: font?.fontWeight ?? defaultFontStyle.fontWeight,
+                letterSpacing: font?.letterSpacing ?? defaultFontStyle.letterSpacing,
                 fontSize:
                   shopName && shopName.length > 12
                     ? '10px'
@@ -246,7 +249,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                textTransform: signageFont === 'elegant' ? 'uppercase' : 'none',
+                textTransform: signageKey === 'elegant' ? 'uppercase' : 'none',
                 textAlign: 'center',
                 maxWidth: logoUrl ? '130px' : '160px',
                 justifySelf: 'center',

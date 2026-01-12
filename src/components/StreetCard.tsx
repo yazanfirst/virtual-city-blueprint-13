@@ -59,7 +59,7 @@ const StreetCard = ({
             </Button>
           ) : (
             <Button variant="cyber" className="w-full" asChild>
-              <Link to={`/city/${id}`}>
+              <Link to={`/city/${id}`} state={{ outsideEntry: true, spawnPointId: 'default' }}>
                 {actionLabel}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

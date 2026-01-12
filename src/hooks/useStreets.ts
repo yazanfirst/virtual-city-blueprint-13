@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
+import { mockShopsByStreetSlug, mockSpotsByStreetSlug, mockStreets } from '@/lib/mockStreetContent';
 
 export type Street = Tables<'streets'>;
 export type ShopSpot = Tables<'shop_spots'>;
@@ -12,24 +13,48 @@ export interface SpotWithShop extends ShopSpot {
 }
 
 export function useStreets() {
+  const ensureFoodStreetIsActive = (street: Street) => street.slug === 'food-street'
+    ? { ...street, is_active: true }
+    : street;
+
   return useQuery({
     queryKey: ['streets'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('streets')
-        .select('*')
-        .order('name');
+      try {
+        const { data, error } = await supabase
+          .from('streets')
+          .select('*')
+          .order('name');
 
-      if (error) throw error;
-      return data as Street[];
+        if (error) throw error;
+        const merged = [...(data as Street[]).map(ensureFoodStreetIsActive)];
+
+        mockStreets.forEach(mockStreet => {
+          if (!merged.find(street => street.slug === mockStreet.slug)) {
+            merged.push(mockStreet);
+          }
+        });
+
+        return merged.map(ensureFoodStreetIsActive);
+      } catch (err) {
+        // If Supabase is unavailable, still expose the mock streets so the zone can be tested
+        return mockStreets;
+      }
     },
   });
 }
 
-export function useStreetBySlug(slug: string) {
+export function useStreetBySlug(slug: string, options?: { enabled?: boolean }) {
+  const ensureFoodStreetIsActive = (street: Street | null) => (street?.slug === 'food-street'
+    ? { ...street, is_active: true }
+    : street);
+
   return useQuery({
     queryKey: ['street', slug],
     queryFn: async () => {
+      const mockStreet = mockStreets.find(street => street.slug === slug);
+      if (mockStreet) return mockStreet;
+
       const { data, error } = await supabase
         .from('streets')
         .select('*')
@@ -37,16 +62,19 @@ export function useStreetBySlug(slug: string) {
         .maybeSingle();
 
       if (error) throw error;
-      return data as Street | null;
+      return ensureFoodStreetIsActive(data as Street | null);
     },
-    enabled: !!slug,
+    enabled: options?.enabled ?? !!slug,
   });
 }
 
-export function useShopSpots(streetId: string) {
+export function useShopSpots(streetId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['shop-spots', streetId],
     queryFn: async () => {
+      const mockSpots = mockSpotsByStreetSlug[streetId];
+      if (mockSpots) return mockSpots;
+
       const { data, error } = await supabase
         .from('shop_spots')
         .select('*')
@@ -56,14 +84,24 @@ export function useShopSpots(streetId: string) {
       if (error) throw error;
       return data as ShopSpot[];
     },
-    enabled: !!streetId,
+    enabled: options?.enabled ?? !!streetId,
   });
 }
 
-export function useSpotsWithShops(streetId: string) {
+export function useSpotsWithShops(streetId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['spots-with-shops', streetId],
     queryFn: async () => {
+      const mockSpots = mockSpotsByStreetSlug[streetId];
+      const mockShops = mockShopsByStreetSlug[streetId];
+
+      if (mockSpots && mockShops) {
+        return mockSpots.map(spot => ({
+          ...spot,
+          shop: mockShops.find(shop => shop.spot_id === spot.id) || null,
+        }));
+      }
+
       // First get all spots
       const { data: spots, error: spotsError } = await supabase
         .from('shop_spots')
@@ -111,7 +149,7 @@ export function useSpotsWithShops(streetId: string) {
 
       return spotsWithShops;
     },
-    enabled: !!streetId,
+    enabled: options?.enabled ?? !!streetId,
   });
 }
 
@@ -119,6 +157,16 @@ export function useActiveShopsForStreet(streetId: string) {
   return useQuery({
     queryKey: ['active-shops', streetId],
     queryFn: async () => {
+      const mockSpots = mockSpotsByStreetSlug[streetId];
+      const mockShops = mockShopsByStreetSlug[streetId];
+
+      if (mockSpots && mockShops) {
+        return mockSpots.map(spot => ({
+          ...spot,
+          shop: mockShops.find(shop => shop.spot_id === spot.id) || null,
+        }));
+      }
+
       const { data: spots, error: spotsError } = await supabase
         .from('shop_spots')
         .select('*')
