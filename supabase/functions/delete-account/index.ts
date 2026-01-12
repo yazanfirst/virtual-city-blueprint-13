@@ -96,13 +96,23 @@ serve(async (req) => {
         }
       }
 
-      // Also delete old-format avatar file if exists
+      // Also delete avatar files (both new folder format and legacy format)
       const { error: avatarDeleteError } = await adminClient.storage
         .from('shop-logos')
-        .remove([`${userId}-avatar.png`, `${userId}-avatar.jpg`, `${userId}-avatar.jpeg`, `${userId}-avatar.webp`]);
+        .remove([
+          `${userId}/avatar.png`, 
+          `${userId}/avatar.jpg`, 
+          `${userId}/avatar.jpeg`, 
+          `${userId}/avatar.webp`,
+          // Legacy format cleanup
+          `${userId}-avatar.png`, 
+          `${userId}-avatar.jpg`, 
+          `${userId}-avatar.jpeg`, 
+          `${userId}-avatar.webp`
+        ]);
 
       if (avatarDeleteError) {
-        console.log('No legacy avatar files to delete or error:', avatarDeleteError.message);
+        console.log('No avatar files to delete or error:', avatarDeleteError.message);
       }
     } catch (storageError) {
       console.error('Storage cleanup error:', storageError);
