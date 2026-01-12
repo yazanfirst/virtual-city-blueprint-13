@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic" | "led_display" | "pharaoh_gold" | "greek_marble" | "art_deco" | "japanese_zen" | "neon_cyberpunk";
 type SignageFont = "classic" | "bold" | "elegant" | "modern" | "playful";
@@ -75,11 +76,12 @@ const BrandingEditor = ({
   textureUrl = "",
   onUpdate,
 }: BrandingEditorProps) => {
+  const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -104,7 +106,8 @@ const BrandingEditor = ({
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      // Use user-specific path for storage security
+      const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('shop-logos')
@@ -143,7 +146,7 @@ const BrandingEditor = ({
 
   const handleTextureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
 
     if (!file.type.startsWith('image/')) {
       toast({
@@ -166,7 +169,8 @@ const BrandingEditor = ({
     setUploadingTexture(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `texture-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      // Use user-specific path for storage security
+      const fileName = `${user.id}/texture-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('shop-logos')

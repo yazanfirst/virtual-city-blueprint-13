@@ -52,6 +52,63 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
+    // Delete storage files in user's folder
+    try {
+      console.log(`Deleting storage files for user: ${userId}`);
+      
+      // List all files in user's folder
+      const { data: userFiles, error: listError } = await adminClient.storage
+        .from('shop-logos')
+        .list(userId);
+
+      if (listError) {
+        console.error('Error listing user files:', listError.message);
+      } else if (userFiles && userFiles.length > 0) {
+        // Delete all files in user's folder (including subfolders like items/, texture-)
+        const filesToDelete = userFiles.map(file => `${userId}/${file.name}`);
+        
+        // Also check for nested folders
+        for (const file of userFiles) {
+          if (file.metadata === null) {
+            // This is a folder, list its contents
+            const { data: nestedFiles } = await adminClient.storage
+              .from('shop-logos')
+              .list(`${userId}/${file.name}`);
+            
+            if (nestedFiles && nestedFiles.length > 0) {
+              nestedFiles.forEach(nested => {
+                filesToDelete.push(`${userId}/${file.name}/${nested.name}`);
+              });
+            }
+          }
+        }
+
+        if (filesToDelete.length > 0) {
+          const { error: deleteFilesError } = await adminClient.storage
+            .from('shop-logos')
+            .remove(filesToDelete);
+
+          if (deleteFilesError) {
+            console.error('Error deleting user files:', deleteFilesError.message);
+          } else {
+            console.log(`Deleted ${filesToDelete.length} storage files for user: ${userId}`);
+          }
+        }
+      }
+
+      // Also delete old-format avatar file if exists
+      const { error: avatarDeleteError } = await adminClient.storage
+        .from('shop-logos')
+        .remove([`${userId}-avatar.png`, `${userId}-avatar.jpg`, `${userId}-avatar.jpeg`, `${userId}-avatar.webp`]);
+
+      if (avatarDeleteError) {
+        console.log('No legacy avatar files to delete or error:', avatarDeleteError.message);
+      }
+    } catch (storageError) {
+      console.error('Storage cleanup error:', storageError);
+      // Continue with account deletion even if storage cleanup fails
+    }
+
     // Delete profile data (cascades to related data via FK constraints)
     const { error: profileError } = await adminClient
       .from('profiles')
