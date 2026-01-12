@@ -24,10 +24,29 @@ export function useMerchantShops() {
     queryFn: async () => {
       if (!user) return [];
 
+      // Explicitly select fields to exclude admin_notes (internal admin field)
       const { data, error } = await supabase
         .from('shops')
         .select(`
-          *,
+          id,
+          merchant_id,
+          spot_id,
+          name,
+          category,
+          external_link,
+          logo_url,
+          primary_color,
+          accent_color,
+          facade_template,
+          signage_font,
+          texture_template,
+          texture_url,
+          status,
+          duplicate_brand,
+          branch_label,
+          branch_justification,
+          created_at,
+          updated_at,
           shop_spots (
             spot_label,
             street_id,
