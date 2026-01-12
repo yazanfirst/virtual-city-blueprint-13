@@ -3,11 +3,31 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 
 export type ShopSpot = Tables<'shop_spots'>;
-// Safe shop type excluding internal admin_notes field
-export type SafeShop = Omit<Tables<'shops'>, 'admin_notes'>;
+
+// Public shop type from RPC - excludes merchant_id and admin_notes
+export interface PublicShop {
+  id: string;
+  spot_id: string;
+  name: string;
+  category: string | null;
+  external_link: string | null;
+  logo_url: string | null;
+  primary_color: string | null;
+  accent_color: string | null;
+  facade_template: string | null;
+  signage_font: string | null;
+  texture_template: string | null;
+  texture_url: string | null;
+  status: string | null;
+  duplicate_brand: boolean | null;
+  branch_label: string | null;
+  branch_justification: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
 
 export interface SpotWithActiveShop extends ShopSpot {
-  shop: SafeShop | null;
+  shop: PublicShop | null;
 }
 
 // Hook to fetch all spots with their active shops for 3D rendering
@@ -34,41 +54,17 @@ export function useAllSpotsForStreet(streetSlug: string) {
 
       if (spotsError) throw spotsError;
 
-      // Get all active AND suspended shops for these spots (suspended shows as closed)
+      // Use RPC to get public shop data (excludes merchant_id and admin_notes)
       const spotIds = spots.map(s => s.id);
-      // Explicitly select fields to exclude admin_notes (internal admin field)
       const { data: shops, error: shopsError } = await supabase
-        .from('shops')
-        .select(`
-          id,
-          merchant_id,
-          spot_id,
-          name,
-          category,
-          external_link,
-          logo_url,
-          primary_color,
-          accent_color,
-          facade_template,
-          signage_font,
-          texture_template,
-          texture_url,
-          status,
-          duplicate_brand,
-          branch_label,
-          branch_justification,
-          created_at,
-          updated_at
-        `)
-        .in('spot_id', spotIds)
-        .in('status', ['active', 'suspended']);
+        .rpc('get_active_or_suspended_public_shops_for_spots', { _spot_ids: spotIds });
 
       if (shopsError) throw shopsError;
 
       // Combine spots with their shops
       const spotsWithShops: SpotWithActiveShop[] = spots.map(spot => ({
         ...spot,
-        shop: shops?.find(shop => shop.spot_id === spot.id) || null,
+        shop: shops?.find((shop: PublicShop) => shop.spot_id === spot.id) || null,
       }));
 
       return spotsWithShops;

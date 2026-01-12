@@ -325,6 +325,52 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_active_or_suspended_public_shops_for_spots: {
+        Args: { _spot_ids: string[] }
+        Returns: {
+          accent_color: string
+          branch_justification: string
+          branch_label: string
+          category: string
+          created_at: string
+          duplicate_brand: boolean
+          external_link: string
+          facade_template: Database["public"]["Enums"]["facade_template"]
+          id: string
+          logo_url: string
+          name: string
+          primary_color: string
+          signage_font: string
+          spot_id: string
+          status: Database["public"]["Enums"]["shop_status"]
+          texture_template: string
+          texture_url: string
+          updated_at: string
+        }[]
+      }
+      get_active_public_shops_for_spots: {
+        Args: { _spot_ids: string[] }
+        Returns: {
+          accent_color: string
+          branch_justification: string
+          branch_label: string
+          category: string
+          created_at: string
+          duplicate_brand: boolean
+          external_link: string
+          facade_template: Database["public"]["Enums"]["facade_template"]
+          id: string
+          logo_url: string
+          name: string
+          primary_color: string
+          signage_font: string
+          spot_id: string
+          status: Database["public"]["Enums"]["shop_status"]
+          texture_template: string
+          texture_url: string
+          updated_at: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -334,6 +380,7 @@ export type Database = {
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_merchant: { Args: { _user_id: string }; Returns: boolean }
+      is_shop_active: { Args: { _shop_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "merchant" | "admin" | "player"
