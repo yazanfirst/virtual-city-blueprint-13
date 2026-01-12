@@ -121,7 +121,7 @@ export type Database = {
       shop_reviews: {
         Row: {
           action: string
-          admin_id: string
+          admin_id: string | null
           created_at: string | null
           id: string
           notes: string | null
@@ -129,7 +129,7 @@ export type Database = {
         }
         Insert: {
           action: string
-          admin_id: string
+          admin_id?: string | null
           created_at?: string | null
           id?: string
           notes?: string | null
@@ -137,7 +137,7 @@ export type Database = {
         }
         Update: {
           action?: string
-          admin_id?: string
+          admin_id?: string | null
           created_at?: string | null
           id?: string
           notes?: string | null
