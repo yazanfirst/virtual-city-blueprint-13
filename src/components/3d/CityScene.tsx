@@ -576,6 +576,114 @@ function Billboard({ position, rotation, isNight }: { position: [number, number,
   );
 }
 
+// Animated fountain water stream component
+function FountainWater({ isNight }: { isNight: boolean }) {
+  const groupRef = useRef<THREE.Group>(null);
+  
+  // Animate water streams
+  useEffect(() => {
+    let animationId: number;
+    let time = 0;
+    
+    const animate = () => {
+      time += 0.03;
+      if (groupRef.current) {
+        // Gentle pulsing animation for water height
+        const pulse = Math.sin(time * 2) * 0.1 + 1;
+        groupRef.current.scale.y = pulse;
+      }
+      animationId = requestAnimationFrame(animate);
+    };
+    
+    animate();
+    return () => cancelAnimationFrame(animationId);
+  }, []);
+  
+  const waterColor = isNight ? "#4A8ABB" : "#6BC8E8";
+  const waterEmissive = isNight ? "#3A6A9A" : "#4AA8C8";
+  
+  return (
+    <group ref={groupRef}>
+      {/* Central water jet - main upward stream */}
+      <mesh position={[0, 4.8, 0]}>
+        <coneGeometry args={[0.15, 1.8, 8]} />
+        <meshLambertMaterial 
+          color={waterColor} 
+          transparent 
+          opacity={0.7}
+          emissive={waterEmissive}
+          emissiveIntensity={isNight ? 0.4 : 0.1}
+        />
+      </mesh>
+      
+      {/* Water spray at top - splashing effect */}
+      <mesh position={[0, 5.6, 0]}>
+        <sphereGeometry args={[0.25, 8, 6]} />
+        <meshLambertMaterial 
+          color={waterColor} 
+          transparent 
+          opacity={0.5}
+          emissive={waterEmissive}
+          emissiveIntensity={isNight ? 0.3 : 0.05}
+        />
+      </mesh>
+      
+      {/* Falling water curtain - cascading down */}
+      <mesh position={[0, 4.2, 0]}>
+        <cylinderGeometry args={[0.6, 0.2, 0.8, 12, 1, true]} />
+        <meshLambertMaterial 
+          color={waterColor} 
+          transparent 
+          opacity={0.4}
+          side={THREE.DoubleSide}
+          emissive={waterEmissive}
+          emissiveIntensity={isNight ? 0.2 : 0}
+        />
+      </mesh>
+      
+      {/* Secondary falling streams into lower basin */}
+      {[0, Math.PI / 2, Math.PI, Math.PI * 1.5].map((angle, i) => (
+        <mesh 
+          key={`stream-${i}`} 
+          position={[
+            Math.cos(angle) * 1.2, 
+            2.8, 
+            Math.sin(angle) * 1.2
+          ]}
+          rotation={[0.3 * Math.cos(angle), 0, 0.3 * Math.sin(angle)]}
+        >
+          <coneGeometry args={[0.08, 1.2, 6]} />
+          <meshLambertMaterial 
+            color={waterColor} 
+            transparent 
+            opacity={0.5}
+            emissive={waterEmissive}
+            emissiveIntensity={isNight ? 0.25 : 0.05}
+          />
+        </mesh>
+      ))}
+      
+      {/* Ripple rings on water surface */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.65, 0]}>
+        <ringGeometry args={[0.5, 0.7, 16]} />
+        <meshLambertMaterial 
+          color="#8AD8F8" 
+          transparent 
+          opacity={0.3}
+        />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.64, 0]}>
+        <ringGeometry args={[1.2, 1.4, 16]} />
+        <meshLambertMaterial 
+          color="#8AD8F8" 
+          transparent 
+          opacity={0.2}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 // ROUNDABOUT with Fountain in center
 function Roundabout({ isNight }: { isNight: boolean }) {
   return (
@@ -620,6 +728,9 @@ function Roundabout({ isNight }: { isNight: boolean }) {
         <cylinderGeometry args={[1.2, 1.2, 0.3, 10]} />
         <meshLambertMaterial color={COLORS.water} />
       </mesh>
+      
+      {/* Animated water streams */}
+      <FountainWater isNight={isNight} />
     </group>
   );
 }
