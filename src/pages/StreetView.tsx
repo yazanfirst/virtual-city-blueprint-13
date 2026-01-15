@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Map, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Gift } from "lucide-react";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Map, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
@@ -9,20 +9,6 @@ import ShopDetailModal from "@/components/3d/ShopDetailModal";
 import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import { useGameStore } from "@/stores/gameStore";
-import { useHazardStore } from "@/stores/hazardStore";
-import { useMissionStore } from "@/stores/missionStore";
-import HuntHUD from "@/components/game/HuntHUD";
-import DamageOverlay from "@/components/game/DamageOverlay";
-import VoucherPopup from "@/components/game/VoucherPopup";
-import DecoyTrollPopup from "@/components/game/DecoyTrollPopup";
-import MemoryQuestionPopup from "@/components/game/MemoryQuestionPopup";
-import PunchIndicator from "@/components/game/PunchIndicator";
-import VoucherInventory from "@/components/game/VoucherInventory";
-import GameOverPopup from "@/components/game/GameOverPopup";
-import CurrentTaskHUD from "@/components/game/CurrentTaskHUD";
-import MissionPanel from "@/components/game/MissionPanel";
-import MissionCompletePopup from "@/components/game/MissionCompletePopup";
-import TaskCompletePopup from "@/components/game/TaskCompletePopup";
 
 const PanelBox = ({ 
   title,
@@ -64,20 +50,7 @@ const StreetView = () => {
   const [interiorShop, setInteriorShop] = useState<ShopBranding | null>(null);
 
   // Game state
-  const { 
-    coins, level, xp, lives, maxLives,
-    nearbyDestructible, vouchers, showGameOver, isGameOver
-  } = useGameStore();
-  
-  // Mission state
-  const { showMissionComplete } = useMissionStore();
-  
-  // Initialize hazards when entering street
-  const initializeHazards = useHazardStore((state) => state.initializeHazards);
-  
-  useEffect(() => {
-    initializeHazards();
-  }, [initializeHazards]);
+  const { coins, level, xp } = useGameStore();
 
   // Find the spot ID for the selected shop (to highlight in 2D map)
   const selectedSpotId = selectedShop?.spotId || "";
@@ -85,8 +58,6 @@ const StreetView = () => {
   const handleShopClick = (shop: ShopBranding) => {
     setSelectedShop(shop);
     setShowShopModal(true);
-    // Track shop visit for missions
-    useGameStore.getState().visitShop(shop.shopId);
   };
 
   const handleEnterShop = (shop: ShopBranding) => {
@@ -240,23 +211,6 @@ const StreetView = () => {
             onShopClick={handleShopClick}
           />
           
-          {/* Game UI Overlays */}
-          <HuntHUD />
-          <DamageOverlay />
-          <VoucherPopup />
-          <DecoyTrollPopup />
-          <MemoryQuestionPopup />
-          <PunchIndicator />
-          
-          {/* Task Complete Popup */}
-          <TaskCompletePopup />
-          
-          {/* Game Over Popup */}
-          {showGameOver && <GameOverPopup />}
-          
-          {/* Mission Complete Popup */}
-          {showMissionComplete && <MissionCompletePopup />}
-          
           {/* Shop Detail Modal */}
           {showShopModal && (
             <ShopDetailModal
@@ -360,9 +314,41 @@ const StreetView = () => {
             </button>
           </div>
           
-          {/* Mission Popup - Full Mission Panel */}
+          {/* Mission Popup */}
           {showMissions && (
-            <MissionPanel onClose={() => setShowMissions(false)} />
+            <div 
+              className="absolute inset-0 flex items-center justify-center pointer-events-auto"
+              style={{ zIndex: 200 }}
+              onClick={() => setShowMissions(false)}
+            >
+              <div 
+                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/30">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/30">
+                      <Target className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
+                      Missions
+                    </h3>
+                  </div>
+                  <button 
+                    onClick={() => setShowMissions(false)} 
+                    className="text-muted-foreground hover:text-foreground p-1"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                
+                <div className="text-center py-8 text-muted-foreground">
+                  <Target className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p className="text-sm">Missions coming soon!</p>
+                  <p className="text-xs mt-2">Check back later for exciting challenges.</p>
+                </div>
+              </div>
+            </div>
           )}
           
           {/* 2D Map Overlay - Full screen on mobile, positioned on desktop */}
@@ -400,18 +386,6 @@ const StreetView = () => {
           
           {/* Right side - Player & Shop panels - ALWAYS VISIBLE */}
           <div className="absolute top-10 md:top-auto md:bottom-4 right-2 md:right-4 pointer-events-auto flex flex-col gap-1 md:gap-2" style={{ zIndex: 150 }}>
-            {/* Lives display */}
-            <OverlayPanel title="Lives" icon={Heart} className="w-28 md:w-40">
-              <div className="flex gap-1">
-                {Array.from({ length: maxLives }).map((_, i) => (
-                  <Heart 
-                    key={i} 
-                    className={`h-4 w-4 ${i < lives ? 'text-red-500 fill-red-500' : 'text-muted-foreground'}`} 
-                  />
-                ))}
-              </div>
-            </OverlayPanel>
-            
             <OverlayPanel title="Player" icon={User} className="w-28 md:w-40">
               <div className="space-y-0.5 md:space-y-1 text-[10px] md:text-xs">
                 <div className="flex justify-between items-center">
@@ -432,11 +406,6 @@ const StreetView = () => {
                   {xp % 200}/200 XP
                 </div>
               </div>
-            </OverlayPanel>
-            
-            {/* Vouchers panel */}
-            <OverlayPanel title="Vouchers" icon={Gift} className="w-28 md:w-48">
-              <VoucherInventory />
             </OverlayPanel>
             
             <OverlayPanel title="Shop" icon={Store} className="w-28 md:w-48">

@@ -1,23 +1,16 @@
 "use client";
 
 import React, { Suspense, useMemo, useRef, useState, useCallback, useEffect } from "react";
-import { Canvas, useThree, useFrame } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import PlayerController from "./PlayerController";
 import MobileControls from "./MobileControls";
 import BrandedShop from "./BrandedShop";
 import CollectibleItem from "./CollectibleItem";
-import MysteryBox from "./MysteryBox";
-import Trap from "./Trap";
-import Destructible from "./Destructible";
-import FallingTree from "./FallingTree";
-import Sinkhole from "./Sinkhole";
-import MissionWaypoint from "./MissionWaypoint";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
-import { useHazardStore } from "@/stores/hazardStore";
 import { ShopBranding } from "@/hooks/use3DShops";
 
 export type CameraView = "thirdPerson" | "firstPerson";
@@ -165,25 +158,6 @@ const billboards = [
   { x: -25, z: 50, rotation: Math.PI / 6 },
   { x: 68, z: 20, rotation: -Math.PI / 3 },
   { x: -68, z: 20, rotation: Math.PI / 3 },
-];
-
-// MYSTERY BOXES - Hunt them! (static positions, visibility controlled by store)
-const mysteryBoxPositions = [
-  // Common boxes (easier to find)
-  { id: 'mbox1', rarity: 'common' as const, x: 8, z: 20 },
-  { id: 'mbox2', rarity: 'common' as const, x: -12, z: 38 },
-  { id: 'mbox3', rarity: 'common' as const, x: 35, z: 5 },
-  { id: 'mbox4', rarity: 'common' as const, x: -48, z: -8 },
-  { id: 'mbox5', rarity: 'common' as const, x: 0, z: -42 },
-  // Rare boxes (hidden spots)
-  { id: 'mbox6', rarity: 'rare' as const, x: 45, z: 42 }, // Park corner
-  { id: 'mbox7', rarity: 'rare' as const, x: -58, z: -48 }, // Near lake (risky!)
-  { id: 'mbox8', rarity: 'rare' as const, x: 65, z: 15, isMoving: true }, // MOVING!
-  // Legendary box (very hard to reach!)
-  { id: 'mbox9', rarity: 'legendary' as const, x: 0, z: 0 }, // At fountain center!
-  // Decoy boxes (trolling!)
-  { id: 'decoy1', rarity: 'decoy' as const, x: 20, z: 25 },
-  { id: 'decoy2', rarity: 'decoy' as const, x: -30, z: -20 },
 ];
 
 // Collectible coins scattered around
@@ -775,29 +749,6 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
-  const collectBox = useGameStore((state) => state.collectBox);
-  const triggerDecoy = useGameStore((state) => state.triggerDecoy);
-  const takeDamage = useGameStore((state) => state.takeDamage);
-  const damageDestructible = useGameStore((state) => state.damageDestructible);
-  const setNearbyDestructible = useGameStore((state) => state.setNearbyDestructible);
-  const destructibles = useGameStore((state) => state.destructibles);
-  const mysteryBoxesFound = useGameStore((state) => state.mysteryBoxesFound);
-  const isHuntActive = useGameStore((state) => state.isHuntActive);
-  const traps = useGameStore((state) => state.traps);
-  
-  // Hazard store
-  const hazards = useHazardStore((state) => state.hazards);
-  const getDangerousTreePositions = useHazardStore((state) => state.getDangerousTreePositions);
-  const getSinkholePositions = useHazardStore((state) => state.getSinkholePositions);
-  
-  // Get dangerous tree positions to exclude from normal tree rendering
-  const dangerousTreePositions = useMemo(() => getDangerousTreePositions(), [hazards]);
-  const sinkholePositions = useMemo(() => getSinkholePositions(), [hazards]);
-  
-  // Check if a tree position is dangerous
-  const isDangerousTree = useCallback((x: number, z: number) => {
-    return dangerousTreePositions.some(dt => Math.abs(dt.x - x) < 0.5 && Math.abs(dt.z - z) < 0.5);
-  }, [dangerousTreePositions]);
 
   useEffect(() => {
     scene.background = null;
@@ -915,38 +866,8 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {/* === TALL BUILDINGS === */}
       {tallBuildings.map((b, i) => <TallBuilding key={`tall-${i}`} position={[b.x, 0, b.z]} height={b.height} color={b.color} isNight={isNight} />)}
 
-      {/* === TREES (exclude dangerous ones) === */}
-      {treePositions
-        .filter(t => !isDangerousTree(t.x, t.z))
-        .map((t, i) => <Tree key={`tree-${i}`} position={[t.x, 0, t.z]} />)}
-      
-      {/* === FALLING TREES (hazards) === */}
-      {hazards
-        .filter(h => h.type === 'falling_tree')
-        .map(hazard => (
-          <FallingTree
-            key={hazard.id}
-            id={hazard.id}
-            position={hazard.position}
-            isTriggered={hazard.isTriggered}
-            isActive={hazard.isActive}
-            onPlayerHit={() => takeDamage(hazard.damage)}
-          />
-        ))}
-      
-      {/* === SINKHOLES (hazards) === */}
-      {hazards
-        .filter(h => h.type === 'sinkhole')
-        .map(hazard => (
-          <Sinkhole
-            key={hazard.id}
-            id={hazard.id}
-            position={hazard.position}
-            isTriggered={hazard.isTriggered}
-            isActive={hazard.isActive}
-            onPlayerFall={() => takeDamage(hazard.damage)}
-          />
-        ))}
+      {/* === TREES === */}
+      {treePositions.map((t, i) => <Tree key={`tree-${i}`} position={[t.x, 0, t.z]} />)}
 
       {/* === LAMPS === */}
       {lampPositions.map((l, i) => <Lamp key={`lamp-${i}`} position={[l.x, 0, l.z]} isNight={isNight} />)}
@@ -978,54 +899,6 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           onCollect={handleCollectItem}
         />
       ))}
-
-      {/* === TRAPS === */}
-      {traps.map((trap) => (
-        <Trap
-          key={trap.id}
-          id={trap.id}
-          type={trap.type}
-          position={trap.position}
-          pattern={trap.pattern}
-          isNight={isNight}
-          onPlayerHit={() => takeDamage()}
-        />
-      ))}
-
-      {/* === DESTRUCTIBLES === */}
-      {destructibles.map((obj) => (
-        !obj.destroyed && (
-          <Destructible
-            key={obj.id}
-            id={obj.id}
-            type={obj.type}
-            position={obj.position}
-            currentHp={obj.currentHp}
-            maxHp={obj.maxHp}
-            destroyed={obj.destroyed}
-            onNearby={setNearbyDestructible}
-          />
-        )
-      ))}
-
-      {/* === MYSTERY BOXES === */}
-      {mysteryBoxPositions.map((box) => (
-        !mysteryBoxesFound.has(box.id) && (
-          <MysteryBox
-            key={box.id}
-            id={box.id}
-            rarity={box.rarity}
-            position={[box.x, 0.5, box.z]}
-            isMoving={box.isMoving}
-            isNight={isNight}
-            onCollect={() => collectBox(box.id)}
-            onDecoyTrigger={() => triggerDecoy(box.id)}
-          />
-        )
-      ))}
-
-      {/* === MISSION WAYPOINT === */}
-      <MissionWaypoint />
 
       {/* === PLAYER CHARACTER === */}
       <PlayerController 

@@ -1,10 +1,8 @@
-import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import LowPolyCharacter from './LowPolyCharacter';
 import { usePlayerStore } from '@/stores/playerStore';
-import { useMissionStore } from '@/stores/missionStore';
-import { useHazardStore } from '@/stores/hazardStore';
 
 const PLAYER_RADIUS = 0.45;
 const STEP_HEIGHT = 0.28;
@@ -79,8 +77,14 @@ const PLATFORM_SURFACES: PlatformSurface[] = [
   } as PlatformSurface)),
 ];
 
-// Note: Tree colliders are computed inside the component so we can disable
-// colliders for trees that are replaced by hazards (falling trees).
+const CYLINDER_COLLIDERS = [
+  // Trees: trunk only (visual trunk is 0.2-0.3 radius, 3 height)
+  ...TREE_COLLIDERS.map(({ x, z }) => ({ x, z, radius: 0.3, height: 3.5 })),
+  // Lamps: pole only (visual pole is 0.1-0.12 radius)
+  ...LAMP_COLLIDERS.map(({ x, z }) => ({ x, z, radius: 0.18, height: 5 })),
+  // Fountain pillar (visual is 0.7-0.9 radius)
+  { x: 0, z: 0, radius: 0.95, height: 4.5 },
+];
 
 // Building collision boxes and props with rectangular footprints
 const COLLISION_BOXES = [
@@ -139,29 +143,8 @@ const PlayerController = ({
   const { position, setPosition, jumpCounter, incrementJump } = usePlayerStore();
   const positionRef = useRef(new THREE.Vector3(...position));
   const lastJumpCounterRef = useRef(jumpCounter);
-  
-  // Mission tracking for move_to tasks
-  const { currentMission, currentTask, updateTaskProgress } = useMissionStore();
-  const lastLocationCheckRef = useRef(0);
 
   const { camera } = useThree();
-
-  const dangerousTreePositions = useHazardStore((s) => s.getDangerousTreePositions());
-
-  const cylinderColliders = useMemo(() => {
-    const dangerous = new Set(dangerousTreePositions.map((p) => `${p.x},${p.z}`));
-
-    const safeTrees = TREE_COLLIDERS.filter((t) => !dangerous.has(`${t.x},${t.z}`));
-
-    return [
-      // Trees (skip trees that are hazards)
-      ...safeTrees.map(({ x, z }) => ({ x, z, radius: 0.3, height: 3.5 })),
-      // Lamps
-      ...LAMP_COLLIDERS.map(({ x, z }) => ({ x, z, radius: 0.18, height: 5 })),
-      // Fountain pillar
-      { x: 0, z: 0, radius: 0.95, height: 4.5 },
-    ];
-  }, [dangerousTreePositions]);
 
   // Keep position in sync if store updates externally
   useEffect(() => {
@@ -190,7 +173,7 @@ const PlayerController = ({
       }
     }
 
-    for (const collider of cylinderColliders) {
+    for (const collider of CYLINDER_COLLIDERS) {
       const dx = x - collider.x;
       const dz = z - collider.z;
       const distanceSq = dx * dx + dz * dz;
@@ -413,28 +396,6 @@ const PlayerController = ({
 
     // Apply position to group
     groupRef.current.position.copy(positionRef.current);
-
-    // Throttled checks (mission + hazards)
-    const now = Date.now();
-    if (now - lastLocationCheckRef.current > 100) {
-      lastLocationCheckRef.current = now;
-
-      // Check move_to mission completion
-      if (currentTask?.type === 'move_to' && currentTask.targetLocation && !currentTask.completed) {
-        const { x, z, radius } = currentTask.targetLocation;
-        const dx = positionRef.current.x - x;
-        const dz = positionRef.current.z - z;
-        const distance = Math.sqrt(dx * dx + dz * dz);
-
-        if (distance <= radius) {
-          updateTaskProgress('move_to', 1);
-        }
-      }
-
-      // Check hazard proximity (only once per 100ms, not every frame)
-      const checkProximityHazards = useHazardStore.getState().checkProximityHazards;
-      checkProximityHazards([positionRef.current.x, positionRef.current.y, positionRef.current.z]);
-    }
 
     if (positionChanged) {
       setPosition([positionRef.current.x, positionRef.current.y, positionRef.current.z]);
