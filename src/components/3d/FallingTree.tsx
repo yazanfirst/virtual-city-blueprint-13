@@ -21,11 +21,12 @@ export default function FallingTree({ id, position, isTriggered, isActive, onPla
   const shakeStartTime = useRef<number | null>(null);
   const fallStartTime = useRef<number | null>(null);
   const fallDirection = useRef(Math.random() * Math.PI * 2);
-  
-  const triggerHazard = useHazardStore((state) => state.triggerHazard);
+
+  const playerPosition = usePlayerStore((s) => s.position);
+
   const activateHazard = useHazardStore((state) => state.activateHazard);
   const checkProximityHazards = useHazardStore((state) => state.checkProximityHazards);
-  
+
   const SHAKE_DURATION = 800;
   const FALL_DURATION = 600;
 
@@ -36,15 +37,14 @@ export default function FallingTree({ id, position, isTriggered, isActive, onPla
     }
   }, [isTriggered, isShaking, hasFallen]);
 
-  useFrame((state) => {
+  useFrame(() => {
     if (!groupRef.current) return;
 
     const now = Date.now();
-    
-    // Check player proximity to trigger
+
+    // Check player proximity to trigger (use player position, not camera)
     if (!isTriggered && !hasFallen) {
-      const playerPos = state.camera.position;
-      checkProximityHazards([playerPos.x, playerPos.y, playerPos.z]);
+      checkProximityHazards([playerPosition[0], playerPosition[1], playerPosition[2]]);
     }
 
     // Shaking phase
@@ -82,9 +82,10 @@ export default function FallingTree({ id, position, isTriggered, isActive, onPla
       
       // Check if player is in danger zone during fall
       if (!hasHitPlayer && progress > 0.5) {
-        const playerPos = state.camera.position;
-        const dx = playerPos.x - position[0];
-        const dz = playerPos.z - position[2];
+        const px = playerPosition[0];
+        const pz = playerPosition[2];
+        const dx = px - position[0];
+        const dz = pz - position[2];
         const distance = Math.sqrt(dx * dx + dz * dz);
         
         // Player is in fall zone

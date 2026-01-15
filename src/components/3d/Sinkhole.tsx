@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useHazardStore } from '@/stores/hazardStore';
+import { usePlayerStore } from '@/stores/playerStore';
 
 export type SinkholeProps = {
   id: string;
@@ -19,7 +20,9 @@ export default function Sinkhole({ id, position, isTriggered, isActive, onPlayer
   const [hasHitPlayer, setHasHitPlayer] = useState(false);
   const warningStartTime = useRef<number | null>(null);
   const openStartTime = useRef<number | null>(null);
-  
+
+  const playerPosition = usePlayerStore((s) => s.position);
+
   const activateHazard = useHazardStore((state) => state.activateHazard);
   const checkTimerHazards = useHazardStore((state) => state.checkTimerHazards);
   
@@ -69,9 +72,10 @@ export default function Sinkhole({ id, position, isTriggered, isActive, onPlayer
     
     // Check if player falls in
     if (isOpen && !hasHitPlayer) {
-      const playerPos = state.camera.position;
-      const dx = playerPos.x - position[0];
-      const dz = playerPos.z - position[2];
+      const px = playerPosition[0];
+      const pz = playerPosition[2];
+      const dx = px - position[0];
+      const dz = pz - position[2];
       const distance = Math.sqrt(dx * dx + dz * dz);
       
       const holeRadius = 2 + openProgress * 1.5;
