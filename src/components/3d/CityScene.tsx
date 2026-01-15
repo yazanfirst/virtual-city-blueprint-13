@@ -8,6 +8,9 @@ import PlayerController from "./PlayerController";
 import MobileControls from "./MobileControls";
 import BrandedShop from "./BrandedShop";
 import CollectibleItem from "./CollectibleItem";
+import MysteryBox from "./MysteryBox";
+import Trap from "./Trap";
+import Destructible from "./Destructible";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
@@ -158,6 +161,25 @@ const billboards = [
   { x: -25, z: 50, rotation: Math.PI / 6 },
   { x: 68, z: 20, rotation: -Math.PI / 3 },
   { x: -68, z: 20, rotation: Math.PI / 3 },
+];
+
+// MYSTERY BOXES - Hunt them! (static positions, visibility controlled by store)
+const mysteryBoxPositions = [
+  // Common boxes (easier to find)
+  { id: 'mbox1', rarity: 'common' as const, x: 8, z: 20 },
+  { id: 'mbox2', rarity: 'common' as const, x: -12, z: 38 },
+  { id: 'mbox3', rarity: 'common' as const, x: 35, z: 5 },
+  { id: 'mbox4', rarity: 'common' as const, x: -48, z: -8 },
+  { id: 'mbox5', rarity: 'common' as const, x: 0, z: -42 },
+  // Rare boxes (hidden spots)
+  { id: 'mbox6', rarity: 'rare' as const, x: 45, z: 42 }, // Park corner
+  { id: 'mbox7', rarity: 'rare' as const, x: -58, z: -48 }, // Near lake (risky!)
+  { id: 'mbox8', rarity: 'rare' as const, x: 65, z: 15, isMoving: true }, // MOVING!
+  // Legendary box (very hard to reach!)
+  { id: 'mbox9', rarity: 'legendary' as const, x: 0, z: 0 }, // At fountain center!
+  // Decoy boxes (trolling!)
+  { id: 'decoy1', rarity: 'decoy' as const, x: 20, z: 25 },
+  { id: 'decoy2', rarity: 'decoy' as const, x: -30, z: -20 },
 ];
 
 // Collectible coins scattered around
@@ -749,6 +771,15 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
+  const collectBox = useGameStore((state) => state.collectBox);
+  const triggerDecoy = useGameStore((state) => state.triggerDecoy);
+  const takeDamage = useGameStore((state) => state.takeDamage);
+  const damageDestructible = useGameStore((state) => state.damageDestructible);
+  const setNearbyDestructible = useGameStore((state) => state.setNearbyDestructible);
+  const destructibles = useGameStore((state) => state.destructibles);
+  const mysteryBoxesFound = useGameStore((state) => state.mysteryBoxesFound);
+  const isHuntActive = useGameStore((state) => state.isHuntActive);
+  const traps = useGameStore((state) => state.traps);
 
   useEffect(() => {
     scene.background = null;
@@ -898,6 +929,51 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           isNight={isNight}
           onCollect={handleCollectItem}
         />
+      ))}
+
+      {/* === TRAPS === */}
+      {traps.map((trap) => (
+        <Trap
+          key={trap.id}
+          id={trap.id}
+          type={trap.type}
+          position={trap.position}
+          pattern={trap.pattern}
+          isNight={isNight}
+          onPlayerHit={() => takeDamage()}
+        />
+      ))}
+
+      {/* === DESTRUCTIBLES === */}
+      {destructibles.map((obj) => (
+        !obj.destroyed && (
+          <Destructible
+            key={obj.id}
+            id={obj.id}
+            type={obj.type}
+            position={obj.position}
+            currentHp={obj.currentHp}
+            maxHp={obj.maxHp}
+            destroyed={obj.destroyed}
+            onNearby={setNearbyDestructible}
+          />
+        )
+      ))}
+
+      {/* === MYSTERY BOXES === */}
+      {mysteryBoxPositions.map((box) => (
+        !mysteryBoxesFound.has(box.id) && (
+          <MysteryBox
+            key={box.id}
+            id={box.id}
+            rarity={box.rarity}
+            position={[box.x, 0.5, box.z]}
+            isMoving={box.isMoving}
+            isNight={isNight}
+            onCollect={() => collectBox(box.id)}
+            onDecoyTrigger={() => triggerDecoy(box.id)}
+          />
+        )
       ))}
 
       {/* === PLAYER CHARACTER === */}

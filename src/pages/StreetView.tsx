@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Map, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target } from "lucide-react";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Map, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
@@ -9,6 +9,13 @@ import ShopDetailModal from "@/components/3d/ShopDetailModal";
 import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import { useGameStore } from "@/stores/gameStore";
+import HuntHUD from "@/components/game/HuntHUD";
+import DamageOverlay from "@/components/game/DamageOverlay";
+import VoucherPopup from "@/components/game/VoucherPopup";
+import DecoyTrollPopup from "@/components/game/DecoyTrollPopup";
+import MemoryQuestionPopup from "@/components/game/MemoryQuestionPopup";
+import PunchIndicator from "@/components/game/PunchIndicator";
+import VoucherInventory from "@/components/game/VoucherInventory";
 
 const PanelBox = ({ 
   title,
@@ -50,7 +57,10 @@ const StreetView = () => {
   const [interiorShop, setInteriorShop] = useState<ShopBranding | null>(null);
 
   // Game state
-  const { coins, level, xp } = useGameStore();
+  const { 
+    coins, level, xp, lives, maxLives,
+    nearbyDestructible, vouchers
+  } = useGameStore();
 
   // Find the spot ID for the selected shop (to highlight in 2D map)
   const selectedSpotId = selectedShop?.spotId || "";
@@ -210,6 +220,14 @@ const StreetView = () => {
             shopBrandings={shopBrandings}
             onShopClick={handleShopClick}
           />
+          
+          {/* Game UI Overlays */}
+          <HuntHUD />
+          <DamageOverlay />
+          <VoucherPopup />
+          <DecoyTrollPopup />
+          <MemoryQuestionPopup />
+          <PunchIndicator />
           
           {/* Shop Detail Modal */}
           {showShopModal && (
@@ -386,6 +404,18 @@ const StreetView = () => {
           
           {/* Right side - Player & Shop panels - ALWAYS VISIBLE */}
           <div className="absolute top-10 md:top-auto md:bottom-4 right-2 md:right-4 pointer-events-auto flex flex-col gap-1 md:gap-2" style={{ zIndex: 150 }}>
+            {/* Lives display */}
+            <OverlayPanel title="Lives" icon={Heart} className="w-28 md:w-40">
+              <div className="flex gap-1">
+                {Array.from({ length: maxLives }).map((_, i) => (
+                  <Heart 
+                    key={i} 
+                    className={`h-4 w-4 ${i < lives ? 'text-red-500 fill-red-500' : 'text-muted-foreground'}`} 
+                  />
+                ))}
+              </div>
+            </OverlayPanel>
+            
             <OverlayPanel title="Player" icon={User} className="w-28 md:w-40">
               <div className="space-y-0.5 md:space-y-1 text-[10px] md:text-xs">
                 <div className="flex justify-between items-center">
@@ -406,6 +436,11 @@ const StreetView = () => {
                   {xp % 200}/200 XP
                 </div>
               </div>
+            </OverlayPanel>
+            
+            {/* Vouchers panel */}
+            <OverlayPanel title="Vouchers" icon={Gift} className="w-28 md:w-48">
+              <VoucherInventory />
             </OverlayPanel>
             
             <OverlayPanel title="Shop" icon={Store} className="w-28 md:w-48">
