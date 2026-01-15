@@ -22,6 +22,7 @@ import GameOverPopup from "@/components/game/GameOverPopup";
 import CurrentTaskHUD from "@/components/game/CurrentTaskHUD";
 import MissionPanel from "@/components/game/MissionPanel";
 import MissionCompletePopup from "@/components/game/MissionCompletePopup";
+import TaskCompletePopup from "@/components/game/TaskCompletePopup";
 
 const PanelBox = ({ 
   title,
@@ -84,6 +85,8 @@ const StreetView = () => {
   const handleShopClick = (shop: ShopBranding) => {
     setSelectedShop(shop);
     setShowShopModal(true);
+    // Track shop visit for missions
+    useGameStore.getState().visitShop(shop.shopId);
   };
 
   const handleEnterShop = (shop: ShopBranding) => {
@@ -244,6 +247,9 @@ const StreetView = () => {
           <DecoyTrollPopup />
           <MemoryQuestionPopup />
           <PunchIndicator />
+          
+          {/* Task Complete Popup */}
+          <TaskCompletePopup />
           
           {/* Game Over Popup */}
           {showGameOver && <GameOverPopup />}
