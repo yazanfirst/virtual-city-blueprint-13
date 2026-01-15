@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import LowPolyCharacter from './LowPolyCharacter';
 import { usePlayerStore } from '@/stores/playerStore';
+import { useMissionStore } from '@/stores/missionStore';
 
 const PLAYER_RADIUS = 0.45;
 const STEP_HEIGHT = 0.28;
@@ -143,6 +144,10 @@ const PlayerController = ({
   const { position, setPosition, jumpCounter, incrementJump } = usePlayerStore();
   const positionRef = useRef(new THREE.Vector3(...position));
   const lastJumpCounterRef = useRef(jumpCounter);
+  
+  // Mission tracking for move_to tasks
+  const { currentMission, currentTask, updateTaskProgress } = useMissionStore();
+  const lastLocationCheckRef = useRef(0);
 
   const { camera } = useThree();
 
@@ -399,6 +404,24 @@ const PlayerController = ({
 
     if (positionChanged) {
       setPosition([positionRef.current.x, positionRef.current.y, positionRef.current.z]);
+      
+      // Check for move_to mission completion (throttled to every 10 frames)
+      const now = Date.now();
+      if (now - lastLocationCheckRef.current > 100) { // Check every 100ms
+        lastLocationCheckRef.current = now;
+        
+        if (currentTask && currentTask.type === 'move_to' && currentTask.targetLocation && !currentTask.completed) {
+          const { x, z, radius } = currentTask.targetLocation;
+          const dx = positionRef.current.x - x;
+          const dz = positionRef.current.z - z;
+          const distance = Math.sqrt(dx * dx + dz * dz);
+          
+          if (distance <= radius) {
+            // Player reached the target location - complete the task!
+            updateTaskProgress('move_to', 1);
+          }
+        }
+      }
     }
 
     // Update camera position based on view mode
