@@ -436,6 +436,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       const newVisited = new Set(state.shopsVisited);
       newVisited.add(shopId);
       set({ shopsVisited: newVisited });
+      
+      // Update mission progress for visit_shop task
+      const { updateTaskProgress } = require('@/stores/missionStore').useMissionStore.getState();
+      updateTaskProgress('visit_shop', 1);
     }
   },
 
@@ -448,6 +452,10 @@ export const useGameStore = create<GameState>((set, get) => ({
         coinsCollected: newCollected,
         coins: state.coins + 10 
       });
+      
+      // Update mission progress for collect_coins task
+      const { updateTaskProgress } = require('@/stores/missionStore').useMissionStore.getState();
+      updateTaskProgress('collect_coins', 1);
     }
   },
 
@@ -462,6 +470,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       totalBoxesThisHunt: boxes.filter(b => b.rarity !== 'decoy').length,
       wrongAnswers: 0,
     });
+    
+    // Update mission progress for start_hunt task
+    const { updateTaskProgress } = require('@/stores/missionStore').useMissionStore.getState();
+    updateTaskProgress('start_hunt', 1);
   },
   
   endHunt: () => {
@@ -512,6 +524,11 @@ export const useGameStore = create<GameState>((set, get) => ({
       totalBoxesFound: state.totalBoxesFound + 1,
       xp: state.xp + 25,
     });
+    
+    // Update mission progress for find_box and collect_voucher tasks
+    const { updateTaskProgress } = require('@/stores/missionStore').useMissionStore.getState();
+    updateTaskProgress('find_box', 1, box.rarity);
+    updateTaskProgress('collect_voucher', 1);
   },
   
   triggerDecoy: (boxId) => {
@@ -642,6 +659,10 @@ export const useGameStore = create<GameState>((set, get) => ({
         coins: state.coins + coinReward,
         xp: state.xp + (destroyed ? 15 : 0),
       });
+      
+      // Update mission progress for destroy_count task
+      const { updateTaskProgress } = require('@/stores/missionStore').useMissionStore.getState();
+      updateTaskProgress('destroy_count', 1);
     } else {
       set({ destructibles: newDestructibles });
     }
@@ -685,6 +706,12 @@ export const useGameStore = create<GameState>((set, get) => ({
           wrongAnswers: 0,
           xp: state.xp + xpReward,
         });
+        
+        // Update mission progress for answer_question, find_box, and collect_voucher
+        const { updateTaskProgress } = require('@/stores/missionStore').useMissionStore.getState();
+        updateTaskProgress('answer_question', 1);
+        updateTaskProgress('find_box', 1, box.rarity);
+        updateTaskProgress('collect_voucher', 1);
       }
       return true;
     } else {

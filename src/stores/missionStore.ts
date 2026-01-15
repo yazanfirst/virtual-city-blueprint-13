@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { CHAPTERS, MISSIONS, Task, Mission, Chapter, getMissionById, getChapterById, getMissionsForChapter } from '@/lib/missions';
+import { CHAPTERS, MISSIONS, Task, Mission, Chapter } from '@/lib/missions';
 
 type MissionState = {
   // State
@@ -12,6 +12,7 @@ type MissionState = {
   // UI State
   showMissionComplete: boolean;
   completedMission: Mission | null;
+  lastCompletedTask: string | null; // For task completion popup
   
   // Computed
   currentMission: Mission | null;
@@ -24,6 +25,7 @@ type MissionState = {
   completeCurrentTask: () => void;
   completeMission: () => void;
   closeMissionComplete: () => void;
+  clearLastCompletedTask: () => void;
   resetMissions: () => void;
 };
 
@@ -38,6 +40,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   // UI State
   showMissionComplete: false,
   completedMission: null,
+  lastCompletedTask: null,
   
   // Computed getters
   get currentMission() {
@@ -99,16 +102,19 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       const matchingTask = newMissions[missionIndex].tasks[matchingTaskIndex];
       
       // For box type specific tasks
-      if (task.boxType && boxType && task.boxType !== boxType) return;
+      if (matchingTask.boxType && boxType && matchingTask.boxType !== boxType) return;
       
       matchingTask.progress += value;
       
       if (matchingTask.target && matchingTask.progress >= matchingTask.target) {
         matchingTask.completed = true;
         matchingTask.progress = matchingTask.target;
+        
+        // Show task complete notification
+        set({ missions: newMissions, lastCompletedTask: matchingTask.description });
+      } else {
+        set({ missions: newMissions });
       }
-      
-      set({ missions: newMissions });
       
       // Check if all tasks complete
       if (newMissions[missionIndex].tasks.every(t => t.completed)) {
@@ -129,6 +135,9 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       currentTask.completed = true;
       currentTask.progress = currentTask.target;
       
+      // Show task complete notification
+      const taskDescription = currentTask.description;
+      
       // Move to next task
       const nextIncompleteIndex = newMissions[missionIndex].tasks.findIndex(
         (t, i) => i > taskIndex && !t.completed
@@ -138,12 +147,13 @@ export const useMissionStore = create<MissionState>((set, get) => ({
         set({ 
           missions: newMissions,
           currentTaskIndex: nextIncompleteIndex,
+          lastCompletedTask: taskDescription,
         });
       } else if (newMissions[missionIndex].tasks.every(t => t.completed)) {
-        set({ missions: newMissions });
+        set({ missions: newMissions, lastCompletedTask: taskDescription });
         get().completeMission();
       } else {
-        set({ missions: newMissions });
+        set({ missions: newMissions, lastCompletedTask: taskDescription });
       }
     } else {
       set({ missions: newMissions });
@@ -247,6 +257,10 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     });
   },
 
+  clearLastCompletedTask: () => {
+    set({ lastCompletedTask: null });
+  },
+
   resetMissions: () => {
     set({
       chapters: JSON.parse(JSON.stringify(CHAPTERS)),
@@ -256,6 +270,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       currentTaskIndex: 0,
       showMissionComplete: false,
       completedMission: null,
+      lastCompletedTask: null,
     });
   },
 }));
