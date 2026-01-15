@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useMemo, useRef, useState, useCallback, useEffect } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import PlayerController from "./PlayerController";
@@ -11,9 +11,12 @@ import CollectibleItem from "./CollectibleItem";
 import MysteryBox from "./MysteryBox";
 import Trap from "./Trap";
 import Destructible from "./Destructible";
+import FallingTree from "./FallingTree";
+import Sinkhole from "./Sinkhole";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
+import { useHazardStore } from "@/stores/hazardStore";
 import { ShopBranding } from "@/hooks/use3DShops";
 
 export type CameraView = "thirdPerson" | "firstPerson";
@@ -780,6 +783,20 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
   const mysteryBoxesFound = useGameStore((state) => state.mysteryBoxesFound);
   const isHuntActive = useGameStore((state) => state.isHuntActive);
   const traps = useGameStore((state) => state.traps);
+  
+  // Hazard store
+  const hazards = useHazardStore((state) => state.hazards);
+  const getDangerousTreePositions = useHazardStore((state) => state.getDangerousTreePositions);
+  const getSinkholePositions = useHazardStore((state) => state.getSinkholePositions);
+  
+  // Get dangerous tree positions to exclude from normal tree rendering
+  const dangerousTreePositions = useMemo(() => getDangerousTreePositions(), [hazards]);
+  const sinkholePositions = useMemo(() => getSinkholePositions(), [hazards]);
+  
+  // Check if a tree position is dangerous
+  const isDangerousTree = useCallback((x: number, z: number) => {
+    return dangerousTreePositions.some(dt => Math.abs(dt.x - x) < 0.5 && Math.abs(dt.z - z) < 0.5);
+  }, [dangerousTreePositions]);
 
   useEffect(() => {
     scene.background = null;
@@ -897,8 +914,38 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {/* === TALL BUILDINGS === */}
       {tallBuildings.map((b, i) => <TallBuilding key={`tall-${i}`} position={[b.x, 0, b.z]} height={b.height} color={b.color} isNight={isNight} />)}
 
-      {/* === TREES === */}
-      {treePositions.map((t, i) => <Tree key={`tree-${i}`} position={[t.x, 0, t.z]} />)}
+      {/* === TREES (exclude dangerous ones) === */}
+      {treePositions
+        .filter(t => !isDangerousTree(t.x, t.z))
+        .map((t, i) => <Tree key={`tree-${i}`} position={[t.x, 0, t.z]} />)}
+      
+      {/* === FALLING TREES (hazards) === */}
+      {hazards
+        .filter(h => h.type === 'falling_tree')
+        .map(hazard => (
+          <FallingTree
+            key={hazard.id}
+            id={hazard.id}
+            position={hazard.position}
+            isTriggered={hazard.isTriggered}
+            isActive={hazard.isActive}
+            onPlayerHit={() => takeDamage(hazard.damage)}
+          />
+        ))}
+      
+      {/* === SINKHOLES (hazards) === */}
+      {hazards
+        .filter(h => h.type === 'sinkhole')
+        .map(hazard => (
+          <Sinkhole
+            key={hazard.id}
+            id={hazard.id}
+            position={hazard.position}
+            isTriggered={hazard.isTriggered}
+            isActive={hazard.isActive}
+            onPlayerFall={() => takeDamage(hazard.damage)}
+          />
+        ))}
 
       {/* === LAMPS === */}
       {lampPositions.map((l, i) => <Lamp key={`lamp-${i}`} position={[l.x, 0, l.z]} isNight={isNight} />)}

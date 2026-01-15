@@ -9,6 +9,8 @@ import ShopDetailModal from "@/components/3d/ShopDetailModal";
 import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import { useGameStore } from "@/stores/gameStore";
+import { useHazardStore } from "@/stores/hazardStore";
+import { useMissionStore } from "@/stores/missionStore";
 import HuntHUD from "@/components/game/HuntHUD";
 import DamageOverlay from "@/components/game/DamageOverlay";
 import VoucherPopup from "@/components/game/VoucherPopup";
@@ -16,6 +18,10 @@ import DecoyTrollPopup from "@/components/game/DecoyTrollPopup";
 import MemoryQuestionPopup from "@/components/game/MemoryQuestionPopup";
 import PunchIndicator from "@/components/game/PunchIndicator";
 import VoucherInventory from "@/components/game/VoucherInventory";
+import GameOverPopup from "@/components/game/GameOverPopup";
+import CurrentTaskHUD from "@/components/game/CurrentTaskHUD";
+import MissionPanel from "@/components/game/MissionPanel";
+import MissionCompletePopup from "@/components/game/MissionCompletePopup";
 
 const PanelBox = ({ 
   title,
@@ -59,8 +65,18 @@ const StreetView = () => {
   // Game state
   const { 
     coins, level, xp, lives, maxLives,
-    nearbyDestructible, vouchers
+    nearbyDestructible, vouchers, showGameOver, isGameOver
   } = useGameStore();
+  
+  // Mission state
+  const { showMissionComplete } = useMissionStore();
+  
+  // Initialize hazards when entering street
+  const initializeHazards = useHazardStore((state) => state.initializeHazards);
+  
+  useEffect(() => {
+    initializeHazards();
+  }, [initializeHazards]);
 
   // Find the spot ID for the selected shop (to highlight in 2D map)
   const selectedSpotId = selectedShop?.spotId || "";
@@ -229,6 +245,15 @@ const StreetView = () => {
           <MemoryQuestionPopup />
           <PunchIndicator />
           
+          {/* Current Task Always Visible */}
+          <CurrentTaskHUD />
+          
+          {/* Game Over Popup */}
+          {showGameOver && <GameOverPopup />}
+          
+          {/* Mission Complete Popup */}
+          {showMissionComplete && <MissionCompletePopup />}
+          
           {/* Shop Detail Modal */}
           {showShopModal && (
             <ShopDetailModal
@@ -332,41 +357,9 @@ const StreetView = () => {
             </button>
           </div>
           
-          {/* Mission Popup */}
+          {/* Mission Popup - Full Mission Panel */}
           {showMissions && (
-            <div 
-              className="absolute inset-0 flex items-center justify-center pointer-events-auto"
-              style={{ zIndex: 200 }}
-              onClick={() => setShowMissions(false)}
-            >
-              <div 
-                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/30">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/30">
-                      <Target className="h-5 w-5 text-primary" />
-                    </div>
-                    <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
-                      Missions
-                    </h3>
-                  </div>
-                  <button 
-                    onClick={() => setShowMissions(false)} 
-                    className="text-muted-foreground hover:text-foreground p-1"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-                
-                <div className="text-center py-8 text-muted-foreground">
-                  <Target className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p className="text-sm">Missions coming soon!</p>
-                  <p className="text-xs mt-2">Check back later for exciting challenges.</p>
-                </div>
-              </div>
-            </div>
+            <MissionPanel onClose={() => setShowMissions(false)} />
           )}
           
           {/* 2D Map Overlay - Full screen on mobile, positioned on desktop */}

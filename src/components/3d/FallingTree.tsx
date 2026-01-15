@@ -1,25 +1,33 @@
 import { useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useHazardStore } from '@/stores/hazardStore';
+import { usePlayerStore } from '@/stores/playerStore';
 
-type FallingTreeProps = {
+export type FallingTreeProps = {
+  id: string;
   position: [number, number, number];
   isTriggered: boolean;
-  onFallComplete: () => void;
+  isActive: boolean;
+  onPlayerHit: () => void;
 };
 
-export default function FallingTree({ position, isTriggered, onFallComplete }: FallingTreeProps) {
+export default function FallingTree({ id, position, isTriggered, isActive, onPlayerHit }: FallingTreeProps) {
   const groupRef = useRef<THREE.Group>(null);
   const [fallProgress, setFallProgress] = useState(0);
   const [isShaking, setIsShaking] = useState(false);
   const [hasFallen, setHasFallen] = useState(false);
+  const [hasHitPlayer, setHasHitPlayer] = useState(false);
   const shakeStartTime = useRef<number | null>(null);
   const fallStartTime = useRef<number | null>(null);
-  const fallDirection = useRef(Math.random() * Math.PI * 2); // Random fall direction
+  const fallDirection = useRef(Math.random() * Math.PI * 2);
   
-  // Warning shake duration
-  const SHAKE_DURATION = 800; // 0.8 seconds warning
-  const FALL_DURATION = 600; // 0.6 seconds to fall
+  const triggerHazard = useHazardStore((state) => state.triggerHazard);
+  const activateHazard = useHazardStore((state) => state.activateHazard);
+  const checkProximityHazards = useHazardStore((state) => state.checkProximityHazards);
+  
+  const SHAKE_DURATION = 800;
+  const FALL_DURATION = 600;
 
   useEffect(() => {
     if (isTriggered && !isShaking && !hasFallen) {
@@ -28,26 +36,31 @@ export default function FallingTree({ position, isTriggered, onFallComplete }: F
     }
   }, [isTriggered, isShaking, hasFallen]);
 
-  useFrame(() => {
+  useFrame((state) => {
     if (!groupRef.current) return;
 
     const now = Date.now();
+    
+    // Check player proximity to trigger
+    if (!isTriggered && !hasFallen) {
+      const playerPos = state.camera.position;
+      checkProximityHazards([playerPos.x, playerPos.y, playerPos.z]);
+    }
 
     // Shaking phase
     if (isShaking && shakeStartTime.current) {
       const elapsed = now - shakeStartTime.current;
       
       if (elapsed < SHAKE_DURATION) {
-        // Shake intensity increases
         const intensity = 0.02 + (elapsed / SHAKE_DURATION) * 0.08;
         groupRef.current.position.x = position[0] + (Math.random() - 0.5) * intensity;
         groupRef.current.position.z = position[2] + (Math.random() - 0.5) * intensity;
       } else {
-        // Start falling
         setIsShaking(false);
         fallStartTime.current = now;
         groupRef.current.position.x = position[0];
         groupRef.current.position.z = position[2];
+        activateHazard(id);
       }
     }
 
@@ -56,28 +69,42 @@ export default function FallingTree({ position, isTriggered, onFallComplete }: F
       const elapsed = now - fallStartTime.current;
       const progress = Math.min(1, elapsed / FALL_DURATION);
       
-      // Ease-in for realistic fall
       const easedProgress = progress * progress;
       setFallProgress(easedProgress);
       
-      // Rotate tree to fall
-      const fallAngle = easedProgress * (Math.PI / 2); // 90 degrees
+      const fallAngle = easedProgress * (Math.PI / 2);
       groupRef.current.rotation.x = Math.cos(fallDirection.current) * fallAngle;
       groupRef.current.rotation.z = Math.sin(fallDirection.current) * fallAngle;
       
-      // Move pivot point effect
-      const fallOffset = Math.sin(fallAngle) * 4; // Tree height offset
+      const fallOffset = Math.sin(fallAngle) * 4;
       groupRef.current.position.x = position[0] + Math.cos(fallDirection.current) * fallOffset * 0.3;
       groupRef.current.position.z = position[2] + Math.sin(fallDirection.current) * fallOffset * 0.3;
       
+      // Check if player is in danger zone during fall
+      if (!hasHitPlayer && progress > 0.5) {
+        const playerPos = state.camera.position;
+        const dx = playerPos.x - position[0];
+        const dz = playerPos.z - position[2];
+        const distance = Math.sqrt(dx * dx + dz * dz);
+        
+        // Player is in fall zone
+        if (distance < 4) {
+          // Check if player is in the direction of fall
+          const playerAngle = Math.atan2(dz, dx);
+          const angleDiff = Math.abs(playerAngle - fallDirection.current);
+          if (angleDiff < Math.PI / 3 || angleDiff > Math.PI * 5 / 3) {
+            setHasHitPlayer(true);
+            onPlayerHit();
+          }
+        }
+      }
+      
       if (progress >= 1) {
         setHasFallen(true);
-        onFallComplete();
       }
     }
   });
 
-  // Color changes based on state
   const trunkColor = isShaking ? '#8B4513' : '#5A3A1A';
   const foliageColor = isShaking ? '#FF6B6B' : hasFallen ? '#2A5A2A' : '#3A7A3A';
 
@@ -85,10 +112,17 @@ export default function FallingTree({ position, isTriggered, onFallComplete }: F
     <group ref={groupRef} position={position}>
       {/* Warning indicator when shaking */}
       {isShaking && (
-        <mesh position={[0, 8, 0]}>
-          <sphereGeometry args={[0.5, 8, 8]} />
-          <meshBasicMaterial color="#FF0000" transparent opacity={0.8} />
-        </mesh>
+        <>
+          <mesh position={[0, 8, 0]}>
+            <sphereGeometry args={[0.5, 8, 8]} />
+            <meshBasicMaterial color="#FF0000" transparent opacity={0.8} />
+          </mesh>
+          {/* Danger text */}
+          <mesh position={[0, 9, 0]}>
+            <boxGeometry args={[2, 0.5, 0.1]} />
+            <meshBasicMaterial color="#FF0000" />
+          </mesh>
+        </>
       )}
       
       {/* Trunk */}
