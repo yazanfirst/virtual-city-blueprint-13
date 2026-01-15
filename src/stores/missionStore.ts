@@ -82,12 +82,22 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     const state = get();
     if (!state.currentMissionId) return;
     
+    console.log('[Mission] updateTaskProgress called:', { taskType, value, boxType });
+    
     const missionIndex = state.missions.findIndex(m => m.id === state.currentMissionId);
     if (missionIndex === -1) return;
     
     const mission = state.missions[missionIndex];
     const taskIndex = state.currentTaskIndex;
     const task = mission.tasks[taskIndex];
+    
+    console.log('[Mission] Current task:', { 
+      taskType: task?.type, 
+      description: task?.description,
+      progress: task?.progress,
+      target: task?.target,
+      completed: task?.completed
+    });
     
     if (!task || task.completed) return;
     
@@ -130,10 +140,12 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     const currentTask = newMissions[missionIndex].tasks[taskIndex];
     
     currentTask.progress += value;
+    console.log('[Mission] Updated progress:', currentTask.progress, '/', currentTask.target);
     
     if (currentTask.target && currentTask.progress >= currentTask.target) {
       currentTask.completed = true;
       currentTask.progress = currentTask.target;
+      console.log('[Mission] ✅ Task completed:', currentTask.description);
       
       // Show task complete notification
       const taskDescription = currentTask.description;

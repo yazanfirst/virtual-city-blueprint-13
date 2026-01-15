@@ -13,6 +13,7 @@ import Trap from "./Trap";
 import Destructible from "./Destructible";
 import FallingTree from "./FallingTree";
 import Sinkhole from "./Sinkhole";
+import MissionWaypoint from "./MissionWaypoint";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
@@ -1022,6 +1023,9 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           />
         )
       ))}
+
+      {/* === MISSION WAYPOINT === */}
+      <MissionWaypoint />
 
       {/* === PLAYER CHARACTER === */}
       <PlayerController 
