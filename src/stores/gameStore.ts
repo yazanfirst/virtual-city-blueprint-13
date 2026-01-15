@@ -52,6 +52,13 @@ export type TrapState = {
   pattern: { activeTime: number; cooldownTime: number };
 };
 
+type GameOverStats = {
+  boxesFound: number;
+  coinsCollected: number;
+  vouchersEarned: number;
+  deathsByHazards: number;
+};
+
 type GameState = {
   // Existing
   coins: number;
@@ -73,6 +80,11 @@ type GameState = {
   maxLives: number;
   lastDamageTime: number;
   isInvincible: boolean;
+  
+  // Game Over
+  isGameOver: boolean;
+  showGameOver: boolean;
+  gameOverStats: GameOverStats;
   
   // Mystery Boxes
   mysteryBoxesFound: Set<string>;
@@ -121,8 +133,11 @@ type GameState = {
   triggerDecoy: (boxId: string) => void;
   
   // Damage Actions
-  takeDamage: () => void;
+  takeDamage: (amount?: number) => void;
   resetLives: () => void;
+  
+  // Game Over Actions
+  restartGame: () => void;
   
   // Punch Actions
   startPunch: () => void;
@@ -367,6 +382,11 @@ export const useGameStore = create<GameState>((set, get) => ({
   lastDamageTime: 0,
   isInvincible: false,
   
+  // Game Over
+  isGameOver: false,
+  showGameOver: false,
+  gameOverStats: { boxesFound: 0, coinsCollected: 0, vouchersEarned: 0, deathsByHazards: 0 },
+  
   // Mystery Boxes
   mysteryBoxesFound: new Set(),
   vouchers: [],
@@ -511,7 +531,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   // Damage Actions
-  takeDamage: () => {
+  takeDamage: (amount: number = 1) => {
     const state = get();
     const now = Date.now();
     
@@ -520,14 +540,37 @@ export const useGameStore = create<GameState>((set, get) => ({
       return;
     }
     
-    const newLives = state.lives - 1;
+    const newLives = Math.max(0, state.lives - amount);
+    
+    // GAME OVER when lives reach 0
+    if (newLives <= 0) {
+      set({
+        lives: 0,
+        isGameOver: true,
+        showGameOver: true,
+        isHuntActive: false,
+        huntEndTime: null,
+        gameOverStats: {
+          boxesFound: state.mysteryBoxesFound.size,
+          coinsCollected: state.coinsCollected.size,
+          vouchersEarned: state.vouchers.length,
+          deathsByHazards: state.totalDeathsByTraps + 1,
+        },
+        showDamageOverlay: true,
+        totalDeathsByTraps: state.totalDeathsByTraps + 1,
+      });
+      
+      setTimeout(() => {
+        set({ showDamageOverlay: false });
+      }, 500);
+      return;
+    }
     
     set({
       lives: newLives,
       lastDamageTime: now,
       isInvincible: true,
       showDamageOverlay: true,
-      totalDeathsByTraps: newLives <= 0 ? state.totalDeathsByTraps + 1 : state.totalDeathsByTraps,
     });
     
     // Remove invincibility after duration
@@ -542,6 +585,22 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   
   resetLives: () => set({ lives: 3 }),
+  
+  // Game Over Actions
+  restartGame: () => {
+    set({
+      lives: 3,
+      isGameOver: false,
+      showGameOver: false,
+      isHuntActive: false,
+      huntEndTime: null,
+      huntCooldownEndTime: null,
+      boxSpawns: [],
+      mysteryBoxesFound: new Set(),
+      coinsCollected: new Set(),
+      gameOverStats: { boxesFound: 0, coinsCollected: 0, vouchersEarned: 0, deathsByHazards: 0 },
+    });
+  },
 
   // Punch Actions
   startPunch: () => set({ isPunching: true }),
