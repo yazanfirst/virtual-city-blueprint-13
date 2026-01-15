@@ -123,7 +123,7 @@ export const MISSIONS: Mission[] = [
         description: 'Find a cardboard box',
         type: 'move_to',
         target: 1,
-        targetLocation: { x: 15, z: 32, radius: 3 },
+        targetLocation: { x: -25, z: 15, radius: 3 },
         progress: 0,
         completed: false,
       },
