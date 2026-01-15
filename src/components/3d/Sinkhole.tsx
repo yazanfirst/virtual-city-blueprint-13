@@ -1,23 +1,30 @@
 import { useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useHazardStore } from '@/stores/hazardStore';
 
-type SinkholeProps = {
+export type SinkholeProps = {
+  id: string;
   position: [number, number, number];
   isTriggered: boolean;
-  onOpenComplete: () => void;
+  isActive: boolean;
+  onPlayerFall: () => void;
 };
 
-export default function Sinkhole({ position, isTriggered, onOpenComplete }: SinkholeProps) {
+export default function Sinkhole({ id, position, isTriggered, isActive, onPlayerFall }: SinkholeProps) {
   const groupRef = useRef<THREE.Group>(null);
   const [openProgress, setOpenProgress] = useState(0);
   const [isWarning, setIsWarning] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [hasHitPlayer, setHasHitPlayer] = useState(false);
   const warningStartTime = useRef<number | null>(null);
   const openStartTime = useRef<number | null>(null);
   
-  const WARNING_DURATION = 1500; // 1.5 seconds warning
-  const OPEN_DURATION = 500; // 0.5 seconds to open
+  const activateHazard = useHazardStore((state) => state.activateHazard);
+  const checkTimerHazards = useHazardStore((state) => state.checkTimerHazards);
+  
+  const WARNING_DURATION = 1500;
+  const OPEN_DURATION = 500;
 
   useEffect(() => {
     if (isTriggered && !isWarning && !isOpen) {
@@ -26,12 +33,17 @@ export default function Sinkhole({ position, isTriggered, onOpenComplete }: Sink
     }
   }, [isTriggered, isWarning, isOpen]);
 
-  useFrame(() => {
+  useFrame((state) => {
     if (!groupRef.current) return;
 
     const now = Date.now();
+    
+    // Check timer hazards periodically
+    if (!isTriggered && !isOpen) {
+      checkTimerHazards();
+    }
 
-    // Warning phase - cracks appear
+    // Warning phase
     if (isWarning && warningStartTime.current) {
       const elapsed = now - warningStartTime.current;
       
@@ -46,13 +58,26 @@ export default function Sinkhole({ position, isTriggered, onOpenComplete }: Sink
       const elapsed = now - openStartTime.current;
       const progress = Math.min(1, elapsed / OPEN_DURATION);
       
-      // Ease-out for satisfying opening
       const easedProgress = 1 - Math.pow(1 - progress, 3);
       setOpenProgress(easedProgress);
       
       if (progress >= 1) {
         setIsOpen(true);
-        onOpenComplete();
+        activateHazard(id);
+      }
+    }
+    
+    // Check if player falls in
+    if (isOpen && !hasHitPlayer) {
+      const playerPos = state.camera.position;
+      const dx = playerPos.x - position[0];
+      const dz = playerPos.z - position[2];
+      const distance = Math.sqrt(dx * dx + dz * dz);
+      
+      const holeRadius = 2 + openProgress * 1.5;
+      if (distance < holeRadius - 0.5) {
+        setHasHitPlayer(true);
+        onPlayerFall();
       }
     }
   });
@@ -62,15 +87,14 @@ export default function Sinkhole({ position, isTriggered, onOpenComplete }: Sink
     return null;
   }
 
-  const holeRadius = 2 + openProgress * 1.5; // Grows as it opens
-  const holeDepth = openProgress * 3; // Gets deeper
+  const holeRadius = 2 + openProgress * 1.5;
+  const holeDepth = openProgress * 3;
 
   return (
     <group ref={groupRef} position={position}>
       {/* Warning cracks */}
       {isWarning && (
         <>
-          {/* Crack lines radiating from center */}
           {[0, 60, 120, 180, 240, 300].map((angle, i) => (
             <mesh 
               key={i}
@@ -92,7 +116,7 @@ export default function Sinkhole({ position, isTriggered, onOpenComplete }: Sink
             />
           </mesh>
           
-          {/* Warning text would go here in a real game */}
+          {/* Warning indicator */}
           <mesh position={[0, 1, 0]}>
             <sphereGeometry args={[0.3, 8, 8]} />
             <meshBasicMaterial color="#FFFF00" />
