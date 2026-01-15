@@ -248,11 +248,11 @@ const MYSTERY_BOX_SPAWNS: { position: [number, number, number]; difficulty: 'eas
   { position: [-45, 0.5, 42], difficulty: 'hard' }, // Park corner
 ];
 
-// Destructible positions
+// Destructible positions - placed on land, away from water/lakes
 const DESTRUCTIBLE_SPAWNS: Omit<DestructibleState, 'destroyed'>[] = [
-  { id: 'cardboard1', type: 'cardboard', position: [15, 0.5, 32], maxHp: 1, currentHp: 1 },
-  { id: 'cardboard2', type: 'cardboard', position: [-15, 0.5, 38], maxHp: 1, currentHp: 1 },
-  { id: 'cardboard3', type: 'cardboard', position: [25, 0.5, 8], maxHp: 1, currentHp: 1 },
+  { id: 'cardboard1', type: 'cardboard', position: [-25, 0.5, 15], maxHp: 1, currentHp: 1 },
+  { id: 'cardboard2', type: 'cardboard', position: [-35, 0.5, -10], maxHp: 1, currentHp: 1 },
+  { id: 'cardboard3', type: 'cardboard', position: [25, 0.5, -15], maxHp: 1, currentHp: 1 },
   { id: 'crate1', type: 'crate', position: [40, 0.5, 12], maxHp: 3, currentHp: 3 },
   { id: 'crate2', type: 'crate', position: [-40, 0.5, -12], maxHp: 3, currentHp: 3 },
   { id: 'trash1', type: 'trash', position: [8, 0.5, 42], maxHp: 2, currentHp: 2 },
