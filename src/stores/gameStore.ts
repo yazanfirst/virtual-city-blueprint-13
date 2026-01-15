@@ -438,6 +438,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       newVisited.add(shopId);
       set({ shopsVisited: newVisited });
       
+      console.log('[Game] Shop visited:', shopId);
+      
       // Update mission progress for visit_shop task
       const { updateTaskProgress } = useMissionStore.getState();
       updateTaskProgress('visit_shop', 1);
@@ -453,6 +455,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         coinsCollected: newCollected,
         coins: state.coins + 10 
       });
+      
+      console.log('[Game] Coin collected:', coinId);
       
       // Update mission progress for collect_coins task
       const { updateTaskProgress } = useMissionStore.getState();
