@@ -414,11 +414,12 @@ const PlayerController = ({
     // Apply position to group
     groupRef.current.position.copy(positionRef.current);
 
-    // Mission + location checks (throttled)
+    // Throttled checks (mission + hazards)
     const now = Date.now();
     if (now - lastLocationCheckRef.current > 100) {
       lastLocationCheckRef.current = now;
 
+      // Check move_to mission completion
       if (currentTask?.type === 'move_to' && currentTask.targetLocation && !currentTask.completed) {
         const { x, z, radius } = currentTask.targetLocation;
         const dx = positionRef.current.x - x;
@@ -429,6 +430,10 @@ const PlayerController = ({
           updateTaskProgress('move_to', 1);
         }
       }
+
+      // Check hazard proximity (only once per 100ms, not every frame)
+      const checkProximityHazards = useHazardStore.getState().checkProximityHazards;
+      checkProximityHazards([positionRef.current.x, positionRef.current.y, positionRef.current.z]);
     }
 
     if (positionChanged) {
