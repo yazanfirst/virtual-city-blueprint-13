@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useHazardStore } from '@/stores/hazardStore';
@@ -14,48 +14,74 @@ export type FallingTreeProps = {
 
 export default function FallingTree({ id, position, isTriggered, isActive, onPlayerHit }: FallingTreeProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const [fallProgress, setFallProgress] = useState(0);
-  const [isShaking, setIsShaking] = useState(false);
-  const [hasFallen, setHasFallen] = useState(false);
-  const [hasHitPlayer, setHasHitPlayer] = useState(false);
-  const shakeStartTime = useRef<number | null>(null);
-  const fallStartTime = useRef<number | null>(null);
-  const fallDirection = useRef(Math.random() * Math.PI * 2);
-  const warningOpacity = useRef(0.3);
+  const trunkRef = useRef<THREE.Mesh>(null);
+  const foliage1Ref = useRef<THREE.Mesh>(null);
+  const foliage2Ref = useRef<THREE.Mesh>(null);
+  const dangerPlaneRef = useRef<THREE.Mesh>(null);
+  const warningRef = useRef<THREE.Group>(null);
+
+  // Use refs for animation state to avoid re-renders
+  const animState = useRef({
+    isShaking: false,
+    hasFallen: false,
+    hasHitPlayer: false,
+    shakeStartTime: 0,
+    fallStartTime: 0,
+    fallDirection: Math.random() * Math.PI * 2,
+  });
 
   const activateHazard = useHazardStore((state) => state.activateHazard);
 
   const SHAKE_DURATION = 800;
   const FALL_DURATION = 600;
 
-  // Start shaking when triggered (only runs when isTriggered changes)
+  // Start shaking when triggered
   useEffect(() => {
-    if (isTriggered && !isShaking && !hasFallen) {
-      setIsShaking(true);
-      shakeStartTime.current = Date.now();
+    if (isTriggered && !animState.current.isShaking && !animState.current.hasFallen) {
+      animState.current.isShaking = true;
+      animState.current.shakeStartTime = Date.now();
     }
-  }, [isTriggered, isShaking, hasFallen]);
+  }, [isTriggered]);
 
   useFrame(() => {
     if (!groupRef.current) return;
 
+    const state = animState.current;
     const now = Date.now();
 
-    // Update warning opacity for pulsing effect (doesn't trigger re-render)
-    warningOpacity.current = 0.3 + Math.sin(now * 0.01) * 0.2;
+    // Show/hide warning indicator
+    if (warningRef.current) {
+      warningRef.current.visible = state.isShaking;
+    }
+
+    // Show/hide danger zone
+    if (dangerPlaneRef.current) {
+      dangerPlaneRef.current.visible = state.isShaking || (state.fallStartTime > 0 && !state.hasFallen);
+    }
 
     // Shaking phase
-    if (isShaking && shakeStartTime.current) {
-      const elapsed = now - shakeStartTime.current;
+    if (state.isShaking && state.shakeStartTime > 0) {
+      const elapsed = now - state.shakeStartTime;
 
       if (elapsed < SHAKE_DURATION) {
         const intensity = 0.02 + (elapsed / SHAKE_DURATION) * 0.08;
         groupRef.current.position.x = position[0] + (Math.random() - 0.5) * intensity;
         groupRef.current.position.z = position[2] + (Math.random() - 0.5) * intensity;
+
+        // Change colors to indicate danger
+        if (trunkRef.current) {
+          (trunkRef.current.material as THREE.MeshLambertMaterial).color.setHex(0x8B4513);
+        }
+        if (foliage1Ref.current) {
+          (foliage1Ref.current.material as THREE.MeshLambertMaterial).color.setHex(0xFF6B6B);
+        }
+        if (foliage2Ref.current) {
+          (foliage2Ref.current.material as THREE.MeshLambertMaterial).color.setHex(0xFF6B6B);
+        }
       } else {
         // Transition to falling
-        setIsShaking(false);
-        fallStartTime.current = now;
+        state.isShaking = false;
+        state.fallStartTime = now;
         groupRef.current.position.x = position[0];
         groupRef.current.position.z = position[2];
         activateHazard(id);
@@ -63,87 +89,97 @@ export default function FallingTree({ id, position, isTriggered, isActive, onPla
     }
 
     // Falling phase
-    if (fallStartTime.current && !hasFallen) {
-      const elapsed = now - fallStartTime.current;
+    if (state.fallStartTime > 0 && !state.hasFallen) {
+      const elapsed = now - state.fallStartTime;
       const progress = Math.min(1, elapsed / FALL_DURATION);
-
       const easedProgress = progress * progress;
-      setFallProgress(easedProgress);
 
       const fallAngle = easedProgress * (Math.PI / 2);
-      groupRef.current.rotation.x = Math.cos(fallDirection.current) * fallAngle;
-      groupRef.current.rotation.z = Math.sin(fallDirection.current) * fallAngle;
+      groupRef.current.rotation.x = Math.cos(state.fallDirection) * fallAngle;
+      groupRef.current.rotation.z = Math.sin(state.fallDirection) * fallAngle;
 
       const fallOffset = Math.sin(fallAngle) * 4;
-      groupRef.current.position.x = position[0] + Math.cos(fallDirection.current) * fallOffset * 0.3;
-      groupRef.current.position.z = position[2] + Math.sin(fallDirection.current) * fallOffset * 0.3;
+      groupRef.current.position.x = position[0] + Math.cos(state.fallDirection) * fallOffset * 0.3;
+      groupRef.current.position.z = position[2] + Math.sin(state.fallDirection) * fallOffset * 0.3;
 
-      // Check if player is in danger zone during fall (using store directly)
-      if (!hasHitPlayer && progress > 0.5) {
+      // Check if player is in danger zone during fall
+      if (!state.hasHitPlayer && progress > 0.5) {
         const playerPos = usePlayerStore.getState().position;
         const dx = playerPos[0] - position[0];
         const dz = playerPos[2] - position[2];
         const distance = Math.sqrt(dx * dx + dz * dz);
 
-        // Player is in fall zone
         if (distance < 4) {
           const playerAngle = Math.atan2(dz, dx);
-          const angleDiff = Math.abs(playerAngle - fallDirection.current);
+          const angleDiff = Math.abs(playerAngle - state.fallDirection);
           if (angleDiff < Math.PI / 3 || angleDiff > Math.PI * 5 / 3) {
-            setHasHitPlayer(true);
+            state.hasHitPlayer = true;
             onPlayerHit();
           }
         }
       }
 
+      // Update fallen colors
+      if (foliage1Ref.current) {
+        (foliage1Ref.current.material as THREE.MeshLambertMaterial).color.setHex(0x3A7A3A);
+      }
+      if (foliage2Ref.current) {
+        (foliage2Ref.current.material as THREE.MeshLambertMaterial).color.setHex(0x3A7A3A);
+      }
+
       if (progress >= 1) {
-        setHasFallen(true);
+        state.hasFallen = true;
+        // Darker color when fallen
+        if (foliage1Ref.current) {
+          (foliage1Ref.current.material as THREE.MeshLambertMaterial).color.setHex(0x2A5A2A);
+        }
+        if (foliage2Ref.current) {
+          (foliage2Ref.current.material as THREE.MeshLambertMaterial).color.setHex(0x2A5A2A);
+        }
       }
     }
   });
 
-  const trunkColor = isShaking ? '#8B4513' : '#5A3A1A';
-  const foliageColor = isShaking ? '#FF6B6B' : hasFallen ? '#2A5A2A' : '#3A7A3A';
-
   return (
     <group ref={groupRef} position={position}>
-      {/* Warning indicator when shaking */}
-      {isShaking && (
-        <>
-          <mesh position={[0, 8, 0]}>
-            <sphereGeometry args={[0.5, 8, 8]} />
-            <meshBasicMaterial color="#FF0000" transparent opacity={0.8} />
-          </mesh>
-          <mesh position={[0, 9, 0]}>
-            <boxGeometry args={[2, 0.5, 0.1]} />
-            <meshBasicMaterial color="#FF0000" />
-          </mesh>
-        </>
-      )}
+      {/* Warning indicator - visibility controlled in useFrame */}
+      <group ref={warningRef} visible={false}>
+        <mesh position={[0, 8, 0]}>
+          <sphereGeometry args={[0.5, 8, 8]} />
+          <meshBasicMaterial color="#FF0000" transparent opacity={0.8} />
+        </mesh>
+        <mesh position={[0, 9, 0]}>
+          <boxGeometry args={[2, 0.5, 0.1]} />
+          <meshBasicMaterial color="#FF0000" />
+        </mesh>
+      </group>
 
       {/* Trunk */}
-      <mesh position={[0, 1.5, 0]}>
+      <mesh ref={trunkRef} position={[0, 1.5, 0]}>
         <cylinderGeometry args={[0.2, 0.3, 3, 6]} />
-        <meshLambertMaterial color={trunkColor} />
+        <meshLambertMaterial color="#5A3A1A" />
       </mesh>
 
       {/* Foliage */}
-      <mesh position={[0, 4, 0]}>
+      <mesh ref={foliage1Ref} position={[0, 4, 0]}>
         <icosahedronGeometry args={[1.8, 0]} />
-        <meshLambertMaterial color={foliageColor} />
+        <meshLambertMaterial color="#3A7A3A" />
       </mesh>
-      <mesh position={[0.5, 5, 0.3]}>
+      <mesh ref={foliage2Ref} position={[0.5, 5, 0.3]}>
         <icosahedronGeometry args={[1.3, 0]} />
-        <meshLambertMaterial color={foliageColor} />
+        <meshLambertMaterial color="#4A8A4A" />
       </mesh>
 
-      {/* Danger zone indicator on ground when falling */}
-      {(isShaking || (fallStartTime.current && !hasFallen)) && (
-        <mesh rotation={[-Math.PI / 2, 0, fallDirection.current]} position={[0, 0.01, 0]}>
-          <planeGeometry args={[3, 8]} />
-          <meshBasicMaterial color="#FF0000" transparent opacity={0.4} />
-        </mesh>
-      )}
+      {/* Danger zone indicator - visibility controlled in useFrame */}
+      <mesh 
+        ref={dangerPlaneRef} 
+        visible={false}
+        rotation={[-Math.PI / 2, 0, animState.current.fallDirection]} 
+        position={[0, 0.01, 0]}
+      >
+        <planeGeometry args={[3, 8]} />
+        <meshBasicMaterial color="#FF0000" transparent opacity={0.4} />
+      </mesh>
     </group>
   );
 }
