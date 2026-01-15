@@ -245,9 +245,6 @@ const StreetView = () => {
           <MemoryQuestionPopup />
           <PunchIndicator />
           
-          {/* Current Task Always Visible */}
-          <CurrentTaskHUD />
-          
           {/* Game Over Popup */}
           {showGameOver && <GameOverPopup />}
           
