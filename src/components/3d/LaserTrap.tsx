@@ -173,14 +173,7 @@ export default function LaserTrap({
         />
       </mesh>
       
-      {/* Glow effect */}
-      <pointLight
-        position={[0, 0.9, 0]}
-        intensity={1.5}
-        distance={6}
-        color="#FF0000"
-        decay={2}
-      />
+      {/* Glow effect - reduced for performance */}
     </group>
   );
 }

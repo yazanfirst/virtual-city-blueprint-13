@@ -22,6 +22,7 @@ export interface ZombieData {
   id: string;
   position: [number, number, number];
   isActive: boolean;
+  behaviorType: 'direct' | 'flanker' | 'ambusher' | 'patrol';
 }
 
 export interface TrapData {
@@ -69,8 +70,9 @@ interface MissionState {
   // Zombie slow state (from laser traps)
   slowedZombieIds: Set<string>;
   
-  // Protection state (after exiting shop)
+  // Protection state (after exiting shop or respawn)
   isProtected: boolean;
+  spawnProtectionTimer: number | null;
   
   // Trap state
   trapTriggered: boolean;
@@ -101,21 +103,28 @@ interface MissionState {
   unslowZombie: (zombieId: string) => void;
 }
 
-// Generate zombie spawn positions (more zombies, spread around)
+// Generate zombie spawn positions with varied behavior types
 function generateZombieSpawns(): ZombieData[] {
   return [
-    { id: 'zombie-1', position: [-30, 0.25, -30], isActive: true },
-    { id: 'zombie-2', position: [30, 0.25, -30], isActive: true },
-    { id: 'zombie-3', position: [0, 0.25, -45], isActive: true },
-    { id: 'zombie-4', position: [-40, 0.25, 0], isActive: true },
-    { id: 'zombie-5', position: [40, 0.25, 0], isActive: true },
-    { id: 'zombie-6', position: [-20, 0.25, -40], isActive: true },
-    { id: 'zombie-7', position: [20, 0.25, -40], isActive: true },
-    { id: 'zombie-8', position: [-50, 0.25, -20], isActive: true },
-    { id: 'zombie-9', position: [50, 0.25, -20], isActive: true },
-    { id: 'zombie-10', position: [0, 0.25, -60], isActive: true },
-    { id: 'zombie-11', position: [-35, 0.25, 20], isActive: true },
-    { id: 'zombie-12', position: [35, 0.25, 20], isActive: true },
+    // Direct chasers - 4 zombies that follow directly
+    { id: 'zombie-1', position: [-35, 0.25, -35], isActive: true, behaviorType: 'direct' },
+    { id: 'zombie-2', position: [35, 0.25, -35], isActive: true, behaviorType: 'direct' },
+    { id: 'zombie-3', position: [-50, 0.25, 15], isActive: true, behaviorType: 'direct' },
+    { id: 'zombie-4', position: [50, 0.25, 15], isActive: true, behaviorType: 'direct' },
+    
+    // Flankers - 3 zombies that try to cut off the player
+    { id: 'zombie-5', position: [0, 0.25, -55], isActive: true, behaviorType: 'flanker' },
+    { id: 'zombie-6', position: [-45, 0.25, -15], isActive: true, behaviorType: 'flanker' },
+    { id: 'zombie-7', position: [45, 0.25, -15], isActive: true, behaviorType: 'flanker' },
+    
+    // Ambushers - 3 zombies that wait near key areas
+    { id: 'zombie-8', position: [-20, 0.25, 35], isActive: true, behaviorType: 'ambusher' },
+    { id: 'zombie-9', position: [20, 0.25, 35], isActive: true, behaviorType: 'ambusher' },
+    { id: 'zombie-10', position: [0, 0.25, -70], isActive: true, behaviorType: 'ambusher' },
+    
+    // Patrollers - 2 zombies that patrol and chase when close
+    { id: 'zombie-11', position: [-60, 0.25, 0], isActive: true, behaviorType: 'patrol' },
+    { id: 'zombie-12', position: [60, 0.25, 0], isActive: true, behaviorType: 'patrol' },
   ];
 }
 
@@ -168,6 +177,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   slowedZombieIds: new Set(),
   
   isProtected: false,
+  spawnProtectionTimer: null,
   
   trapTriggered: false,
   deceptiveMessageShown: false,
@@ -178,6 +188,16 @@ export const useMissionStore = create<MissionState>((set, get) => ({
 
   activateMission: (targetShop, items) => {
     const state = get();
+    
+    // Clear any existing spawn protection timer
+    if (state.spawnProtectionTimer) {
+      clearTimeout(state.spawnProtectionTimer);
+    }
+    
+    // Start with spawn protection
+    const protectionTimer = setTimeout(() => {
+      set({ isProtected: false, spawnProtectionTimer: null });
+    }, 2000) as unknown as number; // 2 seconds of invincibility
     
     set({
       isActive: true,
@@ -194,7 +214,8 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       zombiesPaused: false,
       traps: generateTrapPositions(),
       slowedZombieIds: new Set(),
-      isProtected: false,
+      isProtected: true, // Start protected
+      spawnProtectionTimer: protectionTimer,
       trapTriggered: false,
       deceptiveMessageShown: false,
       lives: 3,
@@ -330,6 +351,13 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   },
 
   resetMission: () => {
+    const state = get();
+    
+    // Clear spawn protection timer if exists
+    if (state.spawnProtectionTimer) {
+      clearTimeout(state.spawnProtectionTimer);
+    }
+    
     set({
       isActive: false,
       phase: 'inactive',
@@ -346,6 +374,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       traps: [],
       slowedZombieIds: new Set(),
       isProtected: false,
+      spawnProtectionTimer: null,
       trapTriggered: false,
       deceptiveMessageShown: false,
       lives: 3,
