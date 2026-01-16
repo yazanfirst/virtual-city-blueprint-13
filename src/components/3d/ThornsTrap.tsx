@@ -158,16 +158,7 @@ export default function ThornsTrap({
         })}
       </group>
       
-      {/* Glow effect when open */}
-      {isOpen && (
-        <pointLight
-          position={[0, 0.5, 0]}
-          intensity={1}
-          distance={4}
-          color="#FF4400"
-          decay={2}
-        />
-      )}
+      {/* Glow removed for performance */}
     </group>
   );
 }

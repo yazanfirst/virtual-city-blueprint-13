@@ -164,7 +164,8 @@ const StreetView = () => {
   };
   
   const handleZombieTouchPlayer = () => {
-    if (mission.isActive && !mission.isProtected) {
+    // Don't trigger if protected (spawn protection or other)
+    if (mission.isActive && !mission.isProtected && mission.phase !== 'failed') {
       mission.failMission('zombie');
       setShowQuestionModal(false);
       setShowFailedModal(true);
@@ -172,7 +173,8 @@ const StreetView = () => {
   };
   
   const handleTrapHitPlayer = (trapType: 'laser' | 'thorns' = 'laser') => {
-    if (mission.isActive) {
+    // Don't trigger if protected (spawn protection)
+    if (mission.isActive && !mission.isProtected && mission.phase !== 'failed') {
       mission.hitByTrap(trapType);
       // Check if lives depleted
       if (mission.lives <= 1) {

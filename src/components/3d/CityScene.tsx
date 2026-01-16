@@ -934,6 +934,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           isNight={isNight}
           isPaused={zombiesPaused}
           isSlowed={slowedZombieIds.has(zombie.id)}
+          behaviorType={zombie.behaviorType}
           onTouchPlayer={(id) => onZombieTouchPlayer?.()}
         />
       ))}
