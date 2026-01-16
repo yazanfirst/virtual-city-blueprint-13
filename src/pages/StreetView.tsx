@@ -17,6 +17,7 @@ import TrapHitFeedback from "@/components/mission/TrapHitFeedback";
 import JumpScareModal from "@/components/mission/JumpScareModal";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
+import { usePlayerStore } from "@/stores/playerStore";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
 import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,6 +63,9 @@ const StreetView = () => {
 
   // Game state
   const { coins, level, xp } = useGameStore();
+  
+  // Player state
+  const { resetToSafeSpawn } = usePlayerStore();
   
   // Mission state
   const mission = useMissionStore();
@@ -175,6 +179,7 @@ const StreetView = () => {
   const handleZombieTouchPlayer = () => {
     // Don't trigger if protected (spawn protection or other)
     if (mission.isActive && !mission.isProtected && mission.phase !== 'failed') {
+      playSounds.zombieGroan();
       mission.failMission('zombie');
       setShowQuestionModal(false);
       setShowFailedModal(true);
@@ -184,9 +189,11 @@ const StreetView = () => {
   const handleTrapHitPlayer = (trapType: 'laser' | 'thorns' = 'laser') => {
     // Don't trigger if protected (spawn protection)
     if (mission.isActive && !mission.isProtected && mission.phase !== 'failed') {
+      playSounds.ouch();
       mission.hitByTrap(trapType);
       // Check if lives depleted
       if (mission.lives <= 1) {
+        playSounds.fail();
         setShowFailedModal(true);
       }
     }
@@ -195,6 +202,7 @@ const StreetView = () => {
   const handleRetryMission = () => {
     setShowFailedModal(false);
     setShowJumpScare(false);
+    resetToSafeSpawn(); // Move player to safe position before retry
     mission.resetMission();
     setShowMissions(true); // Show mission panel to start again
   };
@@ -202,18 +210,20 @@ const StreetView = () => {
   const handleExitMission = () => {
     setShowFailedModal(false);
     setShowJumpScare(false);
+    resetToSafeSpawn(); // Move player to safe position
     mission.resetMission();
   };
   
   const handleQuestionAnswer = (answer: string) => {
     const correct = mission.answerQuestion(answer);
-    const currentQuestion = mission.questions[mission.currentQuestionIndex];
     
     if (!correct) {
-      // Wrong answer - close modal, show deceptive message
+      // Wrong answer - close modal, show deceptive message, play notification
+      playSounds.notification();
       setShowQuestionModal(false);
     } else if (mission.phase === 'completed') {
       // All correct - mission complete
+      playSounds.success();
       setShowQuestionModal(false);
     }
     // Otherwise, next question will show automatically

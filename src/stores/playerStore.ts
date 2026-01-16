@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 
+// Safe spawn position (away from traps/hazards)
+const SAFE_SPAWN_POSITION: [number, number, number] = [0, 0.5, 45];
+
 type PlayerState = {
   position: [number, number, number];
   cameraRotation: { azimuth: number; polar: number };
@@ -7,6 +10,7 @@ type PlayerState = {
   setPosition: (position: [number, number, number]) => void;
   setCameraRotation: (rotation: { azimuth: number; polar: number }) => void;
   incrementJump: () => void;
+  resetToSafeSpawn: () => void;
 };
 
 export const usePlayerStore = create<PlayerState>((set) => ({
@@ -17,4 +21,5 @@ export const usePlayerStore = create<PlayerState>((set) => ({
 
   setPosition: (position) => set({ position }),
   setCameraRotation: (cameraRotation) => set({ cameraRotation }),
+  resetToSafeSpawn: () => set({ position: SAFE_SPAWN_POSITION }),
 }));
