@@ -14,9 +14,11 @@ import QuestionModal from "@/components/mission/QuestionModal";
 import HealthDisplay from "@/components/mission/HealthDisplay";
 import MissionFailedModal from "@/components/mission/MissionFailedModal";
 import TrapHitFeedback from "@/components/mission/TrapHitFeedback";
+import JumpScareModal from "@/components/mission/JumpScareModal";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
+import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
 
 const PanelBox = ({ 
@@ -65,7 +67,11 @@ const StreetView = () => {
   const mission = useMissionStore();
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showFailedModal, setShowFailedModal] = useState(false);
+  const [showJumpScare, setShowJumpScare] = useState(false);
   const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
+  
+  // Game audio
+  useGameAudio();
 
   // Transform spots data to shop brandings - MUST be before useEffect that uses it
   const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
@@ -133,8 +139,11 @@ const StreetView = () => {
   };
 
   const handleEnterShop = (shop: ShopBranding) => {
-    // Check for mission trap (second entry)
+    // Check for mission trap (second entry after wrong answer)
     if (mission.isActive && mission.deceptiveMessageShown && shop.shopId === mission.targetShop?.shopId) {
+      // Trigger jump scare instead of regular fail
+      playSounds.jumpScare();
+      setShowJumpScare(true);
       mission.triggerTrap();
       return;
     }
@@ -185,12 +194,14 @@ const StreetView = () => {
   
   const handleRetryMission = () => {
     setShowFailedModal(false);
+    setShowJumpScare(false);
     mission.resetMission();
     setShowMissions(true); // Show mission panel to start again
   };
   
   const handleExitMission = () => {
     setShowFailedModal(false);
+    setShowJumpScare(false);
     mission.resetMission();
   };
   
@@ -453,11 +464,21 @@ const StreetView = () => {
           {/* Left side - Mission Tab Button */}
           <div className="absolute top-10 md:top-16 left-2 md:left-4 pointer-events-auto" style={{ zIndex: 150 }}>
             <button
-              onClick={() => setShowMissions(true)}
-              className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg"
+              onClick={() => {
+                setShowMissions(true);
+                mission.setNotification(false); // Clear notification when opened
+              }}
+              className="relative flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg"
             >
               <Target className="h-4 w-4 text-primary" />
               <span className="font-display text-xs md:text-sm font-bold uppercase tracking-wider">Missions</span>
+              {/* Notification indicator */}
+              {mission.hasNotification && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                </span>
+              )}
             </button>
           </div>
           
@@ -593,9 +614,16 @@ const StreetView = () => {
         {/* Trap Hit Feedback ("Ouch!") */}
         {mission.isActive && <TrapHitFeedback />}
         
-        {/* Mission Failed Modal */}
+        {/* Jump Scare Modal */}
+        <JumpScareModal
+          isOpen={showJumpScare}
+          onRetry={handleRetryMission}
+          onExit={handleExitMission}
+        />
+        
+        {/* Mission Failed Modal (for non-jumpscare fails) */}
         <MissionFailedModal
-          isOpen={showFailedModal || mission.phase === 'failed'}
+          isOpen={(showFailedModal || mission.phase === 'failed') && !showJumpScare && mission.failReason !== 'jumpscare'}
           failReason={mission.failReason}
           onRetry={handleRetryMission}
           onExit={handleExitMission}
@@ -807,9 +835,16 @@ const StreetView = () => {
       {/* Trap Hit Feedback ("Ouch!") */}
       {mission.isActive && <TrapHitFeedback />}
       
-      {/* Mission Failed Modal */}
+      {/* Jump Scare Modal */}
+      <JumpScareModal
+        isOpen={showJumpScare}
+        onRetry={handleRetryMission}
+        onExit={handleExitMission}
+      />
+      
+      {/* Mission Failed Modal (for non-jumpscare fails) */}
       <MissionFailedModal
-        isOpen={showFailedModal || mission.phase === 'failed'}
+        isOpen={(showFailedModal || mission.phase === 'failed') && !showJumpScare && mission.failReason !== 'jumpscare'}
         failReason={mission.failReason}
         onRetry={handleRetryMission}
         onExit={handleExitMission}
