@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
@@ -12,6 +12,7 @@ import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import MissionPanel from "@/components/mission/MissionPanel";
 import QuestionModal from "@/components/mission/QuestionModal";
 import HealthDisplay from "@/components/mission/HealthDisplay";
+import MissionFailedModal from "@/components/mission/MissionFailedModal";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
@@ -46,6 +47,7 @@ const StreetView = () => {
   const { data: street, isLoading } = useStreetBySlug(streetId || "");
   const { data: spotsData } = useAllSpotsForStreet(streetId || "");
   const { data: spotsWithShops } = useSpotsWithShops(street?.id || "");
+  const navigate = useNavigate();
   const [isMaximized, setIsMaximized] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
@@ -166,6 +168,21 @@ const StreetView = () => {
     if (mission.isActive) {
       mission.hitByTrap();
     }
+  };
+
+  const handleMissionRetry = () => {
+    setShowQuestionModal(false);
+    setIsInsideShop(false);
+    setInteriorShop(null);
+    mission.resetMission();
+  };
+
+  const handleMissionExit = () => {
+    setShowQuestionModal(false);
+    setIsInsideShop(false);
+    setInteriorShop(null);
+    mission.resetMission();
+    navigate("/");
   };
   
   const handleQuestionAnswer = (answer: string) => {
@@ -557,12 +574,17 @@ const StreetView = () => {
         {interiorOverlay}
         
         {/* Question Modal */}
-        <QuestionModal
-          isOpen={showQuestionModal}
-          question={mission.questions[mission.currentQuestionIndex] || null}
-          onAnswer={handleQuestionAnswer}
-          onClose={() => setShowQuestionModal(false)}
-        />
+      <QuestionModal
+        isOpen={showQuestionModal}
+        question={mission.questions[mission.currentQuestionIndex] || null}
+        onAnswer={handleQuestionAnswer}
+        onClose={() => setShowQuestionModal(false)}
+      />
+      <MissionFailedModal
+        isOpen={mission.phase === "failed"}
+        onRetry={handleMissionRetry}
+        onExit={handleMissionExit}
+      />
       </div>
     );
   }
