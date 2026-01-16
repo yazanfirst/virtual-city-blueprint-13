@@ -10,6 +10,7 @@ import BrandedShop from "./BrandedShop";
 import CollectibleItem from "./CollectibleItem";
 import ZombieCharacter from "./ZombieCharacter";
 import LaserTrap from "./LaserTrap";
+import ThornsTrap from "./ThornsTrap";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
@@ -938,13 +939,24 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
 
       {/* === LASER TRAPS (Mission) === */}
-      {missionActive && traps.map((trap) => (
+      {missionActive && traps.filter(t => t.type === 'laser').map((trap) => (
         <LaserTrap
           key={trap.id}
           id={trap.id}
           position={trap.position}
           rotation={trap.rotation}
           length={trap.length}
+          isActive={trap.isActive}
+          onPlayerHit={(id) => onTrapHitPlayer?.()}
+        />
+      ))}
+      
+      {/* === THORNS TRAPS (Mission) === */}
+      {missionActive && traps.filter(t => t.type === 'thorns').map((trap) => (
+        <ThornsTrap
+          key={trap.id}
+          id={trap.id}
+          position={trap.position}
           isActive={trap.isActive}
           onPlayerHit={(id) => onTrapHitPlayer?.()}
         />

@@ -13,6 +13,7 @@ import MissionPanel from "@/components/mission/MissionPanel";
 import QuestionModal from "@/components/mission/QuestionModal";
 import HealthDisplay from "@/components/mission/HealthDisplay";
 import MissionFailedModal from "@/components/mission/MissionFailedModal";
+import TrapHitFeedback from "@/components/mission/TrapHitFeedback";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
@@ -164,15 +165,15 @@ const StreetView = () => {
   
   const handleZombieTouchPlayer = () => {
     if (mission.isActive && !mission.isProtected) {
-      mission.failMission('Caught by zombie');
+      mission.failMission('zombie');
       setShowQuestionModal(false);
       setShowFailedModal(true);
     }
   };
   
-  const handleTrapHitPlayer = () => {
+  const handleTrapHitPlayer = (trapType: 'laser' | 'thorns' = 'laser') => {
     if (mission.isActive) {
-      mission.hitByTrap();
+      mission.hitByTrap(trapType);
       // Check if lives depleted
       if (mission.lives <= 1) {
         setShowFailedModal(true);
@@ -587,9 +588,13 @@ const StreetView = () => {
           onClose={() => setShowQuestionModal(false)}
         />
         
+        {/* Trap Hit Feedback ("Ouch!") */}
+        {mission.isActive && <TrapHitFeedback />}
+        
         {/* Mission Failed Modal */}
         <MissionFailedModal
           isOpen={showFailedModal || mission.phase === 'failed'}
+          failReason={mission.failReason}
           onRetry={handleRetryMission}
           onExit={handleExitMission}
         />
@@ -797,9 +802,13 @@ const StreetView = () => {
       </div>
       {interiorOverlay}
       
+      {/* Trap Hit Feedback ("Ouch!") */}
+      {mission.isActive && <TrapHitFeedback />}
+      
       {/* Mission Failed Modal */}
       <MissionFailedModal
         isOpen={showFailedModal || mission.phase === 'failed'}
+        failReason={mission.failReason}
         onRetry={handleRetryMission}
         onExit={handleExitMission}
       />

@@ -13,12 +13,14 @@ interface LaserTrapProps {
   onPlayerHit: (trapId: string) => void;
 }
 
-const PLAYER_HIT_DISTANCE = 1.2; // How close player needs to be to laser line
-const ZOMBIE_HIT_DISTANCE = 1.5; // Distance for zombie detection
+const PLAYER_HIT_DISTANCE = 0.6; // Reduced - player must be very close to laser line
+const PLAYER_JUMP_HEIGHT_THRESHOLD = 1.0; // Player must jump this high to avoid laser
+const ZOMBIE_HIT_DISTANCE = 1.2; // Distance for zombie detection
 
 /**
  * Laser beam trap that damages player and slows zombies
  * Visual: Red pulsing laser beam between two posts
+ * Player can jump over the laser to avoid damage
  */
 export default function LaserTrap({
   id,
@@ -33,6 +35,7 @@ export default function LaserTrap({
   const pulseRef = useRef(0);
   const hitCooldownRef = useRef(0);
   const zombieCheckRef = useRef(0);
+  const zombieSlowCooldownRef = useRef<Record<string, number>>({});
   
   const playerPosition = usePlayerStore((state) => state.position);
   const { zombies, slowZombie } = useMissionStore();
@@ -81,23 +84,38 @@ export default function LaserTrap({
       const t = Math.max(0, Math.min(1, playerToStart.dot(lineVec) / lineVec.lengthSq()));
       const closestPoint = start.clone().add(lineVec.clone().multiplyScalar(t));
       
-      // Only check X and Z distance (ignore Y)
+      // Only check X and Z distance (ignore Y for distance calc)
       const dx = playerPos.x - closestPoint.x;
       const dz = playerPos.z - closestPoint.z;
-      const distance = Math.sqrt(dx * dx + dz * dz);
+      const horizontalDistance = Math.sqrt(dx * dx + dz * dz);
       
-      if (distance < PLAYER_HIT_DISTANCE) {
+      // Player can avoid laser by jumping high enough
+      // Laser is at Y=0.9, so player needs to be above that
+      if (horizontalDistance < PLAYER_HIT_DISTANCE && playerPos.y < PLAYER_JUMP_HEIGHT_THRESHOLD) {
         onPlayerHit(id);
         hitCooldownRef.current = 1.5; // 1.5 second cooldown between hits
       }
     }
     
+    // Update zombie slow cooldowns
+    for (const zombieId of Object.keys(zombieSlowCooldownRef.current)) {
+      zombieSlowCooldownRef.current[zombieId] -= delta;
+      if (zombieSlowCooldownRef.current[zombieId] <= 0) {
+        delete zombieSlowCooldownRef.current[zombieId];
+      }
+    }
+    
     // Check zombie collision (less frequent for performance)
     zombieCheckRef.current += delta;
-    if (zombieCheckRef.current > 0.2) { // Check every 200ms
+    if (zombieCheckRef.current > 0.15) { // Check every 150ms
       zombieCheckRef.current = 0;
       
       for (const zombie of zombies) {
+        // Skip if this zombie was recently slowed by this trap
+        if (zombieSlowCooldownRef.current[zombie.id] && zombieSlowCooldownRef.current[zombie.id] > 0) {
+          continue;
+        }
+        
         const zombiePos = new THREE.Vector3(...zombie.position);
         const zombieToStart = zombiePos.clone().sub(start);
         
@@ -110,6 +128,8 @@ export default function LaserTrap({
         
         if (distance < ZOMBIE_HIT_DISTANCE) {
           slowZombie(zombie.id);
+          // Set cooldown so we don't spam slow the same zombie
+          zombieSlowCooldownRef.current[zombie.id] = 3.5; // Slightly longer than slow duration
         }
       }
     }

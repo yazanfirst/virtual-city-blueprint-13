@@ -26,11 +26,14 @@ export interface ZombieData {
 
 export interface TrapData {
   id: string;
+  type: 'laser' | 'thorns';
   position: [number, number, number];
   rotation: number;
   length: number;
   isActive: boolean;
 }
+
+export type MissionFailReason = 'zombie' | 'laser' | 'thorns' | 'trap' | 'unknown';
 
 interface MissionState {
   // Mission status
@@ -73,6 +76,9 @@ interface MissionState {
   trapTriggered: boolean;
   deceptiveMessageShown: boolean;
   
+  // Fail reason tracking
+  failReason: MissionFailReason;
+  
   // Recently used shops (to avoid repetition)
   recentlyUsedShopIds: string[];
   
@@ -83,8 +89,8 @@ interface MissionState {
   exitShop: (questions: MissionQuestion[]) => void;
   answerQuestion: (selectedAnswer: string) => boolean;
   triggerTrap: () => void;
-  hitByTrap: () => void;
-  failMission: (reason?: string) => void;
+  hitByTrap: (trapType?: 'laser' | 'thorns') => void;
+  failMission: (reason?: MissionFailReason) => void;
   completeMission: () => void;
   resetMission: () => void;
   setZombies: (zombies: ZombieData[]) => void;
@@ -113,16 +119,23 @@ function generateZombieSpawns(): ZombieData[] {
   ];
 }
 
-// Generate trap positions (laser beams across paths)
+// Generate trap positions (laser beams and thorns traps)
 function generateTrapPositions(): TrapData[] {
   return [
-    { id: 'trap-1', position: [0, 0, 20], rotation: 0, length: 8, isActive: true },
-    { id: 'trap-2', position: [0, 0, -20], rotation: 0, length: 8, isActive: true },
-    { id: 'trap-3', position: [25, 0, 0], rotation: Math.PI / 2, length: 6, isActive: true },
-    { id: 'trap-4', position: [-25, 0, 0], rotation: Math.PI / 2, length: 6, isActive: true },
-    { id: 'trap-5', position: [0, 0, -35], rotation: 0, length: 10, isActive: true },
-    { id: 'trap-6', position: [40, 0, 10], rotation: Math.PI / 4, length: 6, isActive: true },
-    { id: 'trap-7', position: [-40, 0, 10], rotation: -Math.PI / 4, length: 6, isActive: true },
+    // Laser traps
+    { id: 'laser-1', type: 'laser', position: [0, 0, 20], rotation: 0, length: 8, isActive: true },
+    { id: 'laser-2', type: 'laser', position: [0, 0, -20], rotation: 0, length: 8, isActive: true },
+    { id: 'laser-3', type: 'laser', position: [25, 0, 0], rotation: Math.PI / 2, length: 6, isActive: true },
+    { id: 'laser-4', type: 'laser', position: [-25, 0, 0], rotation: Math.PI / 2, length: 6, isActive: true },
+    { id: 'laser-5', type: 'laser', position: [0, 0, -35], rotation: 0, length: 10, isActive: true },
+    // Thorns traps (open/close)
+    { id: 'thorns-1', type: 'thorns', position: [15, 0, 15], rotation: 0, length: 0, isActive: true },
+    { id: 'thorns-2', type: 'thorns', position: [-15, 0, 15], rotation: 0, length: 0, isActive: true },
+    { id: 'thorns-3', type: 'thorns', position: [30, 0, -10], rotation: 0, length: 0, isActive: true },
+    { id: 'thorns-4', type: 'thorns', position: [-30, 0, -10], rotation: 0, length: 0, isActive: true },
+    { id: 'thorns-5', type: 'thorns', position: [0, 0, -50], rotation: 0, length: 0, isActive: true },
+    { id: 'thorns-6', type: 'thorns', position: [20, 0, -25], rotation: 0, length: 0, isActive: true },
+    { id: 'thorns-7', type: 'thorns', position: [-20, 0, -25], rotation: 0, length: 0, isActive: true },
   ];
 }
 
@@ -159,6 +172,8 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   trapTriggered: false,
   deceptiveMessageShown: false,
   
+  failReason: 'unknown',
+  
   recentlyUsedShopIds: [],
 
   activateMission: (targetShop, items) => {
@@ -183,6 +198,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       trapTriggered: false,
       deceptiveMessageShown: false,
       lives: 3,
+      failReason: 'unknown',
       recentlyUsedShopIds: [...state.recentlyUsedShopIds, targetShop.shopId].slice(-5),
     });
   },
@@ -276,7 +292,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     });
   },
 
-  hitByTrap: () => {
+  hitByTrap: (trapType?: 'laser' | 'thorns') => {
     const state = get();
     const newLives = state.lives - 1;
     
@@ -287,17 +303,19 @@ export const useMissionStore = create<MissionState>((set, get) => ({
         phase: 'failed',
         isProtected: false,
         zombiesPaused: true,
+        failReason: trapType || 'trap',
       });
     } else {
       set({ lives: newLives });
     }
   },
 
-  failMission: (reason) => {
+  failMission: (reason?: MissionFailReason) => {
     set({
       phase: 'failed',
       isProtected: false,
       zombiesPaused: true,
+      failReason: reason || 'unknown',
     });
     console.log('Mission failed:', reason);
   },
@@ -331,6 +349,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       trapTriggered: false,
       deceptiveMessageShown: false,
       lives: 3,
+      failReason: 'unknown',
     });
   },
 
