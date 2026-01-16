@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Map, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target } from "lucide-react";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Map as MapIcon, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
@@ -348,7 +348,7 @@ const StreetView = () => {
                 className="bg-background/80 backdrop-blur-md h-6 w-6 md:h-8 md:w-auto p-0 md:px-3"
                 style={{ zIndex: 160 }}
               >
-                <Map className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                <MapIcon className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
                 <span className="hidden md:inline">{show2DMap ? "Hide" : "Map"}</span>
               </Button>
               
@@ -425,7 +425,7 @@ const StreetView = () => {
               <div className="bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-3 md:p-4 shadow-lg w-[90vw] max-w-sm md:max-w-md max-h-[80vh] overflow-auto">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
-                    <Map className="h-4 w-4 text-primary" />
+                    <MapIcon className="h-4 w-4 text-primary" />
                     Street Map
                   </h3>
                   <button 
