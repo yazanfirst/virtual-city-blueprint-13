@@ -131,6 +131,7 @@ const PlayerController = ({
 }: PlayerControllerProps) => {
   const groupRef = useRef<THREE.Group>(null);
   const verticalVelocityRef = useRef(0);
+  const lastStepAtRef = useRef(0);
   const [keys, setKeys] = useState({
     forward: false,
     backward: false,
@@ -227,7 +228,6 @@ const PlayerController = ({
     return surface;
   }, []);
 
-  const lastStepAtRef = useRef(0);
 
   const attemptJump = useCallback(() => {
     const groundInfo = getSurfaceHeight(positionRef.current.x, positionRef.current.z);
