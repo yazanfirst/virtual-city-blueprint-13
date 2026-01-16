@@ -1,19 +1,21 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Map as MapIcon, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target } from "lucide-react";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
-import { useShopItems, ShopItem } from "@/hooks/useShopItems";
+import { ShopItem } from "@/hooks/useShopItems";
 import CityScene, { CameraView } from "@/components/3d/CityScene";
 import ShopDetailModal from "@/components/3d/ShopDetailModal";
 import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import MissionPanel from "@/components/mission/MissionPanel";
 import QuestionModal from "@/components/mission/QuestionModal";
+import HealthDisplay from "@/components/mission/HealthDisplay";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
+import { supabase } from "@/integrations/supabase/client";
 
 const PanelBox = ({ 
   title,
@@ -60,11 +62,46 @@ const StreetView = () => {
   // Mission state
   const mission = useMissionStore();
   const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
+
+  // Transform spots data to shop brandings - MUST be before useEffect that uses it
+  const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
   
-  // Build shop items map for mission
-  const shopItemsMap = useMemo(() => {
-    return new Map<string, ShopItem[]>();
-  }, []);
+  // Fetch all shop items for shops on this street
+  useEffect(() => {
+    const fetchAllShopItems = async () => {
+      if (!shopBrandings || shopBrandings.length === 0) return;
+      
+      // Get all shop IDs that have shops
+      const shopIds = shopBrandings
+        .filter(b => b.hasShop && b.shopId)
+        .map(b => b.shopId);
+      
+      if (shopIds.length === 0) return;
+      
+      const { data, error } = await supabase
+        .from('shop_items')
+        .select('*')
+        .in('shop_id', shopIds);
+      
+      if (error) {
+        console.error('Failed to fetch shop items:', error);
+        return;
+      }
+      
+      // Group by shop_id
+      const itemsByShop = new Map<string, ShopItem[]>();
+      for (const item of data || []) {
+        const existing = itemsByShop.get(item.shop_id) || [];
+        existing.push(item);
+        itemsByShop.set(item.shop_id, existing);
+      }
+      
+      setShopItemsMap(itemsByShop);
+    };
+    
+    fetchAllShopItems();
+  }, [shopBrandings.length]); // use length instead of array to avoid infinite loop
 
   // Find the spot ID for the selected shop (to highlight in 2D map)
   const selectedSpotId = selectedShop?.spotId || "";
@@ -116,6 +153,13 @@ const StreetView = () => {
   const handleZombieTouchPlayer = () => {
     if (mission.isActive && !mission.isProtected) {
       mission.failMission('Caught by zombie');
+      setShowQuestionModal(false);
+    }
+  };
+  
+  const handleTrapHitPlayer = () => {
+    if (mission.isActive) {
+      mission.hitByTrap();
     }
   };
   
@@ -133,8 +177,7 @@ const StreetView = () => {
     // Otherwise, next question will show automatically
   };
 
-  // Transform spots data to shop brandings
-  const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
+  // shopBrandings already declared above
 
   // Request fullscreen + landscape orientation when maximized on mobile
   useEffect(() => {
@@ -274,7 +317,15 @@ const StreetView = () => {
             onShopClick={handleShopClick}
             forcedTimeOfDay={mission.isActive ? "night" : null}
             onZombieTouchPlayer={handleZombieTouchPlayer}
+            onTrapHitPlayer={handleTrapHitPlayer}
           />
+          
+          {/* Health Display (Lives) */}
+          {mission.isActive && (
+            <div className="absolute top-14 left-2 md:left-4 pointer-events-none" style={{ zIndex: 150 }}>
+              <HealthDisplay />
+            </div>
+          )}
           
           {/* Shop Detail Modal */}
           {showShopModal && (
