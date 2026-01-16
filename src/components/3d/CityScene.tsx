@@ -8,9 +8,11 @@ import PlayerController from "./PlayerController";
 import MobileControls from "./MobileControls";
 import BrandedShop from "./BrandedShop";
 import CollectibleItem from "./CollectibleItem";
+import ZombieCharacter from "./ZombieCharacter";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
+import { useMissionStore } from "@/stores/missionStore";
 import { ShopBranding } from "@/hooks/use3DShops";
 
 export type CameraView = "thirdPerson" | "firstPerson";
@@ -21,6 +23,8 @@ type CitySceneProps = {
   cameraView?: CameraView;
   shopBrandings?: ShopBranding[];
   onShopClick?: (branding: ShopBranding) => void;
+  forcedTimeOfDay?: "day" | "night" | null; // For mission control
+  onZombieTouchPlayer?: () => void;
 };
 
 type InnerProps = {
@@ -30,6 +34,7 @@ type InnerProps = {
   cameraRotation: { azimuth: number; polar: number };
   shopBrandings: ShopBranding[];
   onShopClick?: (branding: ShopBranding) => void;
+  onZombieTouchPlayer?: () => void;
 };
 
 // Pastel color palette
@@ -193,7 +198,11 @@ export default function CityScene({
   cameraView = "thirdPerson",
   shopBrandings = [],
   onShopClick,
+  forcedTimeOfDay = null,
+  onZombieTouchPlayer,
 }: CitySceneProps) {
+  // Use forced time of day if provided (for mission night mode)
+  const effectiveTimeOfDay = forcedTimeOfDay ?? timeOfDay;
   const deviceType = useDeviceType();
   const isMobile = deviceType === 'mobile';
   const [joystickInput, setJoystickInput] = useState({ x: 0, y: 0 });
@@ -268,12 +277,13 @@ export default function CityScene({
       >
         <Suspense fallback={null}>
           <SceneInner 
-            timeOfDay={timeOfDay} 
+            timeOfDay={effectiveTimeOfDay} 
             cameraView={cameraView}
             joystickInput={joystickInput}
             cameraRotation={cameraRotation}
             shopBrandings={shopBrandings}
             onShopClick={onShopClick}
+            onZombieTouchPlayer={onZombieTouchPlayer}
           />
         </Suspense>
       </Canvas>
@@ -745,10 +755,11 @@ function LaneMarking({ position, rotation = 0 }: { position: [number, number, nu
   );
 }
 
-function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick }: InnerProps) {
+function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
+  const { zombies, zombiesPaused, isActive: missionActive } = useMissionStore();
 
   useEffect(() => {
     scene.background = null;
@@ -897,6 +908,18 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           type={coin.type}
           isNight={isNight}
           onCollect={handleCollectItem}
+        />
+      ))}
+
+      {/* === ZOMBIES (Mission) === */}
+      {missionActive && zombies.map((zombie) => (
+        <ZombieCharacter
+          key={zombie.id}
+          id={zombie.id}
+          position={zombie.position}
+          isNight={isNight}
+          isPaused={zombiesPaused}
+          onTouchPlayer={(id) => onZombieTouchPlayer?.()}
         />
       ))}
 
