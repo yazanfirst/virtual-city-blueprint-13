@@ -20,8 +20,8 @@ export default function HealthDisplay({ className = '' }: HealthDisplayProps) {
           key={index}
           className={`h-6 w-6 transition-all duration-300 ${
             index < lives
-              ? 'text-red-500 fill-red-500 scale-100'
-              : 'text-gray-600 fill-transparent scale-90'
+              ? 'text-destructive fill-destructive scale-100'
+              : 'text-muted-foreground/50 fill-transparent scale-90'
           }`}
         />
       ))}
