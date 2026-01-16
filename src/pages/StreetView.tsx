@@ -157,7 +157,7 @@ const StreetView = () => {
   
   const handleZombieTouchPlayer = () => {
     if (mission.isActive && !mission.isProtected) {
-      mission.startZombieAttack();
+      mission.failMission('Caught by zombie');
       setShowQuestionModal(false);
     }
   };
