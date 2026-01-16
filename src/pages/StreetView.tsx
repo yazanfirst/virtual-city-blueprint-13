@@ -130,6 +130,14 @@ const StreetView = () => {
       // Non-target shops are ignored during escape phase
       return;
     }
+
+    // After wrong answer: allow ONE return to the *target* shop (it will trigger the trap)
+    if (mission.isActive && mission.phase === 'question' && mission.deceptiveMessageShown) {
+      if (shop.shopId === mission.targetShop?.shopId) {
+        handleEnterShop(shop);
+      }
+      return;
+    }
     
     // During observation/question phase, don't allow any shop clicks
     if (mission.isActive && (mission.phase === 'observation' || mission.phase === 'question')) {
@@ -145,8 +153,7 @@ const StreetView = () => {
   const handleEnterShop = (shop: ShopBranding) => {
     // Check for mission trap (second entry after wrong answer)
     if (mission.isActive && mission.deceptiveMessageShown && shop.shopId === mission.targetShop?.shopId) {
-      // Trigger jump scare instead of regular fail
-      playSounds.jumpScare();
+      // Trigger jump scare modal (NO sound)
       setShowJumpScare(true);
       mission.triggerTrap();
       return;
@@ -179,7 +186,6 @@ const StreetView = () => {
   const handleZombieTouchPlayer = () => {
     // Don't trigger if protected (spawn protection or other)
     if (mission.isActive && !mission.isProtected && mission.phase !== 'failed') {
-      playSounds.zombieGroan();
       mission.failMission('zombie');
       setShowQuestionModal(false);
       setShowFailedModal(true);
@@ -193,7 +199,6 @@ const StreetView = () => {
       mission.hitByTrap(trapType);
       // Check if lives depleted
       if (mission.lives <= 1) {
-        playSounds.fail();
         setShowFailedModal(true);
       }
     }
@@ -223,7 +228,6 @@ const StreetView = () => {
       setShowQuestionModal(false);
     } else if (mission.phase === 'completed') {
       // All correct - mission complete
-      playSounds.success();
       setShowQuestionModal(false);
     }
     // Otherwise, next question will show automatically

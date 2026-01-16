@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import LowPolyCharacter from './LowPolyCharacter';
 import { usePlayerStore } from '@/stores/playerStore';
+import { playSounds } from '@/hooks/useGameAudio';
 
 const PLAYER_RADIUS = 0.45;
 const STEP_HEIGHT = 0.28;
@@ -226,11 +227,14 @@ const PlayerController = ({
     return surface;
   }, []);
 
+  const lastStepAtRef = useRef(0);
+
   const attemptJump = useCallback(() => {
     const groundInfo = getSurfaceHeight(positionRef.current.x, positionRef.current.z);
     const onGround = positionRef.current.y <= groundInfo.height + 0.001 && verticalVelocityRef.current === 0;
 
     if (!isJumping && onGround) {
+      playSounds.jump();
       verticalVelocityRef.current = JUMP_VELOCITY;
       setIsJumping(true);
     }
@@ -373,6 +377,14 @@ const PlayerController = ({
     // Apply jump/gravity
     const groundInfo = getSurfaceHeight(positionRef.current.x, positionRef.current.z);
     const groundHeight = groundInfo.height;
+
+    // Walking footsteps (soft)
+    const now = performance.now();
+    const onGroundForSteps = positionRef.current.y <= groundHeight + 0.001 && verticalVelocityRef.current === 0;
+    if (positionChanged && onGroundForSteps && !isJumping && now - lastStepAtRef.current > 450) {
+      playSounds.step();
+      lastStepAtRef.current = now;
+    }
 
     if (isJumping || positionRef.current.y > groundHeight) {
       verticalVelocityRef.current -= GRAVITY;
