@@ -3,12 +3,22 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { usePlayerStore } from '@/stores/playerStore';
 
+type TrapZone = {
+  position: [number, number, number];
+  rotation?: number;
+  length?: number;
+  isActive?: boolean;
+};
+
 interface ZombieProps {
   id: string;
   position: [number, number, number];
   speed?: number;
   isNight?: boolean;
   isPaused?: boolean;
+  traps?: TrapZone[];
+  trapSlowMultiplier?: number;
+  trapSlowDistance?: number;
   onTouchPlayer: (zombieId: string) => void;
 }
 
@@ -27,6 +37,9 @@ export default function ZombieCharacter({
   speed = 0.025,
   isNight = true,
   isPaused = false,
+  traps,
+  trapSlowMultiplier = 0.35,
+  trapSlowDistance = 1.1,
   onTouchPlayer,
 }: ZombieProps) {
   const groupRef = useRef<THREE.Group>(null);
@@ -56,51 +69,72 @@ export default function ZombieCharacter({
   
   useFrame((_, delta) => {
     if (!groupRef.current || isPaused) return;
-    
+
     const targetX = playerPosition[0];
     const targetZ = playerPosition[2];
-    
+
     // Calculate direction to player
     const dx = targetX - positionRef.current.x;
     const dz = targetZ - positionRef.current.z;
     const distance = Math.sqrt(dx * dx + dz * dz);
-    
+
     // Check for collision with player
     if (distance < PLAYER_COLLISION_DISTANCE) {
       onTouchPlayer(id);
       return;
     }
-    
+
+    // Laser traps slow zombies when they pass through
+    let effectiveSpeed = speed;
+    if (traps && traps.length > 0) {
+      const p = new THREE.Vector3(positionRef.current.x, 0, positionRef.current.z);
+
+      for (const trap of traps) {
+        if (trap.isActive === false) continue;
+
+        const tPos = new THREE.Vector3(...trap.position);
+        const rot = trap.rotation ?? 0;
+        const len = trap.length ?? 8;
+        const halfLen = len / 2;
+
+        const cos = Math.cos(rot);
+        const sin = Math.sin(rot);
+
+        const start = new THREE.Vector3(
+          tPos.x - halfLen * sin,
+          0,
+          tPos.z - halfLen * cos,
+        );
+        const end = new THREE.Vector3(
+          tPos.x + halfLen * sin,
+          0,
+          tPos.z + halfLen * cos,
+        );
+
+        const lineVec = end.clone().sub(start);
+        const pToStart = p.clone().sub(start);
+        const t = Math.max(0, Math.min(1, pToStart.dot(lineVec) / lineVec.lengthSq()));
+        const closestPoint = start.clone().add(lineVec.multiplyScalar(t));
+
+        const ddx = p.x - closestPoint.x;
+        const ddz = p.z - closestPoint.z;
+        const distToLine = Math.sqrt(ddx * ddx + ddz * ddz);
+
+        if (distToLine < trapSlowDistance) {
+          effectiveSpeed = speed * trapSlowMultiplier;
+          break;
+        }
+      }
+    }
+
     // Move toward player (normalized direction * speed)
     if (distance > 0.1) {
-      const moveX = (dx / distance) * speed * delta * 60;
-      const moveZ = (dz / distance) * speed * delta * 60;
-      
+      const moveX = (dx / distance) * effectiveSpeed * delta * 60;
+      const moveZ = (dz / distance) * effectiveSpeed * delta * 60;
+
       positionRef.current.x += moveX;
       positionRef.current.z += moveZ;
     }
-    
-    // Update group position
-    groupRef.current.position.copy(positionRef.current);
-    
-    // Face the player
-    groupRef.current.rotation.y = getFacingAngle(positionRef.current, playerPosition);
-    
-    // Shambling walk animation (slower and more erratic than NPC)
-    walkPhaseRef.current += delta * 4;
-    const swing = Math.sin(walkPhaseRef.current) * 0.25;
-    const armRaise = 0.4; // Arms raised forward like a zombie
-    
-    if (leftArmRef.current) {
-      leftArmRef.current.rotation.x = -armRaise + swing * 0.5;
-      leftArmRef.current.rotation.z = -0.2;
-    }
-    if (rightArmRef.current) {
-      rightArmRef.current.rotation.x = -armRaise - swing * 0.5;
-      rightArmRef.current.rotation.z = 0.2;
-    }
-    if (leftLegRef.current) leftLegRef.current.rotation.x = -swing;
-    if (rightLegRef.current) rightLegRef.current.rotation.x = swing;
   });
   
   // Reset position if initial position changes

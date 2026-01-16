@@ -210,6 +210,9 @@ export default function CityScene({
   const deviceType = useDeviceType();
   const isMobile = deviceType === 'mobile';
   const [joystickInput, setJoystickInput] = useState({ x: 0, y: 0 });
+
+  // Freeze controls during the mission failed cinematic
+  const isMissionFrozen = useMissionStore((s) => s.isActive && s.phase === "failed");
   
   // Use store for camera rotation to persist across game mode changes
   const { cameraRotation, setCameraRotation, incrementJump } = usePlayerStore();
@@ -218,20 +221,23 @@ export default function CityScene({
   const lastMousePosRef = useRef({ x: 0, y: 0 });
 
   const handleJoystickMove = useCallback((x: number, y: number) => {
+    if (isMissionFrozen) return;
     setJoystickInput({ x, y });
-  }, []);
+  }, [isMissionFrozen]);
 
   const handleJump = useCallback(() => {
+    if (isMissionFrozen) return;
     incrementJump();
-  }, [incrementJump]);
+  }, [incrementJump, isMissionFrozen]);
 
   const handleCameraMove = useCallback((deltaX: number, deltaY: number) => {
+    if (isMissionFrozen) return;
     setCameraRotation({
       azimuth: cameraRotation.azimuth + deltaX,
       // Polar range: 0.1 (looking up at sky) to 1.6 (looking down) - full vertical freedom
       polar: Math.max(0.1, Math.min(1.6, cameraRotation.polar + deltaY)),
     });
-  }, [cameraRotation, setCameraRotation]);
+  }, [cameraRotation, setCameraRotation, isMissionFrozen]);
 
   // Desktop mouse controls for camera rotation
   useEffect(() => {
@@ -292,14 +298,14 @@ export default function CityScene({
           />
         </Suspense>
       </Canvas>
-      {isMobile && (
+      {isMobile && !isMissionFrozen && (
         <MobileControls
           onJoystickMove={handleJoystickMove}
           onCameraMove={handleCameraMove}
           onJump={handleJump}
         />
       )}
-      {!isMobile && (
+      {!isMobile && !isMissionFrozen && (
         <div
           className="pointer-events-none absolute bottom-4 right-4 flex flex-col items-end"
           style={{ zIndex: 55 }}
@@ -764,7 +770,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
-  const { zombies, zombiesPaused, traps, isActive: missionActive } = useMissionStore();
+  const { zombies, zombiesPaused, traps, isActive: missionActive, phase } = useMissionStore();
 
   useEffect(() => {
     scene.background = null;
@@ -923,8 +929,11 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           id={zombie.id}
           position={zombie.position}
           isNight={isNight}
-          isPaused={zombiesPaused}
-          onTouchPlayer={(id) => onZombieTouchPlayer?.()}
+          traps={traps}
+          // During the failed cinematic, zombies keep moving and swarm the player
+          isPaused={phase === 'failed' ? false : zombiesPaused}
+          speed={phase === 'failed' ? 0.055 : undefined}
+          onTouchPlayer={() => onZombieTouchPlayer?.()}
         />
       ))}
 
@@ -937,14 +946,14 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           rotation={trap.rotation}
           length={trap.length}
           isActive={trap.isActive}
-          onPlayerHit={(id) => onTrapHitPlayer?.()}
+          onPlayerHit={() => onTrapHitPlayer?.()}
         />
       ))}
 
       {/* === PLAYER CHARACTER === */}
       <PlayerController 
         isNight={isNight} 
-        speed={0.2} 
+        speed={missionActive && phase === 'failed' ? 0 : 0.2} 
         joystickInput={joystickInput} 
         viewMode={cameraView}
         cameraRotation={cameraRotation}
