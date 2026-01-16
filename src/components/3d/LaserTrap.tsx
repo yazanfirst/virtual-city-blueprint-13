@@ -13,9 +13,9 @@ interface LaserTrapProps {
   onPlayerHit: (trapId: string) => void;
 }
 
-const PLAYER_HIT_DISTANCE = 0.6; // Reduced - player must be very close to laser line
-const PLAYER_JUMP_HEIGHT_THRESHOLD = 1.0; // Player must jump this high to avoid laser
-const ZOMBIE_HIT_DISTANCE = 1.2; // Distance for zombie detection
+const PLAYER_HIT_DISTANCE = 0.25; // Player must actually touch the laser beam
+const PLAYER_JUMP_HEIGHT_THRESHOLD = 0.7; // Player must jump this high to avoid laser
+const ZOMBIE_HIT_DISTANCE = 0.8; // Distance for zombie detection
 
 /**
  * Laser beam trap that damages player and slows zombies
