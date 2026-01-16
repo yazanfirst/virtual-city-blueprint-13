@@ -12,7 +12,7 @@ export type MissionPhase =
 
 export interface MissionQuestion {
   id: string;
-  template: 'price' | 'count' | 'position' | 'existence';
+  template: 'price' | 'count' | 'position' | 'existence' | 'shop';
   questionText: string;
   correctAnswer: string;
   options: string[];
@@ -24,11 +24,23 @@ export interface ZombieData {
   isActive: boolean;
 }
 
+export interface TrapData {
+  id: string;
+  position: [number, number, number];
+  rotation: number;
+  length: number;
+  isActive: boolean;
+}
+
 interface MissionState {
   // Mission status
   isActive: boolean;
   phase: MissionPhase;
   missionNumber: number;
+  
+  // Lives system (3 hearts)
+  lives: number;
+  maxLives: number;
   
   // Target shop
   targetShop: ShopBranding | null;
@@ -48,6 +60,9 @@ interface MissionState {
   zombies: ZombieData[];
   zombiesPaused: boolean;
   
+  // Trap state
+  traps: TrapData[];
+  
   // Protection state (after exiting shop)
   isProtected: boolean;
   
@@ -65,6 +80,7 @@ interface MissionState {
   exitShop: (questions: MissionQuestion[]) => void;
   answerQuestion: (selectedAnswer: string) => boolean;
   triggerTrap: () => void;
+  hitByTrap: () => void;
   failMission: (reason?: string) => void;
   completeMission: () => void;
   resetMission: () => void;
@@ -74,11 +90,39 @@ interface MissionState {
   showDeceptiveMessage: () => void;
 }
 
+// Generate zombie spawn positions (more zombies, spread around)
+function generateZombieSpawns(): ZombieData[] {
+  return [
+    { id: 'zombie-1', position: [-35, 0.25, -35], isActive: true },
+    { id: 'zombie-2', position: [35, 0.25, -35], isActive: true },
+    { id: 'zombie-3', position: [0, 0.25, -50], isActive: true },
+    { id: 'zombie-4', position: [-45, 0.25, 0], isActive: true },
+    { id: 'zombie-5', position: [45, 0.25, 0], isActive: true },
+    { id: 'zombie-6', position: [-20, 0.25, -45], isActive: true },
+    { id: 'zombie-7', position: [20, 0.25, -45], isActive: true },
+  ];
+}
+
+// Generate trap positions (laser beams across paths)
+function generateTrapPositions(): TrapData[] {
+  return [
+    { id: 'trap-1', position: [0, 0, 15], rotation: 0, length: 10, isActive: true },
+    { id: 'trap-2', position: [0, 0, -25], rotation: 0, length: 10, isActive: true },
+    { id: 'trap-3', position: [30, 0, 0], rotation: Math.PI / 2, length: 8, isActive: true },
+    { id: 'trap-4', position: [-30, 0, 0], rotation: Math.PI / 2, length: 8, isActive: true },
+    { id: 'trap-5', position: [0, 0, -40], rotation: 0, length: 12, isActive: true },
+  ];
+}
+
 export const useMissionStore = create<MissionState>((set, get) => ({
   // Initial state
   isActive: false,
   phase: 'inactive',
   missionNumber: 1,
+  
+  // Lives
+  lives: 3,
+  maxLives: 3,
   
   targetShop: null,
   targetShopItems: [],
@@ -94,6 +138,8 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   zombies: [],
   zombiesPaused: false,
   
+  traps: [],
+  
   isProtected: false,
   
   trapTriggered: false,
@@ -103,13 +149,6 @@ export const useMissionStore = create<MissionState>((set, get) => ({
 
   activateMission: (targetShop, items) => {
     const state = get();
-    
-    // Generate zombie spawn positions (safe distance from player start)
-    const zombieSpawns: ZombieData[] = [
-      { id: 'zombie-1', position: [-35, 0.25, -35], isActive: true },
-      { id: 'zombie-2', position: [35, 0.25, -35], isActive: true },
-      { id: 'zombie-3', position: [0, 0.25, -45], isActive: true },
-    ];
     
     set({
       isActive: true,
@@ -122,11 +161,13 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       currentQuestionIndex: 0,
       questionsAnswered: 0,
       questionsCorrect: 0,
-      zombies: zombieSpawns,
+      zombies: generateZombieSpawns(),
       zombiesPaused: false,
+      traps: generateTrapPositions(),
       isProtected: false,
       trapTriggered: false,
       deceptiveMessageShown: false,
+      lives: 3,
       recentlyUsedShopIds: [...state.recentlyUsedShopIds, targetShop.shopId].slice(-5),
     });
   },
@@ -197,6 +238,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
         phase: 'completed',
         zombies: [],
         zombiesPaused: true,
+        traps: [],
       });
       return true;
     }
@@ -219,6 +261,23 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     });
   },
 
+  hitByTrap: () => {
+    const state = get();
+    const newLives = state.lives - 1;
+    
+    if (newLives <= 0) {
+      // No more lives - fail mission
+      set({
+        lives: 0,
+        phase: 'failed',
+        isProtected: false,
+        zombiesPaused: true,
+      });
+    } else {
+      set({ lives: newLives });
+    }
+  },
+
   failMission: (reason) => {
     set({
       phase: 'failed',
@@ -233,6 +292,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       phase: 'completed',
       zombies: [],
       zombiesPaused: true,
+      traps: [],
     });
   },
 
@@ -250,9 +310,11 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       questionsCorrect: 0,
       zombies: [],
       zombiesPaused: false,
+      traps: [],
       isProtected: false,
       trapTriggered: false,
       deceptiveMessageShown: false,
+      lives: 3,
     });
   },
 

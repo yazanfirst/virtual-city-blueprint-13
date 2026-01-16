@@ -91,8 +91,12 @@ export default function MissionPanel({
             ESCAPE!
           </span>
         </div>
+        <div className={`bg-red-900/50 rounded-lg px-3 py-2 mb-2 border border-red-500/30`}>
+          <p className="text-[10px] text-red-300 uppercase tracking-wider mb-1">Target Shop:</p>
+          <p className="text-white font-bold text-sm">{targetShop?.shopName || 'Unknown'}</p>
+        </div>
         <p className={`text-red-200 ${isCompact ? 'text-xs' : 'text-sm'}`}>
-          Zombies are coming! Reach <span className="font-bold text-white">{targetShop?.shopName || 'the target shop'}</span> before they catch you!
+          Zombies are coming! Avoid laser traps and reach the target shop!
         </p>
       </div>
     );
@@ -107,8 +111,12 @@ export default function MissionPanel({
             OBSERVE
           </span>
         </div>
+        <div className={`bg-blue-900/50 rounded-lg px-3 py-2 mb-2 border border-blue-500/30`}>
+          <p className="text-[10px] text-blue-300 uppercase tracking-wider mb-1">Current Shop:</p>
+          <p className="text-white font-bold text-sm">{targetShop?.shopName || 'Unknown'}</p>
+        </div>
         <p className={`text-blue-200 ${isCompact ? 'text-xs' : 'text-sm'}`}>
-          You're safe for now. Study everything carefully — item names, prices, positions. You'll be tested when you leave.
+          You're safe! Study everything — item names, prices, positions. You'll be tested when you leave.
         </p>
       </div>
     );

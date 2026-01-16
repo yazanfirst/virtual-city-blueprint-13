@@ -9,6 +9,7 @@ import MobileControls from "./MobileControls";
 import BrandedShop from "./BrandedShop";
 import CollectibleItem from "./CollectibleItem";
 import ZombieCharacter from "./ZombieCharacter";
+import LaserTrap from "./LaserTrap";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
@@ -25,6 +26,7 @@ type CitySceneProps = {
   onShopClick?: (branding: ShopBranding) => void;
   forcedTimeOfDay?: "day" | "night" | null; // For mission control
   onZombieTouchPlayer?: () => void;
+  onTrapHitPlayer?: () => void;
 };
 
 type InnerProps = {
@@ -35,6 +37,7 @@ type InnerProps = {
   shopBrandings: ShopBranding[];
   onShopClick?: (branding: ShopBranding) => void;
   onZombieTouchPlayer?: () => void;
+  onTrapHitPlayer?: () => void;
 };
 
 // Pastel color palette
@@ -200,6 +203,7 @@ export default function CityScene({
   onShopClick,
   forcedTimeOfDay = null,
   onZombieTouchPlayer,
+  onTrapHitPlayer,
 }: CitySceneProps) {
   // Use forced time of day if provided (for mission night mode)
   const effectiveTimeOfDay = forcedTimeOfDay ?? timeOfDay;
@@ -284,6 +288,7 @@ export default function CityScene({
             shopBrandings={shopBrandings}
             onShopClick={onShopClick}
             onZombieTouchPlayer={onZombieTouchPlayer}
+            onTrapHitPlayer={onTrapHitPlayer}
           />
         </Suspense>
       </Canvas>
@@ -755,11 +760,11 @@ function LaneMarking({ position, rotation = 0 }: { position: [number, number, nu
   );
 }
 
-function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer }: InnerProps) {
+function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
-  const { zombies, zombiesPaused, isActive: missionActive } = useMissionStore();
+  const { zombies, zombiesPaused, traps, isActive: missionActive } = useMissionStore();
 
   useEffect(() => {
     scene.background = null;
@@ -920,6 +925,19 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           isNight={isNight}
           isPaused={zombiesPaused}
           onTouchPlayer={(id) => onZombieTouchPlayer?.()}
+        />
+      ))}
+
+      {/* === LASER TRAPS (Mission) === */}
+      {missionActive && traps.map((trap) => (
+        <LaserTrap
+          key={trap.id}
+          id={trap.id}
+          position={trap.position}
+          rotation={trap.rotation}
+          length={trap.length}
+          isActive={trap.isActive}
+          onPlayerHit={(id) => onTrapHitPlayer?.()}
         />
       ))}
 
