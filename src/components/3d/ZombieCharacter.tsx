@@ -14,13 +14,14 @@ interface ZombieProps {
 }
 
 const PLAYER_COLLISION_DISTANCE = 1.2; // Distance at which zombie "touches" player
+const PLAYER_JUMP_HEIGHT_THRESHOLD = 0.8; // Player must be at least this high to avoid zombie touch
 
 /**
  * Zombie NPC that slowly chases the player.
  * Rule-based behavior - NO AI.
  * - Walks toward player position
  * - Slow, predictable movement
- * - Detects collision with player
+ * - Detects collision with player (checks Y position for jump avoidance)
  */
 export default function ZombieCharacter({
   id,
@@ -60,17 +61,23 @@ export default function ZombieCharacter({
     if (!groupRef.current) return;
     
     const targetX = playerPosition[0];
+    const targetY = playerPosition[1]; // Player Y position (height)
     const targetZ = playerPosition[2];
     
-    // Calculate direction to player
+    // Calculate direction to player (horizontal only)
     const dx = targetX - positionRef.current.x;
     const dz = targetZ - positionRef.current.z;
     const distance = Math.sqrt(dx * dx + dz * dz);
     
     // Check for collision with player - ALWAYS check, even when paused
+    // BUT only if player is NOT jumping high enough (Y position check)
     if (distance < PLAYER_COLLISION_DISTANCE) {
-      onTouchPlayer(id);
-      // Don't return - zombie should keep moving!
+      // Player Y is relative to ground (0), zombie height is about 1.5
+      // If player Y > threshold, they're jumping over the zombie
+      if (targetY < PLAYER_JUMP_HEIGHT_THRESHOLD) {
+        onTouchPlayer(id);
+        // Don't return - zombie should keep moving!
+      }
     }
     
     // Don't move if paused, but still check collision above

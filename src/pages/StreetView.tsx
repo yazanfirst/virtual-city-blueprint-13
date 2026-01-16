@@ -125,7 +125,8 @@ const StreetView = () => {
       return;
     }
     
-    // Normal mode - show shop modal
+    // Mission completed or inactive - all shops are clickable normally
+    // (This handles both normal mode and post-mission state)
     setSelectedShop(shop);
     setShowShopModal(true);
   };
@@ -342,7 +343,7 @@ const StreetView = () => {
             cameraView={cameraView}
             shopBrandings={shopBrandings}
             onShopClick={handleShopClick}
-            forcedTimeOfDay={mission.isActive ? "night" : null}
+            forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
             onZombieTouchPlayer={handleZombieTouchPlayer}
             onTrapHitPlayer={handleTrapHitPlayer}
           />
@@ -721,6 +722,9 @@ const StreetView = () => {
                 cameraView={cameraView} 
                 shopBrandings={shopBrandings}
                 onShopClick={handleShopClick}
+                forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
+                onZombieTouchPlayer={handleZombieTouchPlayer}
+                onTrapHitPlayer={handleTrapHitPlayer}
               />
               
               {/* Shop Detail Modal */}

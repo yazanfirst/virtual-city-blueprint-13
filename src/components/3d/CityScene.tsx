@@ -764,7 +764,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
-  const { zombies, zombiesPaused, traps, isActive: missionActive, slowedZombieIds, slowZombie, targetShop } = useMissionStore();
+  const { zombies, zombiesPaused, traps, isActive: missionActive, slowedZombieIds, slowZombie, targetShop, phase: missionPhase } = useMissionStore();
 
   useEffect(() => {
     scene.background = null;
@@ -853,8 +853,10 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {mainBoulevardShops.map((shop, i) => {
         const branding = getBrandingAtPosition(shop.x, shop.z);
         if (branding) {
-          // During mission, only target shop is clickable
-          const isClickable = !missionActive || branding.shopId === targetShop?.shopId;
+          // During active mission (escape phase only), only target shop is clickable
+          // During inactive or completed mission, ALL shops are clickable
+          const isEscapePhase = missionActive && missionPhase === 'escape';
+          const isClickable = !isEscapePhase || branding.shopId === targetShop?.shopId;
           return (
             <BrandedShop 
               key={`main-${i}`} 
@@ -869,8 +871,10 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {crossStreetShops.map((shop, i) => {
         const branding = getBrandingAtPosition(shop.x, shop.z);
         if (branding) {
-          // During mission, only target shop is clickable
-          const isClickable = !missionActive || branding.shopId === targetShop?.shopId;
+          // During active mission (escape phase only), only target shop is clickable
+          // During inactive or completed mission, ALL shops are clickable
+          const isEscapePhase = missionActive && missionPhase === 'escape';
+          const isClickable = !isEscapePhase || branding.shopId === targetShop?.shopId;
           return (
             <BrandedShop 
               key={`cross-${i}`} 
