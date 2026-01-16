@@ -69,6 +69,7 @@ interface MissionState {
   // Trap state
   trapTriggered: boolean;
   deceptiveMessageShown: boolean;
+  zombieAttackActive: boolean;
   
   // Recently used shops (to avoid repetition)
   recentlyUsedShopIds: string[];
@@ -82,6 +83,7 @@ interface MissionState {
   triggerTrap: () => void;
   hitByTrap: () => void;
   failMission: (reason?: string) => void;
+  startZombieAttack: () => void;
   completeMission: () => void;
   resetMission: () => void;
   setZombies: (zombies: ZombieData[]) => void;
@@ -114,6 +116,8 @@ function generateTrapPositions(): TrapData[] {
   ];
 }
 
+let zombieAttackTimeout: ReturnType<typeof setTimeout> | null = null;
+
 export const useMissionStore = create<MissionState>((set, get) => ({
   // Initial state
   isActive: false,
@@ -144,6 +148,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   
   trapTriggered: false,
   deceptiveMessageShown: false,
+  zombieAttackActive: false,
   
   recentlyUsedShopIds: [],
 
@@ -279,15 +284,49 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   },
 
   failMission: (reason) => {
+    if (zombieAttackTimeout) {
+      clearTimeout(zombieAttackTimeout);
+      zombieAttackTimeout = null;
+    }
     set({
       phase: 'failed',
       isProtected: false,
       zombiesPaused: true,
+      zombieAttackActive: false,
     });
     console.log('Mission failed:', reason);
   },
 
+  startZombieAttack: () => {
+    const state = get();
+    if (state.zombieAttackActive || state.phase === 'failed') return;
+
+    if (zombieAttackTimeout) {
+      clearTimeout(zombieAttackTimeout);
+      zombieAttackTimeout = null;
+    }
+
+    set({
+      zombieAttackActive: true,
+      isProtected: false,
+      zombiesPaused: false,
+    });
+
+    zombieAttackTimeout = setTimeout(() => {
+      set({
+        phase: 'failed',
+        zombiesPaused: true,
+        zombieAttackActive: false,
+      });
+      zombieAttackTimeout = null;
+    }, 1500);
+  },
+
   completeMission: () => {
+    if (zombieAttackTimeout) {
+      clearTimeout(zombieAttackTimeout);
+      zombieAttackTimeout = null;
+    }
     set({
       phase: 'completed',
       zombies: [],
@@ -297,6 +336,10 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   },
 
   resetMission: () => {
+    if (zombieAttackTimeout) {
+      clearTimeout(zombieAttackTimeout);
+      zombieAttackTimeout = null;
+    }
     set({
       isActive: false,
       phase: 'inactive',
@@ -315,6 +358,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       trapTriggered: false,
       deceptiveMessageShown: false,
       lives: 3,
+      zombieAttackActive: false,
     });
   },
 

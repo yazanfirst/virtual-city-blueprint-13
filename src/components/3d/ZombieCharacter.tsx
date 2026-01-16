@@ -37,6 +37,7 @@ export default function ZombieCharacter({
   const rightArmRef = useRef<THREE.Mesh>(null);
   const leftLegRef = useRef<THREE.Mesh>(null);
   const rightLegRef = useRef<THREE.Mesh>(null);
+  const hasTouchedPlayerRef = useRef(false);
   
   const positionRef = useRef(new THREE.Vector3(...initialPosition));
   const walkPhaseRef = useRef(Math.random() * Math.PI * 2);
@@ -105,9 +106,9 @@ export default function ZombieCharacter({
     const distance = Math.sqrt(dx * dx + dz * dz);
     
     // Check for collision with player
-    if (distance < PLAYER_COLLISION_DISTANCE) {
+    if (distance < PLAYER_COLLISION_DISTANCE && !hasTouchedPlayerRef.current) {
       onTouchPlayer(id);
-      return;
+      hasTouchedPlayerRef.current = true;
     }
     
     const speedMultiplier = isInsideTrap(positionRef.current)
@@ -150,6 +151,7 @@ export default function ZombieCharacter({
   // Reset position if initial position changes
   useEffect(() => {
     positionRef.current.set(...initialPosition);
+    hasTouchedPlayerRef.current = false;
   }, [initialPosition]);
 
   return (
