@@ -282,7 +282,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     set({
       phase: 'failed',
       isProtected: false,
-      zombiesPaused: true,
+      zombiesPaused: false,
     });
     console.log('Mission failed:', reason);
   },

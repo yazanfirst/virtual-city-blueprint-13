@@ -107,12 +107,14 @@ const StreetView = () => {
   const selectedSpotId = selectedShop?.spotId || "";
 
   const handleShopClick = (shop: ShopBranding) => {
-    // During mission, only allow clicking target shop
     if (mission.isActive && mission.phase === 'escape') {
       if (shop.shopId === mission.targetShop?.shopId) {
         mission.enterShop();
         setInteriorShop(shop);
         setIsInsideShop(true);
+      } else {
+        setSelectedShop(shop);
+        setShowShopModal(true);
       }
       return;
     }
@@ -126,6 +128,9 @@ const StreetView = () => {
       mission.triggerTrap();
       return;
     }
+    if (mission.isActive && mission.phase === 'escape' && shop.shopId === mission.targetShop?.shopId) {
+      mission.enterShop();
+    }
     setInteriorShop(shop);
     setIsInsideShop(true);
     setShowShopModal(false);
@@ -134,7 +139,7 @@ const StreetView = () => {
   const handleExitShop = () => {
     setIsInsideShop(false);
     // If in mission observation phase, trigger questions
-    if (mission.isActive && mission.phase === 'observation') {
+    if (mission.isActive && mission.phase === 'observation' && interiorShop?.shopId === mission.targetShop?.shopId) {
       const questions = generateMissionQuestions(
         mission.targetShopItems,
         mission.targetShop?.shopName

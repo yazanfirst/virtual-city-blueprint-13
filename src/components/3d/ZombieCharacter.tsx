@@ -2,6 +2,7 @@ import { useRef, useMemo, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { usePlayerStore } from '@/stores/playerStore';
+import { useMissionStore } from '@/stores/missionStore';
 
 interface ZombieProps {
   id: string;
@@ -13,6 +14,8 @@ interface ZombieProps {
 }
 
 const PLAYER_COLLISION_DISTANCE = 1.2; // Distance at which zombie "touches" player
+const TRAP_SLOW_DISTANCE = 1.5;
+const TRAP_SLOW_MULTIPLIER = 0.35;
 
 /**
  * Zombie NPC that slowly chases the player.
@@ -34,12 +37,14 @@ export default function ZombieCharacter({
   const rightArmRef = useRef<THREE.Mesh>(null);
   const leftLegRef = useRef<THREE.Mesh>(null);
   const rightLegRef = useRef<THREE.Mesh>(null);
+  const hasTouchedPlayerRef = useRef(false);
   
   const positionRef = useRef(new THREE.Vector3(...initialPosition));
   const walkPhaseRef = useRef(Math.random() * Math.PI * 2);
   
   // Get player position from store
   const playerPosition = usePlayerStore((state) => state.position);
+  const traps = useMissionStore((state) => state.traps);
   
   // Zombie appearance - greenish/grayish skin
   const skinColor = useMemo(() => new THREE.Color('#7A9A6A'), []);
@@ -54,6 +59,41 @@ export default function ZombieCharacter({
     );
   };
   
+  const isInsideTrap = (zombiePos: THREE.Vector3) => {
+    for (const trap of traps) {
+      if (!trap.isActive) continue;
+      const trapPos = new THREE.Vector3(...trap.position);
+      const halfLength = trap.length / 2;
+      const cos = Math.cos(trap.rotation);
+      const sin = Math.sin(trap.rotation);
+
+      const start = new THREE.Vector3(
+        trapPos.x - halfLength * sin,
+        trapPos.y + 0.8,
+        trapPos.z - halfLength * cos
+      );
+      const end = new THREE.Vector3(
+        trapPos.x + halfLength * sin,
+        trapPos.y + 0.8,
+        trapPos.z + halfLength * cos
+      );
+
+      const lineVec = end.clone().sub(start);
+      const zombieToStart = zombiePos.clone().sub(start);
+      const t = Math.max(0, Math.min(1, zombieToStart.dot(lineVec) / lineVec.lengthSq()));
+      const closestPoint = start.clone().add(lineVec.multiplyScalar(t));
+      const dx = zombiePos.x - closestPoint.x;
+      const dz = zombiePos.z - closestPoint.z;
+      const distance = Math.sqrt(dx * dx + dz * dz);
+
+      if (distance < TRAP_SLOW_DISTANCE) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
   useFrame((_, delta) => {
     if (!groupRef.current || isPaused) return;
     
@@ -66,15 +106,20 @@ export default function ZombieCharacter({
     const distance = Math.sqrt(dx * dx + dz * dz);
     
     // Check for collision with player
-    if (distance < PLAYER_COLLISION_DISTANCE) {
+    if (distance < PLAYER_COLLISION_DISTANCE && !hasTouchedPlayerRef.current) {
       onTouchPlayer(id);
-      return;
+      hasTouchedPlayerRef.current = true;
     }
     
+    const speedMultiplier = isInsideTrap(positionRef.current)
+      ? TRAP_SLOW_MULTIPLIER
+      : 1;
+
     // Move toward player (normalized direction * speed)
     if (distance > 0.1) {
-      const moveX = (dx / distance) * speed * delta * 60;
-      const moveZ = (dz / distance) * speed * delta * 60;
+      const adjustedSpeed = speed * speedMultiplier;
+      const moveX = (dx / distance) * adjustedSpeed * delta * 60;
+      const moveZ = (dz / distance) * adjustedSpeed * delta * 60;
       
       positionRef.current.x += moveX;
       positionRef.current.z += moveZ;
@@ -106,6 +151,7 @@ export default function ZombieCharacter({
   // Reset position if initial position changes
   useEffect(() => {
     positionRef.current.set(...initialPosition);
+    hasTouchedPlayerRef.current = false;
   }, [initialPosition]);
 
   return (
