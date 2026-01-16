@@ -39,7 +39,8 @@ export function getEligibleShops(
     const items = shopItemsMap.get(shop.shopId) || [];
     const validItems = items.filter(item => 
       item.title && 
-      item.title.trim().length > 0
+      item.title.trim().length > 0 &&
+      (item.price != null || item.image_url)
     );
     
     // Allow shops with or without items (items enhance the experience but aren't required)
@@ -91,7 +92,8 @@ export function isShopValidForMission(
   
   const validItems = items.filter(item => 
     item.title && 
-    item.title.trim().length > 0
+    item.title.trim().length > 0 &&
+    (item.price != null || item.image_url)
   );
   
   return validItems.length > 0;

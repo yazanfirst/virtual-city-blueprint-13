@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import MissionPanel from "@/components/mission/MissionPanel";
 import QuestionModal from "@/components/mission/QuestionModal";
 import HealthDisplay from "@/components/mission/HealthDisplay";
-import MissionFailedOverlay from "@/components/mission/MissionFailedOverlay";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
@@ -65,26 +64,6 @@ const StreetView = () => {
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
 
-  const [failReason, setFailReason] = useState<'zombie' | 'laser' | 'unknown' | null>(null);
-  const [damageText, setDamageText] = useState<string | null>(null);
-  const damageTimerRef = useRef<number | null>(null);
-
-  const showDamage = useCallback((text: string) => {
-    setDamageText(text);
-    if (damageTimerRef.current) window.clearTimeout(damageTimerRef.current);
-    damageTimerRef.current = window.setTimeout(() => setDamageText(null), 650);
-  }, []);
-
-  useEffect(() => {
-    if (mission.phase === 'inactive') setFailReason(null);
-  }, [mission.phase]);
-
-  useEffect(() => {
-    return () => {
-      if (damageTimerRef.current) window.clearTimeout(damageTimerRef.current);
-    };
-  }, []);
-
   // Transform spots data to shop brandings - MUST be before useEffect that uses it
   const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
   
@@ -128,28 +107,20 @@ const StreetView = () => {
   const selectedSpotId = selectedShop?.spotId || "";
 
   const handleShopClick = (shop: ShopBranding) => {
-    // During mission, only the target shop is interactable
-    if (mission.isActive) {
-      const isTarget = Boolean(shop.shopId && shop.shopId === mission.targetShop?.shopId);
-      if (!isTarget) return;
-
-      // Enter target shop during escape phase
-      if (mission.phase === 'escape') {
+    // During mission, only allow clicking target shop
+    if (mission.isActive && mission.phase === 'escape') {
+      if (shop.shopId === mission.targetShop?.shopId) {
         mission.enterShop();
         setInteriorShop(shop);
         setIsInsideShop(true);
       }
       return;
     }
-
     setSelectedShop(shop);
     setShowShopModal(true);
   };
 
   const handleEnterShop = (shop: ShopBranding) => {
-    // During mission, only the target shop can be entered
-    if (mission.isActive && shop.shopId !== mission.targetShop?.shopId) return;
-
     // Check for mission trap (second entry)
     if (mission.isActive && mission.deceptiveMessageShown && shop.shopId === mission.targetShop?.shopId) {
       mission.triggerTrap();
@@ -180,28 +151,15 @@ const StreetView = () => {
   };
   
   const handleZombieTouchPlayer = () => {
-    if (!mission.isActive) return;
-    if (mission.phase === 'inactive' || mission.phase === 'completed' || mission.phase === 'failed') return;
-
-    setFailReason('zombie');
-    mission.failMission('Caught by zombie');
-    setShowQuestionModal(false);
-    setIsInsideShop(false);
+    if (mission.isActive && !mission.isProtected) {
+      mission.failMission('Caught by zombie');
+      setShowQuestionModal(false);
+    }
   };
   
   const handleTrapHitPlayer = () => {
-    if (!mission.isActive) return;
-    if (mission.phase === 'inactive' || mission.phase === 'completed' || mission.phase === 'failed') return;
-
-    showDamage('OUCH');
-
-    const nextLives = mission.lives - 1;
-    mission.hitByTrap();
-
-    if (nextLives <= 0) {
-      setFailReason('laser');
-      setShowQuestionModal(false);
-      setIsInsideShop(false);
+    if (mission.isActive) {
+      mission.hitByTrap();
     }
   };
   
@@ -368,41 +326,6 @@ const StreetView = () => {
               <HealthDisplay />
             </div>
           )}
-
-          {/* Trap hit feedback */}
-          {damageText && mission.isActive && mission.phase !== 'failed' && (
-            <div
-              className="absolute top-24 left-1/2 -translate-x-1/2 pointer-events-none"
-              style={{ zIndex: 240 }}
-            >
-              <div className="rounded-lg border border-destructive/40 bg-destructive/15 px-4 py-2 font-display text-sm font-bold uppercase tracking-wider text-destructive animate-pulse">
-                {damageText}
-              </div>
-            </div>
-          )}
-
-          {/* Mission Failed cinematic overlay (no control) */}
-          <MissionFailedOverlay
-            open={mission.isActive && mission.phase === 'failed'}
-            reason={failReason ?? 'unknown'}
-            onRetry={() => {
-              mission.resetMission();
-              setFailReason(null);
-              setDamageText(null);
-              setShowQuestionModal(false);
-              setIsInsideShop(false);
-              setInteriorShop(null);
-            }}
-            onExit={() => {
-              mission.resetMission();
-              setFailReason(null);
-              setDamageText(null);
-              setShowQuestionModal(false);
-              setIsInsideShop(false);
-              setInteriorShop(null);
-              setIsMaximized(false);
-            }}
-          />
           
           {/* Shop Detail Modal */}
           {showShopModal && (
