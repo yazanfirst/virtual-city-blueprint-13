@@ -12,7 +12,6 @@ function getAudioContext(): AudioContext | null {
   }
 
   if (sharedAudioContext.state === 'suspended') {
-    // Best effort; must be within user gesture in many browsers.
     sharedAudioContext.resume().catch(() => {});
   }
 
@@ -49,7 +48,7 @@ function playTone(
   }
 }
 
-// Only the sounds you requested: jump, walking, trap hit, notification
+// ONLY these 4 sounds: jump, walking (step), trap hit (ouch), notification
 export const playSounds = {
   ouch: () => playTone(180, 0.18, 'square', 0.22),
   notification: () => playTone(880, 0.08, 'sine', 0.16),
@@ -60,12 +59,11 @@ export const playSounds = {
   step: () => playTone(120, 0.04, 'triangle', 0.08),
 };
 
-// Hook only enables audio after the first user interaction (no background music)
+// Hook enables audio after first user interaction - NO background music
 export function useGameAudio() {
   useEffect(() => {
     const handleInteraction = () => {
       userHasInteracted = true;
-      // Create/resume context eagerly after gesture
       const ctx = getAudioContext();
       ctx?.resume().catch(() => {});
     };
