@@ -12,6 +12,7 @@ import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import MissionPanel from "@/components/mission/MissionPanel";
 import QuestionModal from "@/components/mission/QuestionModal";
 import HealthDisplay from "@/components/mission/HealthDisplay";
+import MissionFailedModal from "@/components/mission/MissionFailedModal";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
@@ -62,6 +63,7 @@ const StreetView = () => {
   // Mission state
   const mission = useMissionStore();
   const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [showFailedModal, setShowFailedModal] = useState(false);
   const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
 
   // Transform spots data to shop brandings - MUST be before useEffect that uses it
@@ -107,15 +109,23 @@ const StreetView = () => {
   const selectedSpotId = selectedShop?.spotId || "";
 
   const handleShopClick = (shop: ShopBranding) => {
-    // During mission, only allow clicking target shop
+    // During mission escape phase, only allow clicking target shop
     if (mission.isActive && mission.phase === 'escape') {
       if (shop.shopId === mission.targetShop?.shopId) {
         mission.enterShop();
         setInteriorShop(shop);
         setIsInsideShop(true);
       }
+      // Non-target shops are ignored during escape phase
       return;
     }
+    
+    // During observation/question phase, don't allow any shop clicks
+    if (mission.isActive && (mission.phase === 'observation' || mission.phase === 'question')) {
+      return;
+    }
+    
+    // Normal mode - show shop modal
     setSelectedShop(shop);
     setShowShopModal(true);
   };
@@ -148,19 +158,36 @@ const StreetView = () => {
   
   const handleMissionActivate = () => {
     // Mission is now active, night mode will be forced
+    setShowFailedModal(false);
   };
   
   const handleZombieTouchPlayer = () => {
     if (mission.isActive && !mission.isProtected) {
       mission.failMission('Caught by zombie');
       setShowQuestionModal(false);
+      setShowFailedModal(true);
     }
   };
   
   const handleTrapHitPlayer = () => {
     if (mission.isActive) {
       mission.hitByTrap();
+      // Check if lives depleted
+      if (mission.lives <= 1) {
+        setShowFailedModal(true);
+      }
     }
+  };
+  
+  const handleRetryMission = () => {
+    setShowFailedModal(false);
+    mission.resetMission();
+    setShowMissions(true); // Show mission panel to start again
+  };
+  
+  const handleExitMission = () => {
+    setShowFailedModal(false);
+    mission.resetMission();
   };
   
   const handleQuestionAnswer = (answer: string) => {
@@ -558,6 +585,13 @@ const StreetView = () => {
           onAnswer={handleQuestionAnswer}
           onClose={() => setShowQuestionModal(false)}
         />
+        
+        {/* Mission Failed Modal */}
+        <MissionFailedModal
+          isOpen={showFailedModal || mission.phase === 'failed'}
+          onRetry={handleRetryMission}
+          onExit={handleExitMission}
+        />
       </div>
     );
   }
@@ -758,6 +792,13 @@ const StreetView = () => {
         </div>
       </div>
       {interiorOverlay}
+      
+      {/* Mission Failed Modal */}
+      <MissionFailedModal
+        isOpen={showFailedModal || mission.phase === 'failed'}
+        onRetry={handleRetryMission}
+        onExit={handleExitMission}
+      />
     </>
   );
 };
