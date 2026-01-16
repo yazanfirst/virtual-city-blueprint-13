@@ -1,14 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Map, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
+import { useShopItems, ShopItem } from "@/hooks/useShopItems";
 import CityScene, { CameraView } from "@/components/3d/CityScene";
 import ShopDetailModal from "@/components/3d/ShopDetailModal";
 import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
+import MissionPanel from "@/components/mission/MissionPanel";
+import QuestionModal from "@/components/mission/QuestionModal";
 import { useGameStore } from "@/stores/gameStore";
+import { useMissionStore } from "@/stores/missionStore";
+import { generateMissionQuestions } from "@/lib/missionQuestions";
 
 const PanelBox = ({ 
   title,
@@ -51,16 +56,39 @@ const StreetView = () => {
 
   // Game state
   const { coins, level, xp } = useGameStore();
+  
+  // Mission state
+  const mission = useMissionStore();
+  const [showQuestionModal, setShowQuestionModal] = useState(false);
+  
+  // Build shop items map for mission
+  const shopItemsMap = useMemo(() => {
+    return new Map<string, ShopItem[]>();
+  }, []);
 
   // Find the spot ID for the selected shop (to highlight in 2D map)
   const selectedSpotId = selectedShop?.spotId || "";
 
   const handleShopClick = (shop: ShopBranding) => {
+    // During mission, only allow clicking target shop
+    if (mission.isActive && mission.phase === 'escape') {
+      if (shop.shopId === mission.targetShop?.shopId) {
+        mission.enterShop();
+        setInteriorShop(shop);
+        setIsInsideShop(true);
+      }
+      return;
+    }
     setSelectedShop(shop);
     setShowShopModal(true);
   };
 
   const handleEnterShop = (shop: ShopBranding) => {
+    // Check for mission trap (second entry)
+    if (mission.isActive && mission.deceptiveMessageShown && shop.shopId === mission.targetShop?.shopId) {
+      mission.triggerTrap();
+      return;
+    }
     setInteriorShop(shop);
     setIsInsideShop(true);
     setShowShopModal(false);
@@ -68,6 +96,38 @@ const StreetView = () => {
 
   const handleExitShop = () => {
     setIsInsideShop(false);
+    // If in mission observation phase, trigger questions
+    if (mission.isActive && mission.phase === 'observation') {
+      const questions = generateMissionQuestions(mission.targetShopItems);
+      mission.exitShop(questions);
+      if (questions.length > 0) {
+        setShowQuestionModal(true);
+      }
+    }
+  };
+  
+  const handleMissionActivate = () => {
+    // Mission is now active, night mode will be forced
+  };
+  
+  const handleZombieTouchPlayer = () => {
+    if (mission.isActive && !mission.isProtected) {
+      mission.failMission('Caught by zombie');
+    }
+  };
+  
+  const handleQuestionAnswer = (answer: string) => {
+    const correct = mission.answerQuestion(answer);
+    const currentQuestion = mission.questions[mission.currentQuestionIndex];
+    
+    if (!correct) {
+      // Wrong answer - close modal, show deceptive message
+      setShowQuestionModal(false);
+    } else if (mission.phase === 'completed') {
+      // All correct - mission complete
+      setShowQuestionModal(false);
+    }
+    // Otherwise, next question will show automatically
   };
 
   // Transform spots data to shop brandings
@@ -209,6 +269,8 @@ const StreetView = () => {
             cameraView={cameraView}
             shopBrandings={shopBrandings}
             onShopClick={handleShopClick}
+            forcedTimeOfDay={mission.isActive ? "night" : null}
+            onZombieTouchPlayer={handleZombieTouchPlayer}
           />
           
           {/* Shop Detail Modal */}
@@ -342,10 +404,13 @@ const StreetView = () => {
                   </button>
                 </div>
                 
-                <div className="text-center py-8 text-muted-foreground">
-                  <Target className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p className="text-sm">Missions coming soon!</p>
-                  <p className="text-xs mt-2">Check back later for exciting challenges.</p>
+                <div className="text-center py-4 text-muted-foreground">
+                  <MissionPanel
+                    shops={shopBrandings}
+                    shopItemsMap={shopItemsMap}
+                    onActivate={handleMissionActivate}
+                    isCompact
+                  />
                 </div>
               </div>
             </div>
@@ -431,6 +496,14 @@ const StreetView = () => {
           </div>
         </div>
         {interiorOverlay}
+        
+        {/* Question Modal */}
+        <QuestionModal
+          isOpen={showQuestionModal}
+          question={mission.questions[mission.currentQuestionIndex] || null}
+          onAnswer={handleQuestionAnswer}
+          onClose={() => setShowQuestionModal(false)}
+        />
       </div>
     );
   }
