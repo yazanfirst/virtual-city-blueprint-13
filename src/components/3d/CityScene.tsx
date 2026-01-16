@@ -764,7 +764,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
-  const { zombies, zombiesPaused, traps, isActive: missionActive } = useMissionStore();
+  const { zombies, zombiesPaused, traps, isActive: missionActive, slowedZombieIds, slowZombie, targetShop } = useMissionStore();
 
   useEffect(() => {
     scene.background = null;
@@ -853,12 +853,14 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {mainBoulevardShops.map((shop, i) => {
         const branding = getBrandingAtPosition(shop.x, shop.z);
         if (branding) {
+          // During mission, only target shop is clickable
+          const isClickable = !missionActive || branding.shopId === targetShop?.shopId;
           return (
             <BrandedShop 
               key={`main-${i}`} 
               branding={branding} 
               isNight={isNight} 
-              onClick={() => onShopClick?.(branding)}
+              onClick={isClickable ? () => onShopClick?.(branding) : undefined}
             />
           );
         }
@@ -867,12 +869,14 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {crossStreetShops.map((shop, i) => {
         const branding = getBrandingAtPosition(shop.x, shop.z);
         if (branding) {
+          // During mission, only target shop is clickable
+          const isClickable = !missionActive || branding.shopId === targetShop?.shopId;
           return (
             <BrandedShop 
               key={`cross-${i}`} 
               branding={branding} 
               isNight={isNight} 
-              onClick={() => onShopClick?.(branding)}
+              onClick={isClickable ? () => onShopClick?.(branding) : undefined}
             />
           );
         }
@@ -924,6 +928,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           position={zombie.position}
           isNight={isNight}
           isPaused={zombiesPaused}
+          isSlowed={slowedZombieIds.has(zombie.id)}
           onTouchPlayer={(id) => onZombieTouchPlayer?.()}
         />
       ))}

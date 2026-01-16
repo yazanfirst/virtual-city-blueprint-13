@@ -9,6 +9,7 @@ interface ZombieProps {
   speed?: number;
   isNight?: boolean;
   isPaused?: boolean;
+  isSlowed?: boolean; // When zombie passes through laser
   onTouchPlayer: (zombieId: string) => void;
 }
 
@@ -24,9 +25,10 @@ const PLAYER_COLLISION_DISTANCE = 1.2; // Distance at which zombie "touches" pla
 export default function ZombieCharacter({
   id,
   position: initialPosition,
-  speed = 0.025,
+  speed = 0.04, // Increased base speed for harder difficulty
   isNight = true,
   isPaused = false,
+  isSlowed = false,
   onTouchPlayer,
 }: ZombieProps) {
   const groupRef = useRef<THREE.Group>(null);
@@ -55,7 +57,7 @@ export default function ZombieCharacter({
   };
   
   useFrame((_, delta) => {
-    if (!groupRef.current || isPaused) return;
+    if (!groupRef.current) return;
     
     const targetX = playerPosition[0];
     const targetZ = playerPosition[2];
@@ -65,16 +67,22 @@ export default function ZombieCharacter({
     const dz = targetZ - positionRef.current.z;
     const distance = Math.sqrt(dx * dx + dz * dz);
     
-    // Check for collision with player
+    // Check for collision with player - ALWAYS check, even when paused
     if (distance < PLAYER_COLLISION_DISTANCE) {
       onTouchPlayer(id);
-      return;
+      // Don't return - zombie should keep moving!
     }
+    
+    // Don't move if paused, but still check collision above
+    if (isPaused) return;
+    
+    // Apply slow effect if zombie passed through laser
+    const effectiveSpeed = isSlowed ? speed * 0.3 : speed;
     
     // Move toward player (normalized direction * speed)
     if (distance > 0.1) {
-      const moveX = (dx / distance) * speed * delta * 60;
-      const moveZ = (dz / distance) * speed * delta * 60;
+      const moveX = (dx / distance) * effectiveSpeed * delta * 60;
+      const moveZ = (dz / distance) * effectiveSpeed * delta * 60;
       
       positionRef.current.x += moveX;
       positionRef.current.z += moveZ;

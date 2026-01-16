@@ -2,6 +2,7 @@ import { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { usePlayerStore } from '@/stores/playerStore';
+import { useMissionStore } from '@/stores/missionStore';
 
 interface LaserTrapProps {
   id: string;
@@ -12,10 +13,11 @@ interface LaserTrapProps {
   onPlayerHit: (trapId: string) => void;
 }
 
-const PLAYER_HIT_DISTANCE = 1.5; // How close player needs to be to laser line
+const PLAYER_HIT_DISTANCE = 1.2; // How close player needs to be to laser line
+const ZOMBIE_HIT_DISTANCE = 1.5; // Distance for zombie detection
 
 /**
- * Laser beam trap that damages both player and zombies
+ * Laser beam trap that damages player and slows zombies
  * Visual: Red pulsing laser beam between two posts
  */
 export default function LaserTrap({
@@ -30,8 +32,10 @@ export default function LaserTrap({
   const beamRef = useRef<THREE.Mesh>(null);
   const pulseRef = useRef(0);
   const hitCooldownRef = useRef(0);
+  const zombieCheckRef = useRef(0);
   
   const playerPosition = usePlayerStore((state) => state.position);
+  const { zombies, slowZombie } = useMissionStore();
   
   // Laser colors
   const laserColor = useMemo(() => new THREE.Color('#FF0000'), []);
@@ -48,17 +52,8 @@ export default function LaserTrap({
       beamRef.current.material.opacity = intensity;
     }
     
-    // Cooldown for hits
-    if (hitCooldownRef.current > 0) {
-      hitCooldownRef.current -= delta;
-      return;
-    }
-    
-    // Check player collision with laser line
-    const trapPos = new THREE.Vector3(...position);
-    const playerPos = new THREE.Vector3(...playerPosition);
-    
     // Calculate laser line endpoints (rotated)
+    const trapPos = new THREE.Vector3(...position);
     const halfLength = length / 2;
     const cos = Math.cos(rotation);
     const sin = Math.sin(rotation);
@@ -74,21 +69,49 @@ export default function LaserTrap({
       trapPos.z + halfLength * cos
     );
     
-    // Distance from player to laser line segment
     const lineVec = end.clone().sub(start);
-    const playerToStart = playerPos.clone().sub(start);
     
-    const t = Math.max(0, Math.min(1, playerToStart.dot(lineVec) / lineVec.lengthSq()));
-    const closestPoint = start.clone().add(lineVec.multiplyScalar(t));
+    // Check player collision (with cooldown)
+    if (hitCooldownRef.current > 0) {
+      hitCooldownRef.current -= delta;
+    } else {
+      const playerPos = new THREE.Vector3(...playerPosition);
+      const playerToStart = playerPos.clone().sub(start);
+      
+      const t = Math.max(0, Math.min(1, playerToStart.dot(lineVec) / lineVec.lengthSq()));
+      const closestPoint = start.clone().add(lineVec.clone().multiplyScalar(t));
+      
+      // Only check X and Z distance (ignore Y)
+      const dx = playerPos.x - closestPoint.x;
+      const dz = playerPos.z - closestPoint.z;
+      const distance = Math.sqrt(dx * dx + dz * dz);
+      
+      if (distance < PLAYER_HIT_DISTANCE) {
+        onPlayerHit(id);
+        hitCooldownRef.current = 1.5; // 1.5 second cooldown between hits
+      }
+    }
     
-    // Only check X and Z distance (ignore Y)
-    const dx = playerPos.x - closestPoint.x;
-    const dz = playerPos.z - closestPoint.z;
-    const distance = Math.sqrt(dx * dx + dz * dz);
-    
-    if (distance < PLAYER_HIT_DISTANCE) {
-      onPlayerHit(id);
-      hitCooldownRef.current = 1.5; // 1.5 second cooldown between hits
+    // Check zombie collision (less frequent for performance)
+    zombieCheckRef.current += delta;
+    if (zombieCheckRef.current > 0.2) { // Check every 200ms
+      zombieCheckRef.current = 0;
+      
+      for (const zombie of zombies) {
+        const zombiePos = new THREE.Vector3(...zombie.position);
+        const zombieToStart = zombiePos.clone().sub(start);
+        
+        const t = Math.max(0, Math.min(1, zombieToStart.dot(lineVec) / lineVec.lengthSq()));
+        const closestPoint = start.clone().add(lineVec.clone().multiplyScalar(t));
+        
+        const dx = zombiePos.x - closestPoint.x;
+        const dz = zombiePos.z - closestPoint.z;
+        const distance = Math.sqrt(dx * dx + dz * dz);
+        
+        if (distance < ZOMBIE_HIT_DISTANCE) {
+          slowZombie(zombie.id);
+        }
+      }
     }
   });
   
