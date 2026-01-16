@@ -98,7 +98,10 @@ const StreetView = () => {
     setIsInsideShop(false);
     // If in mission observation phase, trigger questions
     if (mission.isActive && mission.phase === 'observation') {
-      const questions = generateMissionQuestions(mission.targetShopItems);
+      const questions = generateMissionQuestions(
+        mission.targetShopItems,
+        mission.targetShop?.shopName
+      );
       mission.exitShop(questions);
       if (questions.length > 0) {
         setShowQuestionModal(true);

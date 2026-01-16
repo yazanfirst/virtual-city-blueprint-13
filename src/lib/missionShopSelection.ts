@@ -35,7 +35,7 @@ export function getEligibleShops(
     // Rule 3: Must not be suspended
     if (shop.isSuspended) continue;
     
-    // Rule 4: Must have valid items
+    // Get items if available
     const items = shopItemsMap.get(shop.shopId) || [];
     const validItems = items.filter(item => 
       item.title && 
@@ -43,8 +43,7 @@ export function getEligibleShops(
       (item.price != null || item.image_url)
     );
     
-    if (validItems.length === 0) continue;
-    
+    // Allow shops with or without items (items enhance the experience but aren't required)
     eligible.push({ shop, items: validItems });
   }
   
