@@ -124,8 +124,12 @@ function generateItemOptions(correctItem: string, allItems: ShopItem[]): string[
 
 /**
  * Generate questions from shop items - deterministic, rule-based
+ * If no items are available, generates fallback questions about the shop itself
  */
-export function generateMissionQuestions(items: ShopItem[]): MissionQuestion[] {
+export function generateMissionQuestions(
+  items: ShopItem[],
+  shopName?: string
+): MissionQuestion[] {
   const questions: MissionQuestion[] = [];
   
   // Filter valid items
@@ -133,47 +137,71 @@ export function generateMissionQuestions(items: ShopItem[]): MissionQuestion[] {
     item.title && item.title.trim().length > 0
   );
   
-  if (validItems.length === 0) return questions;
-  
-  // 1. Count question (always include if items exist)
-  questions.push({
-    id: `q-count-${Date.now()}`,
-    template: 'count',
-    questionText: 'How many items were displayed in the shop?',
-    correctAnswer: String(validItems.length),
-    options: generateCountOptions(validItems.length),
-  });
-  
-  // 2. Price question (if any item has price)
-  const pricedItems = validItems.filter(item => item.price != null);
-  if (pricedItems.length > 0) {
-    const randomIndex = Math.floor(Math.random() * pricedItems.length);
-    const item = pricedItems[randomIndex];
-    
+  // If we have items, generate item-based questions
+  if (validItems.length > 0) {
+    // 1. Count question (always include if items exist)
     questions.push({
-      id: `q-price-${Date.now()}`,
-      template: 'price',
-      questionText: `What was the price of "${item.title}"?`,
-      correctAnswer: `$${Number(item.price).toFixed(2)}`,
-      options: generatePriceOptions(Number(item.price)),
+      id: `q-count-${Date.now()}`,
+      template: 'count',
+      questionText: 'How many items were displayed in the shop?',
+      correctAnswer: String(validItems.length),
+      options: generateCountOptions(validItems.length),
     });
-  }
-  
-  // 3. Position question (if we have items with known positions)
-  const positionedItems = validItems.filter(item => 
-    item.slot_index >= 0 && item.slot_index <= 4
-  );
-  if (positionedItems.length > 0) {
-    const randomIndex = Math.floor(Math.random() * positionedItems.length);
-    const item = positionedItems[randomIndex];
-    const positionName = SLOT_POSITIONS[item.slot_index] || 'wall';
+    
+    // 2. Price question (if any item has price)
+    const pricedItems = validItems.filter(item => item.price != null);
+    if (pricedItems.length > 0) {
+      const randomIndex = Math.floor(Math.random() * pricedItems.length);
+      const item = pricedItems[randomIndex];
+      
+      questions.push({
+        id: `q-price-${Date.now()}`,
+        template: 'price',
+        questionText: `What was the price of "${item.title}"?`,
+        correctAnswer: `$${Number(item.price).toFixed(2)}`,
+        options: generatePriceOptions(Number(item.price)),
+      });
+    }
+    
+    // 3. Position question (if we have items with known positions)
+    const positionedItems = validItems.filter(item => 
+      item.slot_index >= 0 && item.slot_index <= 4
+    );
+    if (positionedItems.length > 0) {
+      const randomIndex = Math.floor(Math.random() * positionedItems.length);
+      const item = positionedItems[randomIndex];
+      const positionName = SLOT_POSITIONS[item.slot_index] || 'wall';
+      
+      questions.push({
+        id: `q-position-${Date.now()}`,
+        template: 'position',
+        questionText: `Which item was displayed on the ${positionName}?`,
+        correctAnswer: item.title,
+        options: generateItemOptions(item.title, validItems),
+      });
+    }
+  } else if (shopName) {
+    // Fallback: Generate a simple shop name question when no items available
+    const fakeShopNames = [
+      'Urban Style',
+      'Fashion Hub',
+      'Trend Center',
+      'Style Studio',
+      'Chic Boutique',
+      'Modern Wear',
+      'Elite Fashion',
+      'Prime Store',
+    ].filter(name => name.toLowerCase() !== shopName.toLowerCase());
+    
+    const shuffledFake = fakeShopNames.sort(() => Math.random() - 0.5).slice(0, 3);
+    const options = [shopName, ...shuffledFake].sort(() => Math.random() - 0.5);
     
     questions.push({
-      id: `q-position-${Date.now()}`,
-      template: 'position',
-      questionText: `Which item was displayed on the ${positionName}?`,
-      correctAnswer: item.title,
-      options: generateItemOptions(item.title, validItems),
+      id: `q-shop-${Date.now()}`,
+      template: 'existence',
+      questionText: 'What was the name of the shop you just visited?',
+      correctAnswer: shopName,
+      options,
     });
   }
   
