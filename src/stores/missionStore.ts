@@ -34,7 +34,7 @@ export interface TrapData {
   isActive: boolean;
 }
 
-export type MissionFailReason = 'zombie' | 'laser' | 'thorns' | 'trap' | 'unknown';
+export type MissionFailReason = 'zombie' | 'laser' | 'thorns' | 'trap' | 'jumpscare' | 'unknown';
 
 interface MissionState {
   // Mission status
@@ -53,6 +53,12 @@ interface MissionState {
   // Shop entry tracking (for trap mechanics)
   shopEntryCount: number;
   hasEnteredShop: boolean;
+  
+  // Notification indicator (when there's an update)
+  hasNotification: boolean;
+  
+  // Safe spawn position for retry
+  safeSpawnPosition: [number, number, number];
   
   // Questions
   questions: MissionQuestion[];
@@ -101,6 +107,8 @@ interface MissionState {
   showDeceptiveMessage: () => void;
   slowZombie: (zombieId: string) => void;
   unslowZombie: (zombieId: string) => void;
+  setNotification: (has: boolean) => void;
+  getSafeSpawnPosition: () => [number, number, number];
 }
 
 // Generate zombie spawn positions with varied behavior types
@@ -148,6 +156,9 @@ function generateTrapPositions(): TrapData[] {
   ];
 }
 
+// Safe spawn position (away from traps)
+const SAFE_SPAWN_POSITION: [number, number, number] = [0, 0.5, 45];
+
 export const useMissionStore = create<MissionState>((set, get) => ({
   // Initial state
   isActive: false,
@@ -163,6 +174,12 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   
   shopEntryCount: 0,
   hasEnteredShop: false,
+  
+  // Notification
+  hasNotification: false,
+  
+  // Safe spawn
+  safeSpawnPosition: SAFE_SPAWN_POSITION,
   
   questions: [],
   currentQuestionIndex: 0,
@@ -194,10 +211,10 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       clearTimeout(state.spawnProtectionTimer);
     }
     
-    // Start with spawn protection
+    // Start with spawn protection - 3 seconds for safety
     const protectionTimer = setTimeout(() => {
       set({ isProtected: false, spawnProtectionTimer: null });
-    }, 2000) as unknown as number; // 2 seconds of invincibility
+    }, 3000) as unknown as number; // 3 seconds of invincibility
     
     set({
       isActive: true,
@@ -239,11 +256,12 @@ export const useMissionStore = create<MissionState>((set, get) => ({
         isProtected: true,
       });
     } else if (newEntryCount >= 2) {
-      // Second entry - TRAP! Zombies inside
+      // Second entry - TRAP! Jump scare zombie
       set({
         shopEntryCount: newEntryCount,
         trapTriggered: true,
         phase: 'failed',
+        failReason: 'jumpscare',
       });
     }
   },
@@ -271,13 +289,14 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     const nextIndex = state.currentQuestionIndex + 1;
     
     if (!isCorrect) {
-      // Wrong answer - show deceptive message, enable trap
+      // Wrong answer - show deceptive message, enable trap, set notification
       set({
         questionsAnswered: newQuestionsAnswered,
         questionsCorrect: newQuestionsCorrect,
         isProtected: false,
         zombiesPaused: false,
         deceptiveMessageShown: true,
+        hasNotification: true, // Notify user to check mission panel
       });
       return false;
     }
@@ -411,4 +430,8 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     newSlowed.delete(zombieId);
     set({ slowedZombieIds: newSlowed });
   },
+  
+  setNotification: (has: boolean) => set({ hasNotification: has }),
+  
+  getSafeSpawnPosition: (): [number, number, number] => SAFE_SPAWN_POSITION,
 }));
