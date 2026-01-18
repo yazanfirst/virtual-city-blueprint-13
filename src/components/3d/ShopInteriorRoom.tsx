@@ -352,24 +352,24 @@ const InteriorScene = ({
 
       {/* ═══════════════════════════════════════════════════════════════
           MUSTACHIO-STYLE WALL INSTRUCTION PANEL
-          Front wall, ABOVE the frames (so player sees it immediately)
+          Front wall, placed HIGH ENOUGH to never overlap product frames
           ═══════════════════════════════════════════════════════════════ */}
-      <group position={[0, 3.55, -5.72]} rotation={[0, 0, 0]}>
+      <group position={[0, 3.95, -5.72]} rotation={[0, 0, 0]}>
         {/* Outer ornate gold frame */}
         <mesh position={[0, 0, 0]}>
-          <boxGeometry args={[2.7, 1.25, 0.08]} />
+          <boxGeometry args={[2.55, 0.95, 0.08]} />
           <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.2} />
         </mesh>
 
         {/* Inner frame border - darker gold */}
         <mesh position={[0, 0, 0.02]}>
-          <boxGeometry args={[2.45, 1.05, 0.06]} />
+          <boxGeometry args={[2.32, 0.78, 0.06]} />
           <meshStandardMaterial color="#8b6914" metalness={0.7} roughness={0.3} />
         </mesh>
 
         {/* Velvet background */}
         <mesh position={[0, 0, 0.04]}>
-          <planeGeometry args={[2.25, 0.9]} />
+          <planeGeometry args={[2.14, 0.66]} />
           <meshStandardMaterial
             color={isMissionMode ? "#1a2a1a" : "#2a1515"}
             roughness={0.95}
@@ -378,19 +378,19 @@ const InteriorScene = ({
 
         {/* Corner flourishes */}
         {[
-          [-1.18, 0.48],
-          [1.18, 0.48],
-          [-1.18, -0.48],
-          [1.18, -0.48],
+          [-1.12, 0.34],
+          [1.12, 0.34],
+          [-1.12, -0.34],
+          [1.12, -0.34],
         ].map(([x, y], i) => (
           <group key={i} position={[x, y, 0.05]}>
             <mesh>
-              <sphereGeometry args={[0.1, 16, 16]} />
+              <sphereGeometry args={[0.085, 16, 16]} />
               <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
             </mesh>
             {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((angle, j) => (
-              <mesh key={j} position={[Math.cos(angle) * 0.16, Math.sin(angle) * 0.16, 0]}>
-                <sphereGeometry args={[0.035, 8, 8]} />
+              <mesh key={j} position={[Math.cos(angle) * 0.14, Math.sin(angle) * 0.14, 0]}>
+                <sphereGeometry args={[0.03, 8, 8]} />
                 <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
               </mesh>
             ))}
@@ -398,28 +398,28 @@ const InteriorScene = ({
         ))}
 
         {/* Top center crown decoration */}
-        <mesh position={[0, 0.55, 0.06]}>
-          <boxGeometry args={[0.55, 0.12, 0.04]} />
+        <mesh position={[0, 0.41, 0.06]}>
+          <boxGeometry args={[0.5, 0.1, 0.04]} />
           <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
         </mesh>
-        <mesh position={[0, 0.66, 0.06]}>
-          <coneGeometry args={[0.11, 0.18, 4]} />
+        <mesh position={[0, 0.5, 0.06]}>
+          <coneGeometry args={[0.1, 0.16, 4]} />
           <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
         </mesh>
 
         {/* Bottom center scroll decoration */}
-        <mesh position={[0, -0.55, 0.06]}>
-          <boxGeometry args={[0.7, 0.08, 0.04]} />
+        <mesh position={[0, -0.41, 0.06]}>
+          <boxGeometry args={[0.64, 0.07, 0.04]} />
           <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
         </mesh>
 
         {/* Side decorative bars */}
-        <mesh position={[-1.22, 0, 0.05]}>
-          <boxGeometry args={[0.05, 0.75, 0.04]} />
+        <mesh position={[-1.15, 0, 0.05]}>
+          <boxGeometry args={[0.05, 0.6, 0.04]} />
           <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
         </mesh>
-        <mesh position={[1.22, 0, 0.05]}>
-          <boxGeometry args={[0.05, 0.75, 0.04]} />
+        <mesh position={[1.15, 0, 0.05]}>
+          <boxGeometry args={[0.05, 0.6, 0.04]} />
           <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
         </mesh>
 
@@ -427,58 +427,58 @@ const InteriorScene = ({
         <Html
           transform
           position={[0, 0, 0.08]}
-          distanceFactor={6}
+          distanceFactor={8}
           className="pointer-events-none select-none"
         >
           <div
-            className="w-[240px] text-center px-4 py-3"
+            className="w-[200px] text-center px-3 py-2"
             style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
           >
             {isMissionMode ? (
               <>
                 <div
-                  className="text-amber-400 font-bold text-base mb-2 tracking-wide"
+                  className="text-amber-400 font-bold text-sm mb-1 tracking-wide"
                   style={{ textShadow: "0 0 10px rgba(251, 191, 36, 0.45)" }}
                 >
                   🎯 TARGET SHOP 🎯
                 </div>
                 <div
-                  className="text-emerald-400 text-sm font-semibold mb-2"
+                  className="text-emerald-400 text-xs font-semibold mb-2"
                   style={{ textShadow: "0 0 8px rgba(52, 211, 153, 0.35)" }}
                 >
                   You made it!
                 </div>
-                <div className="bg-black/40 rounded-lg px-3 py-2 border border-amber-500/30">
-                  <p className="text-white text-sm leading-relaxed">
+                <div className="bg-black/40 rounded-md px-2.5 py-2 border border-amber-500/30">
+                  <p className="text-white text-xs leading-relaxed">
                     Press <span className="text-amber-300 font-bold">EXIT</span>
                   </p>
-                  <p className="text-amber-200 text-sm">to answer questions</p>
+                  <p className="text-amber-200 text-xs">to answer questions</p>
                 </div>
               </>
             ) : (
               <>
                 <div
-                  className="text-amber-400 font-bold text-sm mb-2 tracking-wide"
+                  className="text-amber-400 font-bold text-xs mb-2 tracking-wide"
                   style={{ textShadow: "0 0 8px rgba(251, 191, 36, 0.35)" }}
                 >
                   ✨ WELCOME ✨
                 </div>
-                <div className="space-y-1.5 text-white/90">
-                  <div className="flex items-center justify-center gap-2 text-xs">
-                    <span className="text-base">👀</span>
+                <div className="space-y-1 text-white/90">
+                  <div className="flex items-center justify-center gap-2 text-[11px]">
+                    <span className="text-sm">👀</span>
                     <span>Drag to look around</span>
                   </div>
-                  <div className="flex items-center justify-center gap-2 text-xs">
-                    <span className="text-base">👆</span>
+                  <div className="flex items-center justify-center gap-2 text-[11px]">
+                    <span className="text-sm">👆</span>
                     <span>Tap frames for products</span>
                   </div>
-                  <div className="flex items-center justify-center gap-2 text-xs">
-                    <span className="text-base">🌐</span>
+                  <div className="flex items-center justify-center gap-2 text-[11px]">
+                    <span className="text-sm">🌐</span>
                     <span>Visit shop website</span>
                   </div>
                 </div>
                 <div className="mt-2 pt-2 border-t border-amber-500/30">
-                  <p className="text-amber-300 text-xs">
+                  <p className="text-amber-300 text-[11px]">
                     Click <span className="font-bold">EXIT</span> when done
                   </p>
                 </div>
