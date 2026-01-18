@@ -42,7 +42,7 @@ export default function QuestionModal({
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent 
-        className="max-w-[95vw] sm:max-w-md p-0 overflow-hidden bg-gradient-to-b from-slate-900 to-slate-950 border-purple-500/50"
+        className="max-w-[95vw] sm:max-w-md p-0 overflow-hidden max-h-[90svh] flex flex-col bg-gradient-to-b from-slate-900 to-slate-950 border-purple-500/50"
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
@@ -60,8 +60,8 @@ export default function QuestionModal({
           </DialogHeader>
         </div>
         
-        {/* Question */}
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* Body (scrolls on landscape/small heights) */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
           <div className="bg-slate-800/50 rounded-lg p-3 sm:p-4 border border-slate-700/50">
             <p className="text-white text-sm sm:text-base font-medium leading-relaxed">
               {question.questionText}
@@ -75,7 +75,7 @@ export default function QuestionModal({
                 key={index}
                 onClick={() => !hasAnswered && setSelectedOption(option)}
                 disabled={hasAnswered}
-                className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-lg border transition-all duration-200 ${
+                className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-lg border transition-all duration-200 touch-manipulation select-none ${
                   selectedOption === option
                     ? 'bg-purple-600/30 border-purple-500 text-white'
                     : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-700/30 hover:border-slate-600'
@@ -102,15 +102,17 @@ export default function QuestionModal({
             <AlertTriangle className="h-3 w-3 flex-shrink-0" />
             <span>Choose carefully. Wrong answers have consequences.</span>
           </div>
-          
-          {/* Confirm Button */}
-          <Button
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm sm:text-base py-2 sm:py-3"
-            onClick={handleConfirm}
-            disabled={!selectedOption || hasAnswered}
-          >
-            Confirm Answer
-          </Button>
+
+          {/* Confirm Button (sticky so it's always reachable) */}
+          <div className="sticky bottom-0 pt-3 bg-slate-950/90 backdrop-blur">
+            <Button
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm sm:text-base py-2 sm:py-3"
+              onClick={handleConfirm}
+              disabled={!selectedOption || hasAnswered}
+            >
+              Confirm Answer
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

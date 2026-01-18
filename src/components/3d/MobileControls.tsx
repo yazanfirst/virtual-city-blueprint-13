@@ -97,7 +97,8 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
           const deltaY = clientY - lastCameraPosRef.current.y;
           const distanceMoved = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-          if (!cameraDragActiveRef.current && distanceMoved > 6) {
+          // Higher threshold reduces accidental drags that cancel taps on mobile
+          if (!cameraDragActiveRef.current && distanceMoved > 12) {
             cameraDragActiveRef.current = true;
             lastCameraPosRef.current = { x: clientX, y: clientY };
           }

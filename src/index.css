@@ -85,6 +85,17 @@
     font-family: 'Inter', sans-serif;
   }
 
+  /* Improve mobile tap responsiveness across the app */
+  button,
+  [role="button"],
+  a {
+    touch-action: manipulation;
+  }
+
+  canvas {
+    touch-action: none;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Orbitron', sans-serif;
   }

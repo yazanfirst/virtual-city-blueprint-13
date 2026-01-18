@@ -282,10 +282,10 @@ export default function CityScene({
     };
   }, [isMobile, handleCameraMove]);
 
-  return (
     <div className="relative h-full w-full">
       <Canvas
         className="h-full w-full"
+        style={{ touchAction: "none" }}
         camera={{ position: [0, 10, 50], fov: 50 }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
       >
