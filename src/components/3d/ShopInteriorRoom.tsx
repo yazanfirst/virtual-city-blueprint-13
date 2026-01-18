@@ -351,138 +351,134 @@ const InteriorScene = ({
       </Text>
 
       {/* ═══════════════════════════════════════════════════════════════
-          MUSTACHIO-STYLE WALL INSTRUCTION PANEL - On back wall (behind player)
-          Positioned to NOT overlap with any product frames
+          MUSTACHIO-STYLE WALL INSTRUCTION PANEL
+          Front wall, ABOVE the frames (so player sees it immediately)
           ═══════════════════════════════════════════════════════════════ */}
-      <group position={[3.5, 2.5, 5.7]} rotation={[0, Math.PI, 0]}>
+      <group position={[0, 3.55, -5.72]} rotation={[0, 0, 0]}>
         {/* Outer ornate gold frame */}
         <mesh position={[0, 0, 0]}>
-          <boxGeometry args={[3.2, 2.2, 0.08]} />
-          <meshStandardMaterial 
-            color="#d4af37" 
-            metalness={0.8} 
-            roughness={0.2}
-          />
+          <boxGeometry args={[2.7, 1.25, 0.08]} />
+          <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.2} />
         </mesh>
-        
+
         {/* Inner frame border - darker gold */}
         <mesh position={[0, 0, 0.02]}>
-          <boxGeometry args={[2.9, 1.9, 0.06]} />
-          <meshStandardMaterial 
-            color="#8b6914" 
-            metalness={0.7} 
-            roughness={0.3}
-          />
+          <boxGeometry args={[2.45, 1.05, 0.06]} />
+          <meshStandardMaterial color="#8b6914" metalness={0.7} roughness={0.3} />
         </mesh>
-        
-        {/* Velvet background - deep burgundy/maroon */}
+
+        {/* Velvet background */}
         <mesh position={[0, 0, 0.04]}>
-          <planeGeometry args={[2.7, 1.7]} />
-          <meshStandardMaterial 
-            color={isMissionMode ? "#1a2a1a" : "#2a1515"} 
+          <planeGeometry args={[2.25, 0.9]} />
+          <meshStandardMaterial
+            color={isMissionMode ? "#1a2a1a" : "#2a1515"}
             roughness={0.95}
           />
         </mesh>
-        
-        {/* Corner flourishes - ornate gold spheres */}
-        {[[-1.35, 0.85], [1.35, 0.85], [-1.35, -0.85], [1.35, -0.85]].map(([x, y], i) => (
+
+        {/* Corner flourishes */}
+        {[
+          [-1.18, 0.48],
+          [1.18, 0.48],
+          [-1.18, -0.48],
+          [1.18, -0.48],
+        ].map(([x, y], i) => (
           <group key={i} position={[x, y, 0.05]}>
             <mesh>
-              <sphereGeometry args={[0.12, 16, 16]} />
+              <sphereGeometry args={[0.1, 16, 16]} />
               <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
             </mesh>
-            {/* Small decorative dots around corner */}
-            {[0, Math.PI/2, Math.PI, -Math.PI/2].map((angle, j) => (
-              <mesh key={j} position={[Math.cos(angle) * 0.18, Math.sin(angle) * 0.18, 0]}>
-                <sphereGeometry args={[0.04, 8, 8]} />
+            {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((angle, j) => (
+              <mesh key={j} position={[Math.cos(angle) * 0.16, Math.sin(angle) * 0.16, 0]}>
+                <sphereGeometry args={[0.035, 8, 8]} />
                 <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
               </mesh>
             ))}
           </group>
         ))}
-        
+
         {/* Top center crown decoration */}
-        <mesh position={[0, 0.95, 0.06]}>
-          <boxGeometry args={[0.6, 0.15, 0.04]} />
+        <mesh position={[0, 0.55, 0.06]}>
+          <boxGeometry args={[0.55, 0.12, 0.04]} />
           <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
         </mesh>
-        <mesh position={[0, 1.05, 0.06]}>
-          <coneGeometry args={[0.12, 0.2, 4]} />
+        <mesh position={[0, 0.66, 0.06]}>
+          <coneGeometry args={[0.11, 0.18, 4]} />
           <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
         </mesh>
-        
+
         {/* Bottom center scroll decoration */}
-        <mesh position={[0, -0.95, 0.06]}>
-          <boxGeometry args={[0.8, 0.1, 0.04]} />
+        <mesh position={[0, -0.55, 0.06]}>
+          <boxGeometry args={[0.7, 0.08, 0.04]} />
           <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
         </mesh>
-        
+
         {/* Side decorative bars */}
-        <mesh position={[-1.4, 0, 0.05]}>
-          <boxGeometry args={[0.06, 1.2, 0.04]} />
+        <mesh position={[-1.22, 0, 0.05]}>
+          <boxGeometry args={[0.05, 0.75, 0.04]} />
           <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
         </mesh>
-        <mesh position={[1.4, 0, 0.05]}>
-          <boxGeometry args={[0.06, 1.2, 0.04]} />
+        <mesh position={[1.22, 0, 0.05]}>
+          <boxGeometry args={[0.05, 0.75, 0.04]} />
           <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
         </mesh>
-        
-        {/* Beautiful HTML content */}
+
+        {/* Message content */}
         <Html
           transform
           position={[0, 0, 0.08]}
-          distanceFactor={5}
+          distanceFactor={6}
           className="pointer-events-none select-none"
         >
-          <div 
-            className="w-[280px] text-center px-5 py-4"
-            style={{
-              fontFamily: "'Georgia', 'Times New Roman', serif",
-            }}
+          <div
+            className="w-[240px] text-center px-4 py-3"
+            style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
           >
             {isMissionMode ? (
               <>
-                {/* Mission Mode - Target Shop Message */}
-                <div className="text-amber-400 font-bold text-lg mb-3 tracking-wide" style={{ textShadow: '0 0 10px rgba(251, 191, 36, 0.5)' }}>
+                <div
+                  className="text-amber-400 font-bold text-base mb-2 tracking-wide"
+                  style={{ textShadow: "0 0 10px rgba(251, 191, 36, 0.45)" }}
+                >
                   🎯 TARGET SHOP 🎯
                 </div>
-                <div className="text-emerald-400 text-base font-semibold mb-4" style={{ textShadow: '0 0 8px rgba(52, 211, 153, 0.4)' }}>
+                <div
+                  className="text-emerald-400 text-sm font-semibold mb-2"
+                  style={{ textShadow: "0 0 8px rgba(52, 211, 153, 0.35)" }}
+                >
                   You made it!
                 </div>
-                <div className="bg-black/40 rounded-lg px-4 py-3 border border-amber-500/30">
+                <div className="bg-black/40 rounded-lg px-3 py-2 border border-amber-500/30">
                   <p className="text-white text-sm leading-relaxed">
-                    Press <span className="text-amber-300 font-bold">EXIT</span> button
+                    Press <span className="text-amber-300 font-bold">EXIT</span>
                   </p>
-                  <p className="text-amber-200 text-sm mt-1">
-                    to answer questions
-                  </p>
-                </div>
-                <div className="mt-3 text-amber-400/80 text-xs animate-pulse">
-                  ▲ Click EXIT at top right ▲
+                  <p className="text-amber-200 text-sm">to answer questions</p>
                 </div>
               </>
             ) : (
               <>
-                {/* Explore Mode Instructions */}
-                <div className="text-amber-400 font-bold text-base mb-3 tracking-wide" style={{ textShadow: '0 0 8px rgba(251, 191, 36, 0.4)' }}>
+                <div
+                  className="text-amber-400 font-bold text-sm mb-2 tracking-wide"
+                  style={{ textShadow: "0 0 8px rgba(251, 191, 36, 0.35)" }}
+                >
                   ✨ WELCOME ✨
                 </div>
-                <div className="space-y-2.5 text-white/90">
-                  <div className="flex items-center justify-center gap-2 text-sm">
-                    <span className="text-xl">👀</span>
+                <div className="space-y-1.5 text-white/90">
+                  <div className="flex items-center justify-center gap-2 text-xs">
+                    <span className="text-base">👀</span>
                     <span>Drag to look around</span>
                   </div>
-                  <div className="flex items-center justify-center gap-2 text-sm">
-                    <span className="text-xl">👆</span>
+                  <div className="flex items-center justify-center gap-2 text-xs">
+                    <span className="text-base">👆</span>
                     <span>Tap frames for products</span>
                   </div>
-                  <div className="flex items-center justify-center gap-2 text-sm">
-                    <span className="text-xl">🌐</span>
+                  <div className="flex items-center justify-center gap-2 text-xs">
+                    <span className="text-base">🌐</span>
                     <span>Visit shop website</span>
                   </div>
                 </div>
-                <div className="mt-3 pt-2 border-t border-amber-500/30">
-                  <p className="text-amber-300 text-sm">
+                <div className="mt-2 pt-2 border-t border-amber-500/30">
+                  <p className="text-amber-300 text-xs">
                     Click <span className="font-bold">EXIT</span> when done
                   </p>
                 </div>
@@ -490,12 +486,12 @@ const InteriorScene = ({
             )}
           </div>
         </Html>
-        
+
         {/* Subtle spotlight on the panel */}
-        <pointLight 
-          position={[0, 0, 1]} 
-          intensity={0.5} 
-          color="#fff5e6" 
+        <pointLight
+          position={[0, 0, 1]}
+          intensity={0.5}
+          color="#fff5e6"
           distance={3}
           decay={2}
         />
