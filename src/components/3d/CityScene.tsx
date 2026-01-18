@@ -216,7 +216,6 @@ export default function CityScene({
   // Use store for camera rotation to persist across game mode changes
   const { cameraRotation, setCameraRotation, incrementJump } = usePlayerStore();
   
-  const isMouseDownRef = useRef(false);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
 
   const handleJoystickMove = useCallback((x: number, y: number) => {
@@ -235,41 +234,31 @@ export default function CityScene({
     });
   }, [cameraRotation, setCameraRotation]);
 
-  // Desktop mouse controls for camera rotation
+  // Desktop mouse controls for camera rotation - NO CLICK REQUIRED
+  // Just move mouse to orbit camera freely
   useEffect(() => {
     if (isMobile) return;
 
-    const handleMouseDown = (e: MouseEvent) => {
-      // Right click or left click for camera control
-      isMouseDownRef.current = true;
-      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
-    };
-
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isMouseDownRef.current) return;
-      const deltaX = (e.clientX - lastMousePosRef.current.x) * 0.005;
-      const deltaY = (e.clientY - lastMousePosRef.current.y) * 0.005;
+      // Calculate delta from last position
+      const deltaX = (e.clientX - lastMousePosRef.current.x) * 0.003;
+      const deltaY = (e.clientY - lastMousePosRef.current.y) * 0.003;
+      
+      // Apply camera rotation (no click needed)
       handleCameraMove(-deltaX, deltaY);
+      
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
-    };
-
-    const handleMouseUp = () => {
-      isMouseDownRef.current = false;
     };
 
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
     };
 
-    window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('contextmenu', handleContextMenu);
 
     return () => {
-      window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('contextmenu', handleContextMenu);
     };
   }, [isMobile, handleCameraMove]);
