@@ -79,8 +79,16 @@ const StreetView = () => {
   useGameAudio();
 
   // Transform spots data to shop brandings - MUST be before useEffect that uses it
-  const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
+  const shopBrandings = useMemo(() => {
+    return spotsData ? transformToShopBranding(spotsData) : [];
+  }, [spotsData]);
   
+  // Handle starting the game (from start screen)
+  const handleStartGame = useCallback(() => {
+    setShowStartScreen(false);
+    setIsMaximized(true);
+  }, []);
+
   // Fetch all shop items for shops on this street
   useEffect(() => {
     const fetchAllShopItems = async () => {
@@ -167,6 +175,29 @@ const StreetView = () => {
     setIsInsideShop(true);
     setShowShopModal(false);
   }, [mission, playerEnterShop]);
+
+  // Handle entering shop from proximity (E key or button)
+  const handleProximityEnter = useCallback(() => {
+    if (!nearbyShop || !shopBrandings) return;
+    const shop = shopBrandings.find(s => s.shopId === nearbyShop.shopId);
+    if (shop) {
+      handleEnterShop(shop);
+    }
+  }, [nearbyShop, shopBrandings, handleEnterShop]);
+
+  // Listen for E key to enter nearby shop
+  useEffect(() => {
+    if (!isMaximized || !nearbyShop) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'KeyE') {
+        handleProximityEnter();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMaximized, nearbyShop, handleProximityEnter]);
 
   const handleExitShop = () => {
     // Restore outside state (camera + position) when exiting shop
@@ -366,34 +397,6 @@ const StreetView = () => {
     </div>
   );
 
-  // Handle starting the game (from start screen)
-  const handleStartGame = useCallback(() => {
-    setShowStartScreen(false);
-    setIsMaximized(true);
-  }, []);
-
-  // Handle entering shop from proximity (E key or button)
-  const handleProximityEnter = useCallback(() => {
-    if (!nearbyShop || !shopBrandings) return;
-    const shop = shopBrandings.find(s => s.shopId === nearbyShop.shopId);
-    if (shop) {
-      handleEnterShop(shop);
-    }
-  }, [nearbyShop, shopBrandings, handleEnterShop]);
-
-  // Listen for E key to enter nearby shop
-  useEffect(() => {
-    if (!isMaximized || !nearbyShop) return;
-    
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'KeyE') {
-        handleProximityEnter();
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMaximized, nearbyShop, handleProximityEnter]);
 
   // Game Mode (Maximized) Layout
   if (isMaximized) {
