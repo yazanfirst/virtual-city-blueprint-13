@@ -58,6 +58,7 @@ const StreetView = () => {
   const { data: spotsWithShops } = useSpotsWithShops(street?.id || "");
   const [isMaximized, setIsMaximized] = useState(false);
   const [hasGameStarted, setHasGameStarted] = useState(false);
+  const [isGamePaused, setIsGamePaused] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
   const [selectedShop, setSelectedShop] = useState<ShopBranding | null>(null);
@@ -69,10 +70,10 @@ const StreetView = () => {
   const [nearbyShop, setNearbyShop] = useState<ShopBranding | null>(null);
 
   // Game state
-  const { coins, level, xp } = useGameStore();
+  const { coins, level, xp, resetGame } = useGameStore();
   
   // Player state
-  const { position: playerPosition, resetToSafeSpawn, enterShop: playerEnterShop, exitShop: playerExitShop } = usePlayerStore();
+  const { position: playerPosition, resetToSafeSpawn, resetPlayer, enterShop: playerEnterShop, exitShop: playerExitShop } = usePlayerStore();
   
   // Mission state
   const mission = useMissionStore();
@@ -280,6 +281,42 @@ const StreetView = () => {
     setShowFailedModal(false);
     setShowJumpScare(false);
     resetToSafeSpawn(); // Move player to safe position
+    mission.resetMission();
+  };
+
+  const handlePauseGame = () => {
+    setIsGamePaused(true);
+    setIsMaximized(false);
+    if (mission.isActive && mission.phase === 'escape') {
+      mission.pauseZombies();
+    }
+  };
+
+  const handleResumeGame = () => {
+    setIsGamePaused(false);
+    setIsMaximized(true);
+    if (mission.isActive && mission.phase === 'escape') {
+      mission.resumeZombies();
+    }
+  };
+
+  const handleExitGame = () => {
+    setIsGamePaused(false);
+    setIsMaximized(false);
+    setHasGameStarted(false);
+    setShowMissions(false);
+    setShow2DMap(false);
+    setShowShopModal(false);
+    setShowQuestionModal(false);
+    setShowFailedModal(false);
+    setShowJumpScare(false);
+    setSelectedShop(null);
+    setInteriorShop(null);
+    setIsInsideShop(false);
+    setNearbyShop(null);
+    playerExitShop();
+    resetPlayer();
+    resetGame();
     mission.resetMission();
   };
   
@@ -537,7 +574,7 @@ const StreetView = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsMaximized(false)}
+                onClick={handlePauseGame}
                 className="bg-background/80 backdrop-blur-md h-6 md:h-8 px-2 md:px-3"
               >
                 <Minimize2 className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
@@ -791,6 +828,7 @@ const StreetView = () => {
                   category={street.category}
                   onStartGame={() => {
                     setHasGameStarted(true);
+                    setIsGamePaused(false);
                     setIsMaximized(true); // Auto fullscreen on start
                   }}
                 />
@@ -846,11 +884,11 @@ const StreetView = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setIsMaximized(true)}
+                      onClick={() => (isGamePaused ? handleResumeGame() : setIsMaximized(true))}
                       className="h-7 px-2 text-xs bg-background/80 backdrop-blur-md"
                     >
                       <Maximize2 className="h-3 w-3 mr-1" />
-                      Game Mode
+                      {isGamePaused ? "Resume" : "Game Mode"}
                     </Button>
                   </div>
                   
@@ -948,6 +986,26 @@ const StreetView = () => {
         </div>
         </div>
       </div>
+      {isGamePaused && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="cyber-card w-[90vw] max-w-md p-6 text-center space-y-5">
+            <div className="space-y-2">
+              <h2 className="font-display text-2xl font-bold text-foreground">Game Paused</h2>
+              <p className="text-sm text-muted-foreground">
+                Resume to continue where you left off, or exit to restart from the beginning.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Button variant="cyber" onClick={handleResumeGame}>
+                Resume Game
+              </Button>
+              <Button variant="outline" onClick={handleExitGame}>
+                Exit to Start
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       {interiorOverlay}
       
       {/* Trap Hit Feedback ("Ouch!") */}

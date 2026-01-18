@@ -19,6 +19,7 @@ type PlayerState = {
   setCameraRotation: (rotation: { azimuth: number; polar: number }) => void;
   incrementJump: () => void;
   resetToSafeSpawn: () => void;
+  resetPlayer: () => void;
   enterShop: () => void;
   exitShop: () => void;
 };
@@ -34,6 +35,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setPosition: (position) => set({ position }),
   setCameraRotation: (cameraRotation) => set({ cameraRotation }),
   resetToSafeSpawn: () => set({ position: SAFE_SPAWN_POSITION }),
+  resetPlayer: () => set({
+    position: [0, 0.25, 35],
+    cameraRotation: { azimuth: 0, polar: Math.PI / 4 },
+    jumpCounter: 0,
+    isInsideShop: false,
+    savedOutsideState: null,
+  }),
   
   // Save current outside state and mark as inside shop
   enterShop: () => {
