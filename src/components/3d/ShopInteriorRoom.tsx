@@ -351,149 +351,98 @@ const InteriorScene = ({
       </Text>
 
       {/* ═══════════════════════════════════════════════════════════════
-          MUSTACHIO-STYLE WALL INSTRUCTION PANEL
-          Front wall, RIGHT SIDE (so it never covers the product frames)
-          Visible immediately when entering the shop
+          WHITE CANVAS BOARD - Leaning against wall like reference image
+          Simple, clean, white background with bold black text
           ═══════════════════════════════════════════════════════════════ */}
-      <group position={[4.9, 3.2, -5.72]} rotation={[0, 0, 0]} scale={0.9}>
-        {/* Outer ornate gold frame */}
+      <group 
+        position={[-5.2, 1.4, -5.3]} 
+        rotation={[-0.08, 0.15, 0]}
+      >
+        {/* White canvas board */}
         <mesh position={[0, 0, 0]}>
-          <boxGeometry args={[2.55, 0.95, 0.08]} />
-          <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.2} />
+          <boxGeometry args={[1.8, 2.4, 0.06]} />
+          <meshStandardMaterial color="#ffffff" roughness={0.15} />
+        </mesh>
+        
+        {/* Thin shadow/edge effect */}
+        <mesh position={[0.03, -0.03, -0.02]}>
+          <boxGeometry args={[1.82, 2.42, 0.04]} />
+          <meshStandardMaterial color="#888888" roughness={0.8} />
         </mesh>
 
-        {/* Inner frame border - darker gold */}
-        <mesh position={[0, 0, 0.02]}>
-          <boxGeometry args={[2.32, 0.78, 0.06]} />
-          <meshStandardMaterial color="#8b6914" metalness={0.7} roughness={0.3} />
-        </mesh>
-
-        {/* Velvet background */}
-        <mesh position={[0, 0, 0.04]}>
-          <planeGeometry args={[2.14, 0.66]} />
-          <meshStandardMaterial
-            color={isMissionMode ? "#1a2a1a" : "#2a1515"}
-            roughness={0.95}
-          />
-        </mesh>
-
-        {/* Corner flourishes */}
-        {[
-          [-1.12, 0.34],
-          [1.12, 0.34],
-          [-1.12, -0.34],
-          [1.12, -0.34],
-        ].map(([x, y], i) => (
-          <group key={i} position={[x, y, 0.05]}>
-            <mesh>
-              <sphereGeometry args={[0.085, 16, 16]} />
-              <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
-            </mesh>
-            {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((angle, j) => (
-              <mesh key={j} position={[Math.cos(angle) * 0.14, Math.sin(angle) * 0.14, 0]}>
-                <sphereGeometry args={[0.03, 8, 8]} />
-                <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
-              </mesh>
-            ))}
-          </group>
-        ))}
-
-        {/* Top center crown decoration */}
-        <mesh position={[0, 0.41, 0.06]}>
-          <boxGeometry args={[0.5, 0.1, 0.04]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
-        </mesh>
-        <mesh position={[0, 0.5, 0.06]}>
-          <coneGeometry args={[0.1, 0.16, 4]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
-        </mesh>
-
-        {/* Bottom center scroll decoration */}
-        <mesh position={[0, -0.41, 0.06]}>
-          <boxGeometry args={[0.64, 0.07, 0.04]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
-        </mesh>
-
-        {/* Side decorative bars */}
-        <mesh position={[-1.15, 0, 0.05]}>
-          <boxGeometry args={[0.05, 0.6, 0.04]} />
-          <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
-        </mesh>
-        <mesh position={[1.15, 0, 0.05]}>
-          <boxGeometry args={[0.05, 0.6, 0.04]} />
-          <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
-        </mesh>
-
-        {/* Message content */}
+        {/* Text content using Html */}
         <Html
           transform
-          position={[0, 0, 0.08]}
-          distanceFactor={8}
+          position={[0, 0, 0.04]}
+          distanceFactor={4.5}
           className="pointer-events-none select-none"
         >
           <div
-            className="w-[200px] text-center px-3 py-2"
-            style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
+            className="w-[180px] text-left px-4 py-5"
+            style={{ 
+              fontFamily: "'Arial Black', 'Helvetica Neue', sans-serif",
+              backgroundColor: 'white',
+              borderRadius: '2px',
+            }}
           >
             {isMissionMode ? (
-              <>
-                <div
-                  className="text-amber-400 font-bold text-sm mb-1 tracking-wide"
-                  style={{ textShadow: "0 0 10px rgba(251, 191, 36, 0.45)" }}
-                >
-                  🎯 TARGET SHOP 🎯
-                </div>
-                <div
-                  className="text-emerald-400 text-xs font-semibold mb-2"
-                  style={{ textShadow: "0 0 8px rgba(52, 211, 153, 0.35)" }}
-                >
-                  You made it!
-                </div>
-                <div className="bg-black/40 rounded-md px-2.5 py-2 border border-amber-500/30">
-                  <p className="text-white text-xs leading-relaxed">
-                    Press <span className="text-amber-300 font-bold">EXIT</span>
-                  </p>
-                  <p className="text-amber-200 text-xs">to answer questions</p>
-                </div>
-              </>
+              <div className="space-y-2">
+                <p className="text-black font-black text-lg leading-tight tracking-tight uppercase">
+                  TARGET
+                </p>
+                <p className="text-black font-black text-lg leading-tight tracking-tight uppercase">
+                  SHOP!
+                </p>
+                <p className="text-black font-black text-base leading-tight tracking-tight uppercase mt-3">
+                  PRESS
+                </p>
+                <p className="text-black font-black text-base leading-tight tracking-tight uppercase">
+                  EXIT
+                </p>
+                <p className="text-black font-black text-base leading-tight tracking-tight uppercase">
+                  TO ANSWER
+                </p>
+                <p className="text-black font-black text-base leading-tight tracking-tight uppercase">
+                  QUESTIONS.
+                </p>
+              </div>
             ) : (
-              <>
-                <div
-                  className="text-amber-400 font-bold text-xs mb-2 tracking-wide"
-                  style={{ textShadow: "0 0 8px rgba(251, 191, 36, 0.35)" }}
-                >
-                  ✨ WELCOME ✨
-                </div>
-                <div className="space-y-1 text-white/90">
-                  <div className="flex items-center justify-center gap-2 text-[11px]">
-                    <span className="text-sm">👀</span>
-                    <span>Drag to look around</span>
-                  </div>
-                  <div className="flex items-center justify-center gap-2 text-[11px]">
-                    <span className="text-sm">👆</span>
-                    <span>Tap frames for products</span>
-                  </div>
-                  <div className="flex items-center justify-center gap-2 text-[11px]">
-                    <span className="text-sm">🌐</span>
-                    <span>Visit shop website</span>
-                  </div>
-                </div>
-                <div className="mt-2 pt-2 border-t border-amber-500/30">
-                  <p className="text-amber-300 text-[11px]">
-                    Click <span className="font-bold">EXIT</span> when done
-                  </p>
-                </div>
-              </>
+              <div className="space-y-1.5">
+                <p className="text-black font-black text-base leading-tight tracking-tight uppercase">
+                  DRAG TO
+                </p>
+                <p className="text-black font-black text-base leading-tight tracking-tight uppercase">
+                  LOOK
+                </p>
+                <p className="text-black font-black text-base leading-tight tracking-tight uppercase">
+                  AROUND.
+                </p>
+                <p className="text-black font-black text-sm leading-tight tracking-tight uppercase mt-3">
+                  TAP FRAMES
+                </p>
+                <p className="text-black font-black text-sm leading-tight tracking-tight uppercase">
+                  FOR
+                </p>
+                <p className="text-black font-black text-sm leading-tight tracking-tight uppercase">
+                  PRODUCTS.
+                </p>
+                <p className="text-black font-black text-xs leading-tight tracking-tight uppercase mt-3">
+                  CLICK EXIT
+                </p>
+                <p className="text-black font-black text-xs leading-tight tracking-tight uppercase">
+                  WHEN DONE.
+                </p>
+              </div>
             )}
           </div>
         </Html>
 
-        {/* Subtle spotlight on the panel */}
+        {/* Subtle light on the canvas */}
         <pointLight
-          position={[0, 0, 1]}
-          intensity={0.5}
-          color="#fff5e6"
-          distance={3}
+          position={[0, 0.5, 1.5]}
+          intensity={0.6}
+          color="#ffffff"
+          distance={4}
           decay={2}
         />
       </group>
