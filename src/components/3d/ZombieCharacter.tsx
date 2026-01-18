@@ -10,6 +10,7 @@ interface ZombieProps {
   isNight?: boolean;
   isPaused?: boolean;
   isSlowed?: boolean;
+  isFrozen?: boolean; // Complete freeze from laser trap
   behaviorType?: 'direct' | 'flanker' | 'ambusher' | 'patrol';
   onTouchPlayer: (zombieId: string) => void;
 }
@@ -31,6 +32,7 @@ export default function ZombieCharacter({
   isNight = true,
   isPaused = false,
   isSlowed = false,
+  isFrozen = false,
   behaviorType = 'direct',
   onTouchPlayer,
 }: ZombieProps) {
@@ -75,10 +77,10 @@ export default function ZombieCharacter({
       }
     }
     
-    // Don't move if paused
-    if (isPaused) return;
+    // Don't move if paused or frozen
+    if (isPaused || isFrozen) return;
     
-    // Apply slow effect
+    // Apply slow effect (reduced speed when slowed)
     const effectiveSpeed = isSlowed ? speed * 0.3 : speed;
     behaviorTimerRef.current += delta;
     

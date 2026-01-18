@@ -76,6 +76,9 @@ interface MissionState {
   // Zombie slow state (from laser traps)
   slowedZombieIds: Set<string>;
   
+  // Zombie freeze state (complete stop from laser traps)
+  frozenZombieIds: Set<string>;
+  
   // Protection state (after exiting shop or respawn)
   isProtected: boolean;
   spawnProtectionTimer: number | null;
@@ -107,6 +110,8 @@ interface MissionState {
   showDeceptiveMessage: () => void;
   slowZombie: (zombieId: string) => void;
   unslowZombie: (zombieId: string) => void;
+  freezeZombie: (zombieId: string, duration?: number) => void;
+  unfreezeZombie: (zombieId: string) => void;
   setNotification: (has: boolean) => void;
   getSafeSpawnPosition: () => [number, number, number];
 }
@@ -192,6 +197,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   traps: [],
   
   slowedZombieIds: new Set(),
+  frozenZombieIds: new Set(),
   
   isProtected: false,
   spawnProtectionTimer: null,
@@ -231,6 +237,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       zombiesPaused: false,
       traps: generateTrapPositions(),
       slowedZombieIds: new Set(),
+      frozenZombieIds: new Set(),
       isProtected: true, // Start protected
       spawnProtectionTimer: protectionTimer,
       trapTriggered: false,
@@ -392,6 +399,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       zombiesPaused: false,
       traps: [],
       slowedZombieIds: new Set(),
+      frozenZombieIds: new Set(),
       isProtected: false,
       spawnProtectionTimer: null,
       trapTriggered: false,
@@ -429,6 +437,28 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     const newSlowed = new Set(state.slowedZombieIds);
     newSlowed.delete(zombieId);
     set({ slowedZombieIds: newSlowed });
+  },
+  
+  freezeZombie: (zombieId: string, duration: number = 1000) => {
+    const state = get();
+    const newFrozen = new Set(state.frozenZombieIds);
+    newFrozen.add(zombieId);
+    set({ frozenZombieIds: newFrozen });
+    
+    // Automatically unfreeze after duration (default 1 second)
+    setTimeout(() => {
+      const currentState = get();
+      const updated = new Set(currentState.frozenZombieIds);
+      updated.delete(zombieId);
+      set({ frozenZombieIds: updated });
+    }, duration);
+  },
+  
+  unfreezeZombie: (zombieId: string) => {
+    const state = get();
+    const newFrozen = new Set(state.frozenZombieIds);
+    newFrozen.delete(zombieId);
+    set({ frozenZombieIds: newFrozen });
   },
   
   setNotification: (has: boolean) => set({ hasNotification: has }),
