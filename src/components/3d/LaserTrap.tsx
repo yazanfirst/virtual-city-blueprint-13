@@ -17,6 +17,59 @@ const PLAYER_HIT_DISTANCE = 0.25; // Player must actually touch the laser beam
 const PLAYER_JUMP_HEIGHT_THRESHOLD = 0.7; // Player must jump this high to avoid laser
 const ZOMBIE_HIT_DISTANCE = 0.8; // Distance for zombie detection
 
+const getSegmentDistance2D = (
+  aStart: THREE.Vector2,
+  aEnd: THREE.Vector2,
+  bStart: THREE.Vector2,
+  bEnd: THREE.Vector2
+): number => {
+  const getPointToSegmentDistance = (point: THREE.Vector2, segStart: THREE.Vector2, segEnd: THREE.Vector2) => {
+    const seg = segEnd.clone().sub(segStart);
+    const segLengthSq = seg.lengthSq();
+    if (segLengthSq === 0) {
+      return point.distanceTo(segStart);
+    }
+    const t = Math.max(0, Math.min(1, point.clone().sub(segStart).dot(seg) / segLengthSq));
+    const projection = segStart.clone().add(seg.multiplyScalar(t));
+    return point.distanceTo(projection);
+  };
+
+  const cross = (a: THREE.Vector2, b: THREE.Vector2) => a.x * b.y - a.y * b.x;
+  const direction = (a: THREE.Vector2, b: THREE.Vector2, c: THREE.Vector2) =>
+    cross(c.clone().sub(a), b.clone().sub(a));
+  const onSegment = (a: THREE.Vector2, b: THREE.Vector2, c: THREE.Vector2) =>
+    Math.min(a.x, b.x) <= c.x + 1e-6 &&
+    Math.max(a.x, b.x) >= c.x - 1e-6 &&
+    Math.min(a.y, b.y) <= c.y + 1e-6 &&
+    Math.max(a.y, b.y) >= c.y - 1e-6;
+
+  const d1 = direction(aStart, aEnd, bStart);
+  const d2 = direction(aStart, aEnd, bEnd);
+  const d3 = direction(bStart, bEnd, aStart);
+  const d4 = direction(bStart, bEnd, aEnd);
+
+  const intersects =
+    ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+    ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
+
+  const colinearIntersection =
+    Math.abs(d1) < 1e-6 && onSegment(aStart, aEnd, bStart) ||
+    Math.abs(d2) < 1e-6 && onSegment(aStart, aEnd, bEnd) ||
+    Math.abs(d3) < 1e-6 && onSegment(bStart, bEnd, aStart) ||
+    Math.abs(d4) < 1e-6 && onSegment(bStart, bEnd, aEnd);
+
+  if (intersects || colinearIntersection) {
+    return 0;
+  }
+
+  const distanceA = getPointToSegmentDistance(aStart, bStart, bEnd);
+  const distanceB = getPointToSegmentDistance(aEnd, bStart, bEnd);
+  const distanceC = getPointToSegmentDistance(bStart, aStart, aEnd);
+  const distanceD = getPointToSegmentDistance(bEnd, aStart, aEnd);
+
+  return Math.min(distanceA, distanceB, distanceC, distanceD);
+};
+
 /**
  * Laser beam trap that damages player and slows zombies
  * Visual: Red pulsing laser beam between two posts
@@ -36,6 +89,7 @@ export default function LaserTrap({
   const hitCooldownRef = useRef(0);
   const zombieCheckRef = useRef(0);
   const zombieSlowCooldownRef = useRef<Record<string, number>>({});
+  const lastPlayerPosRef = useRef<THREE.Vector3 | null>(null);
   
   const playerPosition = usePlayerStore((state) => state.position);
   const { zombies, slowZombie } = useMissionStore();
@@ -75,27 +129,38 @@ export default function LaserTrap({
     const lineVec = end.clone().sub(start);
     
     // Check player collision (with cooldown)
+    const playerPos = new THREE.Vector3(...playerPosition);
+    const lastPlayerPos = lastPlayerPosRef.current ?? playerPos.clone();
     if (hitCooldownRef.current > 0) {
       hitCooldownRef.current -= delta;
     } else {
-      const playerPos = new THREE.Vector3(...playerPosition);
       const playerToStart = playerPos.clone().sub(start);
       
       const t = Math.max(0, Math.min(1, playerToStart.dot(lineVec) / lineVec.lengthSq()));
       const closestPoint = start.clone().add(lineVec.clone().multiplyScalar(t));
       
-      // Only check X and Z distance (ignore Y for distance calc)
-      const dx = playerPos.x - closestPoint.x;
-      const dz = playerPos.z - closestPoint.z;
-      const horizontalDistance = Math.sqrt(dx * dx + dz * dz);
+      const playerSegmentStart = new THREE.Vector2(lastPlayerPos.x, lastPlayerPos.z);
+      const playerSegmentEnd = new THREE.Vector2(playerPos.x, playerPos.z);
+      const beamSegmentStart = new THREE.Vector2(start.x, start.z);
+      const beamSegmentEnd = new THREE.Vector2(end.x, end.z);
+
+      const segmentDistance = getSegmentDistance2D(
+        playerSegmentStart,
+        playerSegmentEnd,
+        beamSegmentStart,
+        beamSegmentEnd
+      );
+      const minPlayerHeight = Math.min(lastPlayerPos.y, playerPos.y);
       
       // Player can avoid laser by jumping high enough
       // Laser is at Y=0.9, so player needs to be above that
-      if (horizontalDistance < PLAYER_HIT_DISTANCE && playerPos.y < PLAYER_JUMP_HEIGHT_THRESHOLD) {
+      if (segmentDistance < PLAYER_HIT_DISTANCE && minPlayerHeight < PLAYER_JUMP_HEIGHT_THRESHOLD) {
         onPlayerHit(id);
         hitCooldownRef.current = 1.5; // 1.5 second cooldown between hits
       }
     }
+
+    lastPlayerPosRef.current = playerPos;
     
     // Update zombie slow cooldowns
     for (const zombieId of Object.keys(zombieSlowCooldownRef.current)) {
