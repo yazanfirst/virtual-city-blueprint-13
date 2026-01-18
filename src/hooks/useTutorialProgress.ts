@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 
 export type TutorialStep = 
-  | 'movement'         // First time in game - show WASD controls
-  | 'mission_start'    // First time opening mission panel - how to start
-  | 'shop_nearby'      // First time near a shop - show how to enter
-  | 'shop_inside'      // First time inside shop - show exit button
-  | 'mission_escape'   // First time in escape phase - explain zombie chase
-  | 'mission_observation' // First time in observation phase - study items
-  | 'mission_question'; // First time in question phase - explain answering
+  | 'movement'              // First time in game - show WASD controls
+  | 'shop_nearby'           // First time near a shop - show how to enter
+  | 'shop_inside'           // First time inside shop (exploration) - browse, website, exit
+  | 'shop_exit_missions'    // After first shop exit - introduce missions for coins
+  | 'mission_activated'     // After clicking activate - what happens in mission
+  | 'mission_escape'        // In escape phase - zombie chase and traps
+  | 'mission_observation'   // Inside target shop during mission - memorize & exit to answer
+  | 'mission_question';     // Question phase - answer carefully
 
 const STORAGE_KEY = 'game_tutorial_progress';
 

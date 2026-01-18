@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Move, MousePointer, Store, LogOut, Target, Brain, AlertTriangle, Eye } from "lucide-react";
+import { X, Move, MousePointer, Store, LogOut, Target, Brain, AlertTriangle, Eye, Coins } from "lucide-react";
 import { TutorialStep } from "@/hooks/useTutorialProgress";
 import { Button } from "@/components/ui/button";
 
@@ -17,31 +17,38 @@ const tutorialContent: Record<TutorialStep, {
 }> = {
   movement: {
     icon: Move,
-    title: "Movement Controls",
-    description: "Use WASD or Arrow Keys to move your character around the street. Hold Left Click and drag to rotate the camera. Press Space to jump!",
+    title: "Welcome to the Street!",
+    description: "Use WASD or Arrow Keys to move around. Hold Left Click and drag to rotate the camera. Press Space to jump! Explore the shops around you.",
     hint: "Tap anywhere to continue",
-    position: 'center',
-  },
-  mission_start: {
-    icon: Target,
-    title: "Ready for a Mission?",
-    description: "Look at the Mission Panel on your screen! Click the 'Activate Mission' button to start. You'll need to escape zombies and reach a target shop while avoiding traps!",
-    hint: "Find the Mission Panel and click Activate Mission",
     position: 'center',
   },
   shop_nearby: {
     icon: Store,
-    title: "Enter Shop",
-    description: "You're near a shop! Click on it to enter and explore the products inside.",
-    hint: "Get close to shops to enter them",
+    title: "Shop Nearby!",
+    description: "You're close to a shop! Click on it to enter and explore what's inside.",
+    hint: "Click on the shop to enter",
     position: 'bottom-center',
   },
   shop_inside: {
     icon: LogOut,
     title: "Welcome to the Shop!",
-    description: "Look around and explore the products on display! You can browse items, check prices, and even visit the shop's website. When you're done, click the Exit button at the top right.",
+    description: "Look around and explore the products on display! You can browse items, check prices, and visit the shop's website. When you're done, click the EXIT button at the top right.",
     hint: "Exit button is at the top right",
     position: 'top-right',
+  },
+  shop_exit_missions: {
+    icon: Coins,
+    title: "Want More Coins?",
+    description: "Great job exploring! Want to earn coins and get discounts? Click the MISSION button on the left side of your screen to start a mission!",
+    hint: "Look for the Mission button on the left",
+    position: 'top-left',
+  },
+  mission_activated: {
+    icon: Target,
+    title: "Mission Started!",
+    description: "Zombies will start chasing you! Run to the TARGET SHOP shown in green. Avoid fire pits, swinging axes, and thorns along the way. Press SPACE to jump over obstacles!",
+    hint: "Find and run to the target shop!",
+    position: 'center',
   },
   mission_escape: {
     icon: AlertTriangle,
@@ -52,8 +59,8 @@ const tutorialContent: Record<TutorialStep, {
   },
   mission_observation: {
     icon: Eye,
-    title: "You Reached the Target Shop!",
-    description: "You made it! Now look around carefully and remember what you see - the items, their names, and prices. When you're ready, click the EXIT button at the top right to answer questions about this shop!",
+    title: "You Made It!",
+    description: "You're inside the target shop! Now look around carefully - remember the items, their names, and prices. When you're ready, click the EXIT button at the top right to answer questions!",
     hint: "Click EXIT when ready to answer questions",
     position: 'top-right',
   },
