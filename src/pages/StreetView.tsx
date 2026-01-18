@@ -111,59 +111,48 @@ const StreetView = () => {
     }
   }, [nearbyShop, hasGameStarted, isInsideShop, mission.isActive]);
 
-  // 3. Inside shop tutorial (exploration mode - not during mission)
-  useEffect(() => {
-    if (isInsideShop && !mission.isActive) {
-      tutorial.showTutorialStep('shop_inside');
-    }
-  }, [isInsideShop, mission.isActive]);
-
-  // 4. After exiting shop first time - introduce missions
+  // 3. Shop exit tutorial (after first exit - not during mission) - introduce missions
   useEffect(() => {
     if (hasExitedShopOnce && !isInsideShop && !mission.isActive) {
       tutorial.showTutorialStep('shop_exit_missions');
     }
   }, [hasExitedShopOnce, isInsideShop, mission.isActive]);
 
-  // 5. Mission activated tutorial - right after clicking activate
+  // 4. Mission activated tutorial - right after clicking activate
   useEffect(() => {
     if (mission.isActive && mission.phase === 'escape' && !tutorial.isStepCompleted('mission_activated')) {
       tutorial.showTutorialStep('mission_activated');
     }
   }, [mission.isActive, mission.phase]);
 
-  // 6. Inside target shop during mission (observation phase)
-  useEffect(() => {
-    if (mission.isActive && mission.phase === 'observation' && isInsideShop) {
-      tutorial.showTutorialStep('mission_observation');
-    }
-  }, [mission.isActive, mission.phase, isInsideShop]);
-
-  // 7. Question phase tutorial
+  // 5. Question phase tutorial
   useEffect(() => {
     if (mission.isActive && mission.phase === 'question' && showQuestionModal) {
       tutorial.showTutorialStep('mission_question');
     }
   }, [mission.isActive, mission.phase, showQuestionModal]);
 
-  // PAUSE GAME while tutorial tooltip is active
+  // PAUSE GAME when ANY popup/modal is active
+  const isAnyPopupOpen = tutorial.activeTooltip || showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+  
   useEffect(() => {
-    if (tutorial.activeTooltip) {
-      // Pause zombies when tutorial is showing
+    if (isAnyPopupOpen) {
+      // Pause zombies when any popup is showing
       if (mission.isActive && !mission.zombiesPaused) {
         mission.pauseZombies();
       }
     }
-  }, [tutorial.activeTooltip, mission.isActive]);
+  }, [isAnyPopupOpen, mission.isActive]);
 
   // Resume game when tutorial tooltip is dismissed
   const handleTutorialDismiss = useCallback(() => {
     tutorial.dismissTooltip();
-    // Resume zombies if in escape phase
-    if (mission.isActive && mission.phase === 'escape') {
+    // Resume zombies only if no other popups are open
+    const otherPopupsOpen = showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+    if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
       mission.resumeZombies();
     }
-  }, [tutorial, mission]);
+  }, [tutorial, mission, showMissions, show2DMap, showShopModal, showQuestionModal, showFailedModal, showJumpScare]);
   // Fetch all shop items for shops on this street
   useEffect(() => {
     const fetchAllShopItems = async () => {
@@ -545,7 +534,11 @@ const StreetView = () => {
   // Game Mode (Maximized) Layout
   if (isMaximized) {
     const interiorOverlay = isInsideShop && interiorShop ? (
-      <ShopInteriorRoom shop={interiorShop} onExit={handleExitShop} />
+      <ShopInteriorRoom 
+        shop={interiorShop} 
+        onExit={handleExitShop} 
+        isMissionMode={mission.isActive && mission.phase === 'observation'}
+      />
     ) : null;
 
     return (
@@ -698,8 +691,9 @@ const StreetView = () => {
               style={{ zIndex: 200 }}
               onClick={() => {
                 setShowMissions(false);
-                // Resume zombies when mission panel closes during escape phase
-                if (mission.isActive && mission.phase === 'escape') {
+                // Resume zombies when mission panel closes during escape phase (if no other popups open)
+                const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+                if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
                   mission.resumeZombies();
                 }
               }}
@@ -718,13 +712,14 @@ const StreetView = () => {
                     </h3>
                   </div>
                   <button 
-                    onClick={() => {
-                      setShowMissions(false);
-                      // Resume zombies when mission panel closes during escape phase
-                      if (mission.isActive && mission.phase === 'escape') {
-                        mission.resumeZombies();
-                      }
-                    }}
+            onClick={() => {
+              setShowMissions(false);
+              // Resume zombies when mission panel closes during escape phase (if no other popups open)
+              const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+              if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
+                mission.resumeZombies();
+              }
+            }}
                     className="text-muted-foreground hover:text-foreground p-1"
                   >
                     <X className="h-5 w-5" />
@@ -862,7 +857,11 @@ const StreetView = () => {
   }
 
   const interiorOverlay = isInsideShop && interiorShop ? (
-    <ShopInteriorRoom shop={interiorShop} onExit={handleExitShop} />
+    <ShopInteriorRoom 
+      shop={interiorShop} 
+      onExit={handleExitShop}
+      isMissionMode={mission.isActive && mission.phase === 'observation'}
+    />
   ) : null;
 
   // Normal 3-Column Layout
