@@ -17,9 +17,11 @@ import TrapHitFeedback from "@/components/mission/TrapHitFeedback";
 import JumpScareModal from "@/components/mission/JumpScareModal";
 import GameStartScreen from "@/components/3d/GameStartScreen";
 import ShopProximityIndicator from "@/components/3d/ShopProximityIndicator";
+import TutorialTooltip from "@/components/3d/TutorialTooltip";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { usePlayerStore } from "@/stores/playerStore";
+import { useTutorialProgress } from "@/hooks/useTutorialProgress";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
 import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
@@ -85,9 +87,47 @@ const StreetView = () => {
   // Game audio
   useGameAudio();
 
+  // Tutorial system
+  const tutorial = useTutorialProgress();
+
   // Transform spots data to shop brandings - MUST be before useEffect that uses it
   const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
-  
+
+  // Tutorial triggers
+  useEffect(() => {
+    // Show movement tutorial when game first starts
+    if (hasGameStarted && isMaximized && !isInsideShop) {
+      tutorial.showTutorialStep('movement');
+    }
+  }, [hasGameStarted, isMaximized]);
+
+  useEffect(() => {
+    // Show shop_nearby tutorial when first time near a shop
+    if (nearbyShop && hasGameStarted && !isInsideShop) {
+      tutorial.showTutorialStep('shop_nearby');
+    }
+  }, [nearbyShop, hasGameStarted, isInsideShop]);
+
+  useEffect(() => {
+    // Show shop_inside tutorial when entering shop for first time
+    if (isInsideShop) {
+      tutorial.showTutorialStep('shop_inside');
+    }
+  }, [isInsideShop]);
+
+  useEffect(() => {
+    // Show mission_escape tutorial when escape phase starts
+    if (mission.isActive && mission.phase === 'escape') {
+      tutorial.showTutorialStep('mission_escape');
+    }
+  }, [mission.isActive, mission.phase]);
+
+  useEffect(() => {
+    // Show mission_question tutorial when question phase starts
+    if (mission.isActive && mission.phase === 'question' && showQuestionModal) {
+      tutorial.showTutorialStep('mission_question');
+    }
+  }, [mission.isActive, mission.phase, showQuestionModal]);
   // Fetch all shop items for shops on this street
   useEffect(() => {
     const fetchAllShopItems = async () => {
@@ -766,6 +806,14 @@ const StreetView = () => {
           onRetry={handleRetryMission}
           onExit={handleExitMission}
         />
+        
+        {/* Tutorial Tooltip */}
+        {tutorial.activeTooltip && (
+          <TutorialTooltip
+            step={tutorial.activeTooltip}
+            onDismiss={tutorial.dismissTooltip}
+          />
+        )}
       </div>
     );
   }
