@@ -111,6 +111,7 @@ interface MissionState {
   unslowZombie: (zombieId: string) => void;
   freezeZombie: (zombieId: string, duration?: number) => void;
   unfreezeZombie: (zombieId: string) => void;
+  freezeAllZombies: (duration?: number) => void;
   setNotification: (has: boolean) => void;
   getSafeSpawnPosition: () => [number, number, number];
 }
@@ -465,6 +466,18 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     const newFrozen = new Set(state.frozenZombieIds);
     newFrozen.delete(zombieId);
     set({ frozenZombieIds: newFrozen });
+  },
+  
+  freezeAllZombies: (duration: number = 3000) => {
+    const state = get();
+    const allZombieIds = state.zombies.map(z => z.id);
+    const newFrozen = new Set(allZombieIds);
+    set({ frozenZombieIds: newFrozen });
+    
+    // Automatically unfreeze all after duration (default 3 seconds)
+    setTimeout(() => {
+      set({ frozenZombieIds: new Set() });
+    }, duration);
   },
   
   setNotification: (has: boolean) => set({ hasNotification: has }),
