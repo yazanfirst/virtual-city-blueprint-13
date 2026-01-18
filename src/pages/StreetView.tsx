@@ -103,17 +103,17 @@ const StreetView = () => {
 
   useEffect(() => {
     // Show shop_nearby tutorial when first time near a shop
-    if (nearbyShop && hasGameStarted && !isInsideShop) {
+    if (nearbyShop && hasGameStarted && !isInsideShop && !mission.isActive) {
       tutorial.showTutorialStep('shop_nearby');
     }
-  }, [nearbyShop, hasGameStarted, isInsideShop]);
+  }, [nearbyShop, hasGameStarted, isInsideShop, mission.isActive]);
 
   useEffect(() => {
-    // Show shop_inside tutorial when entering shop for first time
-    if (isInsideShop) {
+    // Show shop_inside tutorial when entering shop for first time (not during mission)
+    if (isInsideShop && !mission.isActive) {
       tutorial.showTutorialStep('shop_inside');
     }
-  }, [isInsideShop]);
+  }, [isInsideShop, mission.isActive]);
 
   useEffect(() => {
     // Show mission_escape tutorial when escape phase starts
@@ -123,11 +123,37 @@ const StreetView = () => {
   }, [mission.isActive, mission.phase]);
 
   useEffect(() => {
+    // Show mission_observation tutorial when entering target shop during mission
+    if (mission.isActive && mission.phase === 'observation' && isInsideShop) {
+      tutorial.showTutorialStep('mission_observation');
+    }
+  }, [mission.isActive, mission.phase, isInsideShop]);
+
+  useEffect(() => {
     // Show mission_question tutorial when question phase starts
     if (mission.isActive && mission.phase === 'question' && showQuestionModal) {
       tutorial.showTutorialStep('mission_question');
     }
   }, [mission.isActive, mission.phase, showQuestionModal]);
+
+  // PAUSE GAME while tutorial tooltip is active
+  useEffect(() => {
+    if (tutorial.activeTooltip) {
+      // Pause zombies when tutorial is showing
+      if (mission.isActive && !mission.zombiesPaused) {
+        mission.pauseZombies();
+      }
+    }
+  }, [tutorial.activeTooltip, mission.isActive]);
+
+  // Resume game when tutorial tooltip is dismissed
+  const handleTutorialDismiss = useCallback(() => {
+    tutorial.dismissTooltip();
+    // Resume zombies if in escape phase
+    if (mission.isActive && mission.phase === 'escape') {
+      mission.resumeZombies();
+    }
+  }, [tutorial, mission]);
   // Fetch all shop items for shops on this street
   useEffect(() => {
     const fetchAllShopItems = async () => {
@@ -633,6 +659,10 @@ const StreetView = () => {
                 if (mission.isActive && mission.phase === 'escape') {
                   mission.pauseZombies();
                 }
+                // Show mission_start tutorial first time opening mission panel
+                if (!mission.isActive) {
+                  tutorial.showTutorialStep('mission_start');
+                }
               }}
               className="relative flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg"
             >
@@ -811,7 +841,7 @@ const StreetView = () => {
         {tutorial.activeTooltip && (
           <TutorialTooltip
             step={tutorial.activeTooltip}
-            onDismiss={tutorial.dismissTooltip}
+            onDismiss={handleTutorialDismiss}
           />
         )}
       </div>

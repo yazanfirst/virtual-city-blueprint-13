@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Move, MousePointer, Store, LogOut, Target, Brain, AlertTriangle } from "lucide-react";
+import { X, Move, MousePointer, Store, LogOut, Target, Brain, AlertTriangle, Eye } from "lucide-react";
 import { TutorialStep } from "@/hooks/useTutorialProgress";
 import { Button } from "@/components/ui/button";
 
@@ -22,38 +22,45 @@ const tutorialContent: Record<TutorialStep, {
     hint: "Tap anywhere to continue",
     position: 'center',
   },
-  mission: {
+  mission_start: {
     icon: Target,
     title: "Start a Mission",
-    description: "Open the Missions panel to start exciting challenges. Complete missions to earn coins and XP!",
-    hint: "Tap anywhere to continue",
-    position: 'top-right',
+    description: "Click 'Activate Mission' to begin! You'll need to escape zombies, reach the target shop, memorize items inside, then answer questions about what you saw.",
+    hint: "Click Activate Mission to begin",
+    position: 'center',
   },
   shop_nearby: {
     icon: Store,
     title: "Enter Shop",
-    description: "You're near a shop! Click on it or press E to enter and explore the products inside.",
+    description: "You're near a shop! Click on it to enter and explore the products inside.",
     hint: "Get close to shops to enter them",
     position: 'bottom-center',
   },
   shop_inside: {
     icon: LogOut,
     title: "Inside the Shop",
-    description: "Browse the products on display. Look around to see what's available. Click the Exit button when you're ready to leave.",
+    description: "Browse the products on display. Look around to see what's available. Click the Exit button at the top when you're ready to leave.",
     hint: "Exit button is at the top right",
     position: 'top-right',
   },
   mission_escape: {
     icon: AlertTriangle,
     title: "Escape Phase!",
-    description: "Zombies are chasing you! Run to the target shop marked on your screen. Avoid traps and obstacles on your way!",
-    hint: "Look for the glowing shop marker",
+    description: "Zombies are chasing you! Run to the TARGET SHOP shown in the mission panel. Avoid fire pits, swinging axes, and thorns! Press SPACE to jump over obstacles.",
+    hint: "Look for the target shop name",
+    position: 'center',
+  },
+  mission_observation: {
+    icon: Eye,
+    title: "Memorize Everything!",
+    description: "You're safe inside the target shop! Study the items carefully - their names, prices, and positions. You'll be tested when you exit!",
+    hint: "Click Exit when ready to answer questions",
     position: 'center',
   },
   mission_question: {
     icon: Brain,
-    title: "Answer Questions",
-    description: "Now answer questions about what you saw in the shop. Remember the items, prices, and details you observed!",
+    title: "Memory Test",
+    description: "Answer questions about what you saw in the shop. Get all answers correct to complete the mission. One wrong answer and the zombies will find you!",
     hint: "Think carefully before answering",
     position: 'center',
   },
