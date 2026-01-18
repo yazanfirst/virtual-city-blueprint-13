@@ -217,6 +217,7 @@ export default function CityScene({
   const { cameraRotation, setCameraRotation, incrementJump } = usePlayerStore();
   
   const lastMousePosRef = useRef({ x: 0, y: 0 });
+  const isMouseDownRef = useRef(false);
 
   const handleJoystickMove = useCallback((x: number, y: number) => {
     setJoystickInput({ x, y });
@@ -234,17 +235,31 @@ export default function CityScene({
     });
   }, [cameraRotation, setCameraRotation]);
 
-  // Desktop mouse controls for camera rotation - NO CLICK REQUIRED
-  // Just move mouse to orbit camera freely
+  // Desktop mouse controls for camera rotation - LEFT CLICK to orbit
   useEffect(() => {
     if (isMobile) return;
 
+    const handleMouseDown = (e: MouseEvent) => {
+      if (e.button === 0) { // Left click
+        isMouseDownRef.current = true;
+        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (e.button === 0) {
+        isMouseDownRef.current = false;
+      }
+    };
+
     const handleMouseMove = (e: MouseEvent) => {
+      if (!isMouseDownRef.current) return;
+      
       // Calculate delta from last position
       const deltaX = (e.clientX - lastMousePosRef.current.x) * 0.003;
       const deltaY = (e.clientY - lastMousePosRef.current.y) * 0.003;
       
-      // Apply camera rotation (no click needed)
+      // Apply camera rotation only when mouse is held down
       handleCameraMove(-deltaX, deltaY);
       
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
@@ -254,10 +269,14 @@ export default function CityScene({
       e.preventDefault();
     };
 
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('contextmenu', handleContextMenu);
 
     return () => {
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('contextmenu', handleContextMenu);
     };
