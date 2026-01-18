@@ -282,6 +282,7 @@ export default function CityScene({
     };
   }, [isMobile, handleCameraMove]);
 
+  return (
     <div className="relative h-full w-full">
       <Canvas
         className="h-full w-full"
