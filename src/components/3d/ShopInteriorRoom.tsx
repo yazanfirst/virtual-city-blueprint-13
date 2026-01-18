@@ -407,30 +407,18 @@ const InteriorScene = ({
                 </p>
               </div>
             ) : (
-              <div className="space-y-1.5">
-                <p className="text-black font-black text-base leading-tight tracking-tight uppercase">
-                  DRAG TO
-                </p>
-                <p className="text-black font-black text-base leading-tight tracking-tight uppercase">
-                  LOOK
-                </p>
-                <p className="text-black font-black text-base leading-tight tracking-tight uppercase">
-                  AROUND.
-                </p>
-                <p className="text-black font-black text-sm leading-tight tracking-tight uppercase mt-3">
-                  TAP FRAMES
+              <div className="space-y-2">
+                <p className="text-black font-black text-sm leading-tight tracking-tight uppercase">
+                  DRAG TO LOOK AROUND
                 </p>
                 <p className="text-black font-black text-sm leading-tight tracking-tight uppercase">
-                  FOR
+                  TAP FRAMES TO VIEW PRODUCTS
                 </p>
                 <p className="text-black font-black text-sm leading-tight tracking-tight uppercase">
-                  PRODUCTS.
+                  PRESS VISIT (TOP RIGHT) TO GO TO THE SHOP
                 </p>
-                <p className="text-black font-black text-xs leading-tight tracking-tight uppercase mt-3">
-                  CLICK EXIT
-                </p>
-                <p className="text-black font-black text-xs leading-tight tracking-tight uppercase">
-                  WHEN DONE.
+                <p className="text-black font-black text-sm leading-tight tracking-tight uppercase">
+                  PRESS EXIT TO LEAVE THE SHOP
                 </p>
               </div>
             )}
