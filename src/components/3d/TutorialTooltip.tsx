@@ -18,7 +18,7 @@ const tutorialContent: Record<TutorialStep, {
   movement: {
     icon: Move,
     title: "Welcome to the Street!",
-    description: "Use WASD or Arrow Keys to move around. Hold Left Click and drag to rotate the camera. Press Space to jump! Explore the shops around you.",
+    description: "Use WASD or Arrow Keys to move around. Hold Left Click and drag to rotate the camera. Press Space to jump! Walk up to any shop and click to enter and explore inside!",
     hint: "Tap anywhere to continue",
     position: 'center',
   },

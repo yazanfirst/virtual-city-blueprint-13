@@ -351,9 +351,10 @@ const InteriorScene = ({
       </Text>
 
       {/* ═══════════════════════════════════════════════════════════════
-          MUSTACHIO-STYLE WALL INSTRUCTION PANEL - Elegant ornate design
+          MUSTACHIO-STYLE WALL INSTRUCTION PANEL - On back wall (behind player)
+          Positioned to NOT overlap with any product frames
           ═══════════════════════════════════════════════════════════════ */}
-      <group position={[-6.65, 2.5, -2.5]} rotation={[0, Math.PI / 2, 0]}>
+      <group position={[3.5, 2.5, 5.7]} rotation={[0, Math.PI, 0]}>
         {/* Outer ornate gold frame */}
         <mesh position={[0, 0, 0]}>
           <boxGeometry args={[3.2, 2.2, 0.08]} />
