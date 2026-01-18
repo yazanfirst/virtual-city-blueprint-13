@@ -120,6 +120,7 @@ type PlayerControllerProps = {
   joystickInput?: { x: number; y: number };
   viewMode?: "thirdPerson" | "firstPerson";
   cameraRotation?: { azimuth: number; polar: number };
+  controlsEnabled?: boolean;
 };
 
 const PlayerController = ({
@@ -128,6 +129,7 @@ const PlayerController = ({
   joystickInput = { x: 0, y: 0 },
   viewMode = "thirdPerson",
   cameraRotation = { azimuth: 0, polar: Math.PI / 4 },
+  controlsEnabled = true,
 }: PlayerControllerProps) => {
   const groupRef = useRef<THREE.Group>(null);
   const verticalVelocityRef = useRef(0);
@@ -248,8 +250,19 @@ const PlayerController = ({
     lastJumpCounterRef.current = jumpCounter;
   }, [attemptJump, jumpCounter]);
 
+  useEffect(() => {
+    if (controlsEnabled) return;
+    setKeys({
+      forward: false,
+      backward: false,
+      left: false,
+      right: false,
+    });
+  }, [controlsEnabled]);
+
   // Keyboard event handlers
   useEffect(() => {
+    if (!controlsEnabled) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.code) {
         case 'KeyW':
@@ -303,10 +316,16 @@ const PlayerController = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [incrementJump]);
+  }, [controlsEnabled, incrementJump]);
 
-  const isWalking = keys.forward || keys.backward || keys.left || keys.right ||
-    Math.abs(joystickInput.x) > 0.1 || Math.abs(joystickInput.y) > 0.1;
+  const isWalking = controlsEnabled && (
+    keys.forward ||
+    keys.backward ||
+    keys.left ||
+    keys.right ||
+    Math.abs(joystickInput.x) > 0.1 ||
+    Math.abs(joystickInput.y) > 0.1
+  );
 
   // Movement and camera logic
   useFrame(() => {

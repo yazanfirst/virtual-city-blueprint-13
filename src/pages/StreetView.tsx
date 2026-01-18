@@ -374,6 +374,7 @@ const StreetView = () => {
             forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
             onZombieTouchPlayer={handleZombieTouchPlayer}
             onTrapHitPlayer={handleTrapHitPlayer}
+            isInsideShop={isInsideShop}
           />
           
           {/* Health Display (Lives) */}
@@ -761,7 +762,7 @@ const StreetView = () => {
                   <ZoomIn className="h-3 w-3" /> Scroll to zoom
                 </span>
                 <span className="flex items-center gap-1">
-                  <Move className="h-3 w-3" /> Drag to rotate
+                  <Move className="h-3 w-3" /> Move mouse to rotate
                 </span>
               </div>
               
@@ -774,6 +775,7 @@ const StreetView = () => {
                 forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
                 onZombieTouchPlayer={handleZombieTouchPlayer}
                 onTrapHitPlayer={handleTrapHitPlayer}
+                isInsideShop={isInsideShop}
               />
               
               {/* Shop Detail Modal */}

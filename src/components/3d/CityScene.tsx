@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useMemo, useRef, useState, useCallback, useEffect } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import PlayerController from "./PlayerController";
@@ -28,6 +28,7 @@ type CitySceneProps = {
   forcedTimeOfDay?: "day" | "night" | null; // For mission control
   onZombieTouchPlayer?: () => void;
   onTrapHitPlayer?: () => void;
+  isInsideShop?: boolean;
 };
 
 type InnerProps = {
@@ -39,6 +40,7 @@ type InnerProps = {
   onShopClick?: (branding: ShopBranding) => void;
   onZombieTouchPlayer?: () => void;
   onTrapHitPlayer?: () => void;
+  controlsEnabled: boolean;
 };
 
 // Pastel color palette
@@ -205,18 +207,19 @@ export default function CityScene({
   forcedTimeOfDay = null,
   onZombieTouchPlayer,
   onTrapHitPlayer,
+  isInsideShop = false,
 }: CitySceneProps) {
   // Use forced time of day if provided (for mission night mode)
   const effectiveTimeOfDay = forcedTimeOfDay ?? timeOfDay;
   const deviceType = useDeviceType();
   const isMobile = deviceType === 'mobile';
   const [joystickInput, setJoystickInput] = useState({ x: 0, y: 0 });
+  const controlsEnabled = !isInsideShop;
   
   // Use store for camera rotation to persist across game mode changes
   const { cameraRotation, setCameraRotation, incrementJump } = usePlayerStore();
   
-  const isMouseDownRef = useRef(false);
-  const lastMousePosRef = useRef({ x: 0, y: 0 });
+  const lastPointerPosRef = useRef<{ x: number; y: number } | null>(null);
 
   const handleJoystickMove = useCallback((x: number, y: number) => {
     setJoystickInput({ x, y });
@@ -234,44 +237,24 @@ export default function CityScene({
     });
   }, [cameraRotation, setCameraRotation]);
 
-  // Desktop mouse controls for camera rotation
-  useEffect(() => {
-    if (isMobile) return;
-
-    const handleMouseDown = (e: MouseEvent) => {
-      // Right click or left click for camera control
-      isMouseDownRef.current = true;
-      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
-    };
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isMouseDownRef.current) return;
-      const deltaX = (e.clientX - lastMousePosRef.current.x) * 0.005;
-      const deltaY = (e.clientY - lastMousePosRef.current.y) * 0.005;
+  const handlePointerMove = useCallback(
+    (event: ThreeEvent<PointerEvent>) => {
+      if (isMobile || isInsideShop) return;
+      if (!lastPointerPosRef.current) {
+        lastPointerPosRef.current = { x: event.clientX, y: event.clientY };
+        return;
+      }
+      const deltaX = (event.clientX - lastPointerPosRef.current.x) * 0.005;
+      const deltaY = (event.clientY - lastPointerPosRef.current.y) * 0.005;
       handleCameraMove(-deltaX, deltaY);
-      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
-    };
+      lastPointerPosRef.current = { x: event.clientX, y: event.clientY };
+    },
+    [handleCameraMove, isInsideShop, isMobile]
+  );
 
-    const handleMouseUp = () => {
-      isMouseDownRef.current = false;
-    };
-
-    const handleContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-    };
-
-    window.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    window.addEventListener('contextmenu', handleContextMenu);
-
-    return () => {
-      window.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      window.removeEventListener('contextmenu', handleContextMenu);
-    };
-  }, [isMobile, handleCameraMove]);
+  const handlePointerLeave = useCallback(() => {
+    lastPointerPosRef.current = null;
+  }, []);
 
   return (
     <div className="relative h-full w-full">
@@ -279,21 +262,24 @@ export default function CityScene({
         className="h-full w-full"
         camera={{ position: [0, 10, 50], fov: 50 }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
       >
         <Suspense fallback={null}>
           <SceneInner 
             timeOfDay={effectiveTimeOfDay} 
             cameraView={cameraView}
-            joystickInput={joystickInput}
+            joystickInput={controlsEnabled ? joystickInput : { x: 0, y: 0 }}
             cameraRotation={cameraRotation}
             shopBrandings={shopBrandings}
             onShopClick={onShopClick}
             onZombieTouchPlayer={onZombieTouchPlayer}
             onTrapHitPlayer={onTrapHitPlayer}
+            controlsEnabled={controlsEnabled}
           />
         </Suspense>
       </Canvas>
-      {isMobile && (
+      {isMobile && controlsEnabled && (
         <MobileControls
           onJoystickMove={handleJoystickMove}
           onCameraMove={handleCameraMove}
@@ -761,7 +747,7 @@ function LaneMarking({ position, rotation = 0 }: { position: [number, number, nu
   );
 }
 
-function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer }: InnerProps) {
+function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer, controlsEnabled }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
@@ -970,6 +956,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
         joystickInput={joystickInput} 
         viewMode={cameraView}
         cameraRotation={cameraRotation}
+        controlsEnabled={controlsEnabled}
       />
     </>
   );
