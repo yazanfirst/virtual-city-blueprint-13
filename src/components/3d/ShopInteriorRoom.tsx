@@ -17,6 +17,7 @@ import {
 interface ShopInteriorRoomProps {
   shop: ShopBranding;
   onExit: () => void;
+  isMissionMode?: boolean; // When true, show mission-specific wall instructions
 }
 
 interface FrameSpotConfig {
@@ -238,11 +239,13 @@ const InteriorScene = ({
   items,
   selectedSlot,
   onSelectItem,
+  isMissionMode = false,
 }: {
   shop: ShopBranding;
   items: (ShopItem | undefined)[];
   selectedSlot: number | null;
   onSelectItem: (slot: number) => void;
+  isMissionMode?: boolean;
 }) => {
   const brickTexture = useBrickTexture();
   const accent = shop.accentColor || "#10B981";
@@ -346,6 +349,52 @@ const InteriorScene = ({
       >
         {shop.shopName || "Gallery"}
       </Text>
+
+      {/* Wall Instructions Panel - on left wall */}
+      <group position={[-6.7, 2.8, -3]} rotation={[0, Math.PI / 2, 0]}>
+        {/* Instruction board background */}
+        <mesh position={[0, 0, 0]}>
+          <planeGeometry args={[2.4, 1.6]} />
+          <meshStandardMaterial color="#1a1510" />
+        </mesh>
+        {/* Border frame */}
+        <mesh position={[0, 0, 0.01]}>
+          <planeGeometry args={[2.5, 1.7]} />
+          <meshStandardMaterial color="#c9a227" />
+        </mesh>
+        <mesh position={[0, 0, 0.02]}>
+          <planeGeometry args={[2.35, 1.55]} />
+          <meshStandardMaterial color="#1a1510" />
+        </mesh>
+        
+        {/* Instruction text using Html for better formatting */}
+        <Html
+          transform
+          position={[0, 0, 0.05]}
+          distanceFactor={6}
+          className="pointer-events-none select-none"
+        >
+          <div className="w-[200px] text-center px-3 py-2">
+            <div className="text-yellow-400 font-bold text-sm mb-2 flex items-center justify-center gap-1">
+              📋 {isMissionMode ? "MISSION MODE" : "HOW TO EXPLORE"}
+            </div>
+            {isMissionMode ? (
+              <div className="text-white text-[11px] space-y-1.5 leading-relaxed">
+                <p>🎯 <strong>Look around carefully!</strong></p>
+                <p>Remember the items, names, and prices</p>
+                <p className="text-yellow-300 mt-2">👆 Click <strong>EXIT</strong> when ready to answer questions</p>
+              </div>
+            ) : (
+              <div className="text-white text-[11px] space-y-1.5 leading-relaxed">
+                <p>👀 <strong>Drag to look around</strong></p>
+                <p>👆 Tap frames to view products</p>
+                <p>🌐 Visit shop website for more</p>
+                <p className="text-yellow-300 mt-2">Click <strong>EXIT</strong> when done</p>
+              </div>
+            )}
+          </div>
+        </Html>
+      </group>
     </group>
   );
 };
@@ -383,7 +432,7 @@ function RoomCameraClamp({
   return null;
 }
 
-const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
+const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorRoomProps) => {
   const { data: items = [], isLoading } = useShopItems(shop.shopId);
   const controlsRef = useRef<any>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
@@ -480,7 +529,8 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
             shop={shop} 
             items={wallItems} 
             selectedSlot={selectedSlot}
-            onSelectItem={handleFrameClick} 
+            onSelectItem={handleFrameClick}
+            isMissionMode={isMissionMode}
           />
         </React.Suspense>
 
