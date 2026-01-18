@@ -192,7 +192,7 @@ const StreetView = () => {
     }
   };
   
-  const handleTrapHitPlayer = (trapType: 'laser' | 'thorns' = 'laser') => {
+  const handleTrapHitPlayer = (trapType: 'firepit' | 'axe' | 'thorns' = 'firepit') => {
     // Don't trigger if protected (spawn protection)
     if (mission.isActive && !mission.isProtected && mission.phase !== 'failed') {
       playSounds.ouch();

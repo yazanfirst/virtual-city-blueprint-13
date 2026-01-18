@@ -20,14 +20,23 @@ const getFailMessage = (reason: MissionFailReason) => {
         bgColor: 'from-green-950',
         borderColor: 'border-green-500/50',
       };
-    case 'laser':
+    case 'firepit':
       return {
         icon: Zap,
-        title: 'Burned by Laser!',
-        message: 'The laser beams drained all your life. Try jumping over them!',
+        title: 'Burned by Fire!',
+        message: 'The fire pit burned you! Try jumping over them!',
         iconColor: 'text-red-400',
         bgColor: 'from-red-950',
         borderColor: 'border-red-500/50',
+      };
+    case 'axe':
+      return {
+        icon: X,
+        title: 'Hit by Swinging Axe!',
+        message: 'The swinging axe got you! Time your movement to pass through safely!',
+        iconColor: 'text-gray-400',
+        bgColor: 'from-gray-950',
+        borderColor: 'border-gray-500/50',
       };
     case 'thorns':
       return {

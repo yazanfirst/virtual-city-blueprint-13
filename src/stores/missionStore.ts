@@ -27,14 +27,13 @@ export interface ZombieData {
 
 export interface TrapData {
   id: string;
-  type: 'laser' | 'thorns';
+  type: 'firepit' | 'axe' | 'thorns';
   position: [number, number, number];
   rotation: number;
-  length: number;
   isActive: boolean;
 }
 
-export type MissionFailReason = 'zombie' | 'laser' | 'thorns' | 'trap' | 'jumpscare' | 'unknown';
+export type MissionFailReason = 'zombie' | 'firepit' | 'axe' | 'thorns' | 'trap' | 'jumpscare' | 'unknown';
 
 interface MissionState {
   // Mission status
@@ -100,7 +99,7 @@ interface MissionState {
   exitShop: (questions: MissionQuestion[]) => void;
   answerQuestion: (selectedAnswer: string) => boolean;
   triggerTrap: () => void;
-  hitByTrap: (trapType?: 'laser' | 'thorns') => void;
+  hitByTrap: (trapType?: 'firepit' | 'axe' | 'thorns') => void;
   failMission: (reason?: MissionFailReason) => void;
   completeMission: () => void;
   resetMission: () => void;
@@ -141,23 +140,30 @@ function generateZombieSpawns(): ZombieData[] {
   ];
 }
 
-// Generate trap positions (laser beams and thorns traps)
+// Generate trap positions (fire pits, swinging axes, and thorns)
 function generateTrapPositions(): TrapData[] {
   return [
-    // Laser traps
-    { id: 'laser-1', type: 'laser', position: [0, 0, 20], rotation: 0, length: 8, isActive: true },
-    { id: 'laser-2', type: 'laser', position: [0, 0, -20], rotation: 0, length: 8, isActive: true },
-    { id: 'laser-3', type: 'laser', position: [25, 0, 0], rotation: Math.PI / 2, length: 6, isActive: true },
-    { id: 'laser-4', type: 'laser', position: [-25, 0, 0], rotation: Math.PI / 2, length: 6, isActive: true },
-    { id: 'laser-5', type: 'laser', position: [0, 0, -35], rotation: 0, length: 10, isActive: true },
-    // Thorns traps (open/close)
-    { id: 'thorns-1', type: 'thorns', position: [15, 0, 15], rotation: 0, length: 0, isActive: true },
-    { id: 'thorns-2', type: 'thorns', position: [-15, 0, 15], rotation: 0, length: 0, isActive: true },
-    { id: 'thorns-3', type: 'thorns', position: [30, 0, -10], rotation: 0, length: 0, isActive: true },
-    { id: 'thorns-4', type: 'thorns', position: [-30, 0, -10], rotation: 0, length: 0, isActive: true },
-    { id: 'thorns-5', type: 'thorns', position: [0, 0, -50], rotation: 0, length: 0, isActive: true },
-    { id: 'thorns-6', type: 'thorns', position: [20, 0, -25], rotation: 0, length: 0, isActive: true },
-    { id: 'thorns-7', type: 'thorns', position: [-20, 0, -25], rotation: 0, length: 0, isActive: true },
+    // Fire pit traps - simple circular ground traps (jump over them)
+    { id: 'firepit-1', type: 'firepit', position: [0, 0, 20], rotation: 0, isActive: true },
+    { id: 'firepit-2', type: 'firepit', position: [0, 0, -20], rotation: 0, isActive: true },
+    { id: 'firepit-3', type: 'firepit', position: [25, 0, 5], rotation: 0, isActive: true },
+    { id: 'firepit-4', type: 'firepit', position: [-25, 0, 5], rotation: 0, isActive: true },
+    { id: 'firepit-5', type: 'firepit', position: [0, 0, -45], rotation: 0, isActive: true },
+    
+    // Swinging axe traps - time your movement to pass through
+    { id: 'axe-1', type: 'axe', position: [5, 0, 0], rotation: 0, isActive: true },
+    { id: 'axe-2', type: 'axe', position: [-5, 0, -35], rotation: Math.PI / 2, isActive: true },
+    { id: 'axe-3', type: 'axe', position: [35, 0, 0], rotation: Math.PI / 2, isActive: true },
+    { id: 'axe-4', type: 'axe', position: [-35, 0, 0], rotation: Math.PI / 2, isActive: true },
+    
+    // Thorns traps (open/close) - existing reliable trap
+    { id: 'thorns-1', type: 'thorns', position: [15, 0, 15], rotation: 0, isActive: true },
+    { id: 'thorns-2', type: 'thorns', position: [-15, 0, 15], rotation: 0, isActive: true },
+    { id: 'thorns-3', type: 'thorns', position: [30, 0, -10], rotation: 0, isActive: true },
+    { id: 'thorns-4', type: 'thorns', position: [-30, 0, -10], rotation: 0, isActive: true },
+    { id: 'thorns-5', type: 'thorns', position: [0, 0, -55], rotation: 0, isActive: true },
+    { id: 'thorns-6', type: 'thorns', position: [20, 0, -25], rotation: 0, isActive: true },
+    { id: 'thorns-7', type: 'thorns', position: [-20, 0, -25], rotation: 0, isActive: true },
   ];
 }
 
@@ -339,7 +345,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     });
   },
 
-  hitByTrap: (trapType?: 'laser' | 'thorns') => {
+  hitByTrap: (trapType?: 'firepit' | 'axe' | 'thorns') => {
     const state = get();
     const newLives = state.lives - 1;
     
