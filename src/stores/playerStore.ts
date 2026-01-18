@@ -9,18 +9,28 @@ type SavedOutsideState = {
   cameraRotation: { azimuth: number; polar: number };
 };
 
+// Shop proximity info for enter prompt
+type NearbyShop = {
+  shopId: string;
+  spotId: string;
+  shopName: string;
+  distance: number;
+} | null;
+
 type PlayerState = {
   position: [number, number, number];
   cameraRotation: { azimuth: number; polar: number };
   jumpCounter: number;
   isInsideShop: boolean;
   savedOutsideState: SavedOutsideState | null;
+  nearbyShop: NearbyShop;
   setPosition: (position: [number, number, number]) => void;
   setCameraRotation: (rotation: { azimuth: number; polar: number }) => void;
   incrementJump: () => void;
   resetToSafeSpawn: () => void;
   enterShop: () => void;
   exitShop: () => void;
+  setNearbyShop: (shop: NearbyShop) => void;
 };
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -29,17 +39,20 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   jumpCounter: 0,
   isInsideShop: false,
   savedOutsideState: null,
+  nearbyShop: null,
   incrementJump: () => set((state) => ({ jumpCounter: state.jumpCounter + 1 })),
 
   setPosition: (position) => set({ position }),
   setCameraRotation: (cameraRotation) => set({ cameraRotation }),
   resetToSafeSpawn: () => set({ position: SAFE_SPAWN_POSITION }),
+  setNearbyShop: (nearbyShop) => set({ nearbyShop }),
   
   // Save current outside state and mark as inside shop
   enterShop: () => {
     const { position, cameraRotation } = get();
     set({
       isInsideShop: true,
+      nearbyShop: null,
       savedOutsideState: {
         position: [...position] as [number, number, number],
         cameraRotation: { ...cameraRotation },
