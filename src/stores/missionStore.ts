@@ -439,13 +439,13 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     set({ slowedZombieIds: newSlowed });
   },
   
-  freezeZombie: (zombieId: string, duration: number = 1000) => {
+  freezeZombie: (zombieId: string, duration: number = 2000) => {
     const state = get();
     const newFrozen = new Set(state.frozenZombieIds);
     newFrozen.add(zombieId);
     set({ frozenZombieIds: newFrozen });
     
-    // Automatically unfreeze after duration (default 1 second)
+    // Automatically unfreeze after duration (default 2 seconds)
     setTimeout(() => {
       const currentState = get();
       const updated = new Set(currentState.frozenZombieIds);

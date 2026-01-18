@@ -14,10 +14,10 @@ interface LaserTrapProps {
 }
 
 // Collision thresholds
-const PLAYER_HIT_RADIUS = 0.4; // Player collision radius
+const PLAYER_HIT_RADIUS = 0.15; // Player collision radius - VERY tight to avoid false hits
 const LASER_BEAM_HEIGHT = 0.9; // Laser Y position
 const PLAYER_JUMP_CLEARANCE = 0.6; // Player must be this high above laser to clear it
-const ZOMBIE_HIT_DISTANCE = 0.6; // Distance for zombie detection
+const ZOMBIE_HIT_DISTANCE = 0.4; // Distance for zombie detection
 
 /**
  * Laser beam trap that damages player and freezes zombies
@@ -181,10 +181,10 @@ export default function LaserTrap({
         const distance = Math.sqrt(dx * dx + dz * dz);
         
         if (distance < ZOMBIE_HIT_DISTANCE) {
-          // Freeze zombie for 1 second (1000ms)
-          freezeZombie(zombie.id, 1000);
-          // Set cooldown so we don't spam freeze the same zombie (1.5s)
-          zombieFrozenUntilRef.current[zombie.id] = now + 1500;
+          // Freeze zombie for 2 seconds (2000ms)
+          freezeZombie(zombie.id, 2000);
+          // Set cooldown so we don't spam freeze the same zombie (2.5s)
+          zombieFrozenUntilRef.current[zombie.id] = now + 2500;
         }
       }
     }
