@@ -67,9 +67,10 @@ const Settings = () => {
 
     setLoading(true);
     try {
+      // Explicitly select only safe profile fields
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, display_name, avatar_url, business_name')
         .eq('id', user.id)
         .single();
 
@@ -151,7 +152,7 @@ const Settings = () => {
     setSaving(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-avatar.${fileExt}`;
+      const fileName = `${user.id}/avatar.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('shop-logos')
@@ -227,18 +228,23 @@ const Settings = () => {
     
     setDeleting(true);
     try {
-      // Delete user's profile first
-      await supabase.from('profiles').delete().eq('id', user.id);
+      // Call the Edge Function to properly delete the account (including auth.users record)
+      const { data, error } = await supabase.functions.invoke('delete-account');
       
-      // Delete user roles
-      await supabase.from('user_roles').delete().eq('user_id', user.id);
+      if (error) {
+        throw new Error(error.message || 'Failed to delete account');
+      }
       
-      // Sign out user (account deletion requires admin SDK which we can't use client-side)
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      
+      // Sign out locally after successful deletion
       await signOut();
       
       toast({
         title: "Account Deleted",
-        description: "Your account data has been removed. You've been signed out.",
+        description: "Your account has been completely removed.",
       });
       
       navigate('/');

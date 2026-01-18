@@ -1,14 +1,31 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Map, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target } from "lucide-react";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
+import { ShopItem } from "@/hooks/useShopItems";
 import CityScene, { CameraView } from "@/components/3d/CityScene";
 import ShopDetailModal from "@/components/3d/ShopDetailModal";
 import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
+import MissionPanel from "@/components/mission/MissionPanel";
+import QuestionModal from "@/components/mission/QuestionModal";
+import HealthDisplay from "@/components/mission/HealthDisplay";
+import MissionFailedModal from "@/components/mission/MissionFailedModal";
+import TrapHitFeedback from "@/components/mission/TrapHitFeedback";
+import JumpScareModal from "@/components/mission/JumpScareModal";
+import GameStartScreen from "@/components/3d/GameStartScreen";
+import ShopProximityIndicator from "@/components/3d/ShopProximityIndicator";
 import { useGameStore } from "@/stores/gameStore";
+import { useMissionStore } from "@/stores/missionStore";
+import { usePlayerStore } from "@/stores/playerStore";
+import { generateMissionQuestions } from "@/lib/missionQuestions";
+import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
+import { supabase } from "@/integrations/supabase/client";
+
+// Shop entry distance threshold (in world units)
+const SHOP_ENTRY_DISTANCE = 8;
 
 const PanelBox = ({ 
   title,
@@ -40,6 +57,7 @@ const StreetView = () => {
   const { data: spotsData } = useAllSpotsForStreet(streetId || "");
   const { data: spotsWithShops } = useSpotsWithShops(street?.id || "");
   const [isMaximized, setIsMaximized] = useState(false);
+  const [hasGameStarted, setHasGameStarted] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
   const [selectedShop, setSelectedShop] = useState<ShopBranding | null>(null);
@@ -48,30 +66,242 @@ const StreetView = () => {
   const [showMissions, setShowMissions] = useState(false);
   const [isInsideShop, setIsInsideShop] = useState(false);
   const [interiorShop, setInteriorShop] = useState<ShopBranding | null>(null);
+  const [nearbyShop, setNearbyShop] = useState<ShopBranding | null>(null);
 
   // Game state
   const { coins, level, xp } = useGameStore();
+  
+  // Player state
+  const { position: playerPosition, resetToSafeSpawn, enterShop: playerEnterShop, exitShop: playerExitShop } = usePlayerStore();
+  
+  // Mission state
+  const mission = useMissionStore();
+  const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [showFailedModal, setShowFailedModal] = useState(false);
+  const [showJumpScare, setShowJumpScare] = useState(false);
+  const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
+  
+  // Game audio
+  useGameAudio();
+
+  // Transform spots data to shop brandings - MUST be before useEffect that uses it
+  const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
+  
+  // Fetch all shop items for shops on this street
+  useEffect(() => {
+    const fetchAllShopItems = async () => {
+      if (!shopBrandings || shopBrandings.length === 0) return;
+      
+      // Get all shop IDs that have shops
+      const shopIds = shopBrandings
+        .filter(b => b.hasShop && b.shopId)
+        .map(b => b.shopId);
+      
+      if (shopIds.length === 0) return;
+      
+      const { data, error } = await supabase
+        .from('shop_items')
+        .select('*')
+        .in('shop_id', shopIds);
+      
+      if (error) {
+        console.error('Failed to fetch shop items:', error);
+        return;
+      }
+      
+      // Group by shop_id
+      const itemsByShop = new Map<string, ShopItem[]>();
+      for (const item of data || []) {
+        const existing = itemsByShop.get(item.shop_id) || [];
+        existing.push(item);
+        itemsByShop.set(item.shop_id, existing);
+      }
+      
+      setShopItemsMap(itemsByShop);
+    };
+    
+    fetchAllShopItems();
+  }, [shopBrandings.length]); // use length instead of array to avoid infinite loop
+
+  // Proximity detection - find nearby shop
+  useEffect(() => {
+    if (!hasGameStarted || isInsideShop) {
+      setNearbyShop(null);
+      return;
+    }
+
+    const [px, , pz] = playerPosition;
+    let closest: ShopBranding | null = null;
+    let closestDist = Infinity;
+
+    for (const shop of shopBrandings) {
+      if (!shop.hasShop || shop.isSuspended) continue;
+      
+      // Calculate distance to shop front (z+4 offset for front of building)
+      const shopFrontX = shop.position.x;
+      const shopFrontZ = shop.position.z + Math.cos(shop.position.rotation) * 4;
+      const shopFrontXOffset = Math.sin(shop.position.rotation) * 4;
+      
+      const dx = px - (shopFrontX + shopFrontXOffset);
+      const dz = pz - shopFrontZ;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+
+      if (dist < SHOP_ENTRY_DISTANCE && dist < closestDist) {
+        closest = shop;
+        closestDist = dist;
+      }
+    }
+
+    setNearbyShop(closest);
+  }, [playerPosition, shopBrandings, hasGameStarted, isInsideShop]);
 
   // Find the spot ID for the selected shop (to highlight in 2D map)
   const selectedSpotId = selectedShop?.spotId || "";
 
+  // Check if player is close enough to enter shop
+  const isPlayerNearShop = (shop: ShopBranding): boolean => {
+    const [px, , pz] = playerPosition;
+    const shopFrontX = shop.position.x;
+    const shopFrontZ = shop.position.z + Math.cos(shop.position.rotation) * 4;
+    const shopFrontXOffset = Math.sin(shop.position.rotation) * 4;
+    
+    const dx = px - (shopFrontX + shopFrontXOffset);
+    const dz = pz - shopFrontZ;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    
+    return dist < SHOP_ENTRY_DISTANCE;
+  };
+
   const handleShopClick = (shop: ShopBranding) => {
+    // Check proximity first - player must be near the shop
+    if (!isPlayerNearShop(shop)) {
+      return; // Too far away, ignore click
+    }
+
+    // During mission escape phase, only allow clicking target shop
+    if (mission.isActive && mission.phase === 'escape') {
+      if (shop.shopId === mission.targetShop?.shopId) {
+        mission.enterShop();
+        // Save outside state before entering shop
+        playerEnterShop();
+        setInteriorShop(shop);
+        setIsInsideShop(true);
+      }
+      // Non-target shops are ignored during escape phase
+      return;
+    }
+
+    // After wrong answer: allow ONE return to the *target* shop (it will trigger the trap)
+    if (mission.isActive && mission.phase === 'question' && mission.deceptiveMessageShown) {
+      if (shop.shopId === mission.targetShop?.shopId) {
+        handleEnterShop(shop);
+      }
+      return;
+    }
+    
+    // During observation/question phase, don't allow any shop clicks
+    if (mission.isActive && (mission.phase === 'observation' || mission.phase === 'question')) {
+      return;
+    }
+    
+    // Mission completed or inactive - all shops are clickable normally
+    // (This handles both normal mode and post-mission state)
     setSelectedShop(shop);
     setShowShopModal(true);
   };
 
   const handleEnterShop = (shop: ShopBranding) => {
+    // Check for mission trap (second entry after wrong answer)
+    if (mission.isActive && mission.deceptiveMessageShown && shop.shopId === mission.targetShop?.shopId) {
+      // Trigger jump scare modal (NO sound)
+      setShowJumpScare(true);
+      mission.triggerTrap();
+      return;
+    }
+    // Save outside state before entering shop (camera + position)
+    playerEnterShop();
     setInteriorShop(shop);
     setIsInsideShop(true);
     setShowShopModal(false);
   };
 
   const handleExitShop = () => {
+    // Restore outside state (camera + position) when exiting shop
+    playerExitShop();
     setIsInsideShop(false);
+    // If in mission observation phase, trigger questions
+    if (mission.isActive && mission.phase === 'observation') {
+      const questions = generateMissionQuestions(
+        mission.targetShopItems,
+        mission.targetShop?.shopName
+      );
+      mission.exitShop(questions);
+      if (questions.length > 0) {
+        setShowQuestionModal(true);
+      }
+    }
+  };
+  
+  const handleMissionActivate = () => {
+    // Mission is now active, night mode will be forced
+    setShowFailedModal(false);
+  };
+  
+  const handleZombieTouchPlayer = () => {
+    // Don't trigger if protected (spawn protection or other)
+    if (mission.isActive && !mission.isProtected && mission.phase !== 'failed') {
+      mission.failMission('zombie');
+      setShowQuestionModal(false);
+      setShowFailedModal(true);
+    }
+  };
+  
+  const handleTrapHitPlayer = (trapType: 'firepit' | 'axe' | 'thorns' = 'firepit') => {
+    // Don't trigger if protected (spawn protection)
+    if (mission.isActive && !mission.isProtected && mission.phase !== 'failed') {
+      playSounds.ouch();
+      mission.hitByTrap(trapType);
+      // Check if lives depleted
+      if (mission.lives <= 1) {
+        setShowFailedModal(true);
+      }
+    }
+  };
+  
+  const handleRetryMission = () => {
+    setShowFailedModal(false);
+    setShowJumpScare(false);
+    resetToSafeSpawn(); // Move player to safe position before retry
+    mission.resetMission();
+    setShowMissions(true); // Show mission panel to start again
+  };
+  
+  const handleExitMission = () => {
+    setShowFailedModal(false);
+    setShowJumpScare(false);
+    resetToSafeSpawn(); // Move player to safe position
+    mission.resetMission();
+  };
+  
+  const handleQuestionAnswer = (answer: string) => {
+    const correct = mission.answerQuestion(answer);
+    
+    // Freeze ALL zombies for 3 seconds after any question closes
+    // This gives player a fair chance to escape even if zombies were close
+    mission.freezeAllZombies(3000);
+    
+    if (!correct) {
+      // Wrong answer - close modal, show deceptive message, play notification
+      playSounds.notification();
+      setShowQuestionModal(false);
+    } else if (mission.phase === 'completed') {
+      // All correct - mission complete
+      setShowQuestionModal(false);
+    }
+    // Otherwise, next question will show automatically
   };
 
-  // Transform spots data to shop brandings
-  const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
+  // shopBrandings already declared above
 
   // Request fullscreen + landscape orientation when maximized on mobile
   useEffect(() => {
@@ -209,7 +439,20 @@ const StreetView = () => {
             cameraView={cameraView}
             shopBrandings={shopBrandings}
             onShopClick={handleShopClick}
+            forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
+            onZombieTouchPlayer={handleZombieTouchPlayer}
+            onTrapHitPlayer={handleTrapHitPlayer}
           />
+          
+          {/* Health Display (Lives) */}
+          {mission.isActive && (
+            <div className="absolute top-14 left-2 md:left-4 pointer-events-none" style={{ zIndex: 150 }}>
+              <HealthDisplay />
+            </div>
+          )}
+          
+          {/* Shop Proximity Indicator */}
+          <ShopProximityIndicator nearbyShop={nearbyShop} />
           
           {/* Shop Detail Modal */}
           {showShopModal && (
@@ -286,7 +529,7 @@ const StreetView = () => {
                 className="bg-background/80 backdrop-blur-md h-6 w-6 md:h-8 md:w-auto p-0 md:px-3"
                 style={{ zIndex: 160 }}
               >
-                <Map className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                <MapIcon className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
                 <span className="hidden md:inline">{show2DMap ? "Hide" : "Map"}</span>
               </Button>
               
@@ -306,11 +549,25 @@ const StreetView = () => {
           {/* Left side - Mission Tab Button */}
           <div className="absolute top-10 md:top-16 left-2 md:left-4 pointer-events-auto" style={{ zIndex: 150 }}>
             <button
-              onClick={() => setShowMissions(true)}
-              className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg"
+              onClick={() => {
+                setShowMissions(true);
+                mission.setNotification(false); // Clear notification when opened
+                // Pause zombies when mission panel opens during active mission
+                if (mission.isActive && mission.phase === 'escape') {
+                  mission.pauseZombies();
+                }
+              }}
+              className="relative flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg"
             >
               <Target className="h-4 w-4 text-primary" />
               <span className="font-display text-xs md:text-sm font-bold uppercase tracking-wider">Missions</span>
+              {/* Notification indicator */}
+              {mission.hasNotification && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                </span>
+              )}
             </button>
           </div>
           
@@ -319,7 +576,13 @@ const StreetView = () => {
             <div 
               className="absolute inset-0 flex items-center justify-center pointer-events-auto"
               style={{ zIndex: 200 }}
-              onClick={() => setShowMissions(false)}
+              onClick={() => {
+                setShowMissions(false);
+                // Resume zombies when mission panel closes during escape phase
+                if (mission.isActive && mission.phase === 'escape') {
+                  mission.resumeZombies();
+                }
+              }}
             >
               <div 
                 className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md"
@@ -335,17 +598,26 @@ const StreetView = () => {
                     </h3>
                   </div>
                   <button 
-                    onClick={() => setShowMissions(false)} 
+                    onClick={() => {
+                      setShowMissions(false);
+                      // Resume zombies when mission panel closes during escape phase
+                      if (mission.isActive && mission.phase === 'escape') {
+                        mission.resumeZombies();
+                      }
+                    }}
                     className="text-muted-foreground hover:text-foreground p-1"
                   >
                     <X className="h-5 w-5" />
                   </button>
                 </div>
                 
-                <div className="text-center py-8 text-muted-foreground">
-                  <Target className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p className="text-sm">Missions coming soon!</p>
-                  <p className="text-xs mt-2">Check back later for exciting challenges.</p>
+                <div className="text-center py-4 text-muted-foreground">
+                  <MissionPanel
+                    shops={shopBrandings}
+                    shopItemsMap={shopItemsMap}
+                    onActivate={handleMissionActivate}
+                    isCompact
+                  />
                 </div>
               </div>
             </div>
@@ -360,7 +632,7 @@ const StreetView = () => {
               <div className="bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-3 md:p-4 shadow-lg w-[90vw] max-w-sm md:max-w-md max-h-[80vh] overflow-auto">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
-                    <Map className="h-4 w-4 text-primary" />
+                    <MapIcon className="h-4 w-4 text-primary" />
                     Street Map
                   </h3>
                   <button 
@@ -431,6 +703,32 @@ const StreetView = () => {
           </div>
         </div>
         {interiorOverlay}
+        
+        {/* Question Modal */}
+        <QuestionModal
+          isOpen={showQuestionModal}
+          question={mission.questions[mission.currentQuestionIndex] || null}
+          onAnswer={handleQuestionAnswer}
+          onClose={() => setShowQuestionModal(false)}
+        />
+        
+        {/* Trap Hit Feedback ("Ouch!") */}
+        {mission.isActive && <TrapHitFeedback />}
+        
+        {/* Jump Scare Modal */}
+        <JumpScareModal
+          isOpen={showJumpScare}
+          onRetry={handleRetryMission}
+          onExit={handleExitMission}
+        />
+        
+        {/* Mission Failed Modal (for non-jumpscare fails) */}
+        <MissionFailedModal
+          isOpen={(showFailedModal || mission.phase === 'failed') && !showJumpScare && mission.failReason !== 'jumpscare'}
+          failReason={mission.failReason}
+          onRetry={handleRetryMission}
+          onExit={handleExitMission}
+        />
       </div>
     );
   }
@@ -483,92 +781,112 @@ const StreetView = () => {
             </PanelBox>
           </div>
 
-          {/* Center Column - 3D Scene */}
+          {/* Center Column - 3D Scene or Start Screen */}
           <div className="lg:col-span-6">
             <div className="cyber-card h-full min-h-[400px] lg:min-h-[500px] p-0 overflow-hidden relative">
-              {/* Controls Bar */}
-              <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
-              {/* Camera View - Only desktop */}
-              <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 gap-1 hidden md:flex">
-                <Button
-                  variant={cameraView === "thirdPerson" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setCameraView("thirdPerson")}
-                  className="h-7 px-2 text-xs"
-                  title="Third Person View"
-                >
-                  <UserCircle className="h-3 w-3 mr-1" />
-                  3rd
-                </Button>
-                <Button
-                  variant={cameraView === "firstPerson" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setCameraView("firstPerson")}
-                  className="h-7 px-2 text-xs"
-                  title="First Person View"
-                >
-                  <Eye className="h-3 w-3 mr-1" />
-                  1st
-                </Button>
-              </div>
-
-                {/* Day/Night Toggle */}
-                <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 flex gap-1">
-                  <Button
-                    variant={timeOfDay === "day" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setTimeOfDay("day")}
-                    className="h-7 px-2 text-xs"
-                  >
-                    <Sun className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant={timeOfDay === "night" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setTimeOfDay("night")}
-                    className="h-7 px-2 text-xs"
-                  >
-                    <Moon className="h-3 w-3" />
-                  </Button>
-                </div>
-                
-                {/* Maximize Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsMaximized(true)}
-                  className="h-7 px-2 text-xs bg-background/80 backdrop-blur-md"
-                >
-                  <Maximize2 className="h-3 w-3 mr-1" />
-                  Game Mode
-                </Button>
-              </div>
-              
-              {/* Zoom/Controls Hint */}
-              <div className="absolute bottom-2 left-2 z-10 bg-background/70 backdrop-blur-md rounded-lg px-3 py-1.5 flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <ZoomIn className="h-3 w-3" /> Scroll to zoom
-                </span>
-                <span className="flex items-center gap-1">
-                  <Move className="h-3 w-3" /> Drag to rotate
-                </span>
-              </div>
-              
-              <CityScene 
-                streetId={street.id} 
-                timeOfDay={timeOfDay} 
-                cameraView={cameraView} 
-                shopBrandings={shopBrandings}
-                onShopClick={handleShopClick}
-              />
-              
-              {/* Shop Detail Modal */}
-              {showShopModal && (
-                <ShopDetailModal
-                  shop={selectedShop}
-                  onClose={() => setShowShopModal(false)}
-                  onEnterShop={handleEnterShop}
+              {!hasGameStarted ? (
+                /* Start Game Screen */
+                <GameStartScreen 
+                  streetName={street.name}
+                  category={street.category}
+                  onStartGame={() => {
+                    setHasGameStarted(true);
+                    setIsMaximized(true); // Auto fullscreen on start
+                  }}
                 />
+              ) : (
+                <>
+                  {/* Controls Bar */}
+                  <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+                  {/* Camera View - Only desktop */}
+                  <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 gap-1 hidden md:flex">
+                    <Button
+                      variant={cameraView === "thirdPerson" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setCameraView("thirdPerson")}
+                      className="h-7 px-2 text-xs"
+                      title="Third Person View"
+                    >
+                      <UserCircle className="h-3 w-3 mr-1" />
+                      3rd
+                    </Button>
+                    <Button
+                      variant={cameraView === "firstPerson" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setCameraView("firstPerson")}
+                      className="h-7 px-2 text-xs"
+                      title="First Person View"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      1st
+                    </Button>
+                  </div>
+
+                    {/* Day/Night Toggle */}
+                    <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 flex gap-1">
+                      <Button
+                        variant={timeOfDay === "day" ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setTimeOfDay("day")}
+                        className="h-7 px-2 text-xs"
+                      >
+                        <Sun className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant={timeOfDay === "night" ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setTimeOfDay("night")}
+                        className="h-7 px-2 text-xs"
+                      >
+                        <Moon className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    
+                    {/* Maximize Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsMaximized(true)}
+                      className="h-7 px-2 text-xs bg-background/80 backdrop-blur-md"
+                    >
+                      <Maximize2 className="h-3 w-3 mr-1" />
+                      Game Mode
+                    </Button>
+                  </div>
+                  
+                  {/* Zoom/Controls Hint */}
+                  <div className="absolute bottom-2 left-2 z-10 bg-background/70 backdrop-blur-md rounded-lg px-3 py-1.5 flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <ZoomIn className="h-3 w-3" /> Scroll to zoom
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Move className="h-3 w-3" /> Drag to rotate
+                    </span>
+                  </div>
+                  
+                  <CityScene 
+                    streetId={street.id} 
+                    timeOfDay={timeOfDay} 
+                    cameraView={cameraView} 
+                    shopBrandings={shopBrandings}
+                    onShopClick={handleShopClick}
+                    forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
+                    onZombieTouchPlayer={handleZombieTouchPlayer}
+                    onTrapHitPlayer={handleTrapHitPlayer}
+                  />
+                  
+                  {/* Shop Proximity Indicator */}
+                  <ShopProximityIndicator nearbyShop={nearbyShop} />
+                  
+                  {/* Shop Detail Modal */}
+                  {showShopModal && (
+                    <ShopDetailModal
+                      shop={selectedShop}
+                      onClose={() => setShowShopModal(false)}
+                      onEnterShop={handleEnterShop}
+                    />
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -631,6 +949,24 @@ const StreetView = () => {
         </div>
       </div>
       {interiorOverlay}
+      
+      {/* Trap Hit Feedback ("Ouch!") */}
+      {mission.isActive && <TrapHitFeedback />}
+      
+      {/* Jump Scare Modal */}
+      <JumpScareModal
+        isOpen={showJumpScare}
+        onRetry={handleRetryMission}
+        onExit={handleExitMission}
+      />
+      
+      {/* Mission Failed Modal (for non-jumpscare fails) */}
+      <MissionFailedModal
+        isOpen={(showFailedModal || mission.phase === 'failed') && !showJumpScare && mission.failReason !== 'jumpscare'}
+        failReason={mission.failReason}
+        onRetry={handleRetryMission}
+        onExit={handleExitMission}
+      />
     </>
   );
 };

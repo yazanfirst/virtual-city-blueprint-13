@@ -8,9 +8,14 @@ import PlayerController from "./PlayerController";
 import MobileControls from "./MobileControls";
 import BrandedShop from "./BrandedShop";
 import CollectibleItem from "./CollectibleItem";
+import ZombieCharacter from "./ZombieCharacter";
+import FirePitTrap from "./FirePitTrap";
+import SwingingAxeTrap from "./SwingingAxeTrap";
+import ThornsTrap from "./ThornsTrap";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
+import { useMissionStore } from "@/stores/missionStore";
 import { ShopBranding } from "@/hooks/use3DShops";
 
 export type CameraView = "thirdPerson" | "firstPerson";
@@ -21,6 +26,9 @@ type CitySceneProps = {
   cameraView?: CameraView;
   shopBrandings?: ShopBranding[];
   onShopClick?: (branding: ShopBranding) => void;
+  forcedTimeOfDay?: "day" | "night" | null; // For mission control
+  onZombieTouchPlayer?: () => void;
+  onTrapHitPlayer?: () => void;
 };
 
 type InnerProps = {
@@ -30,6 +38,8 @@ type InnerProps = {
   cameraRotation: { azimuth: number; polar: number };
   shopBrandings: ShopBranding[];
   onShopClick?: (branding: ShopBranding) => void;
+  onZombieTouchPlayer?: () => void;
+  onTrapHitPlayer?: () => void;
 };
 
 // Pastel color palette
@@ -193,7 +203,12 @@ export default function CityScene({
   cameraView = "thirdPerson",
   shopBrandings = [],
   onShopClick,
+  forcedTimeOfDay = null,
+  onZombieTouchPlayer,
+  onTrapHitPlayer,
 }: CitySceneProps) {
+  // Use forced time of day if provided (for mission night mode)
+  const effectiveTimeOfDay = forcedTimeOfDay ?? timeOfDay;
   const deviceType = useDeviceType();
   const isMobile = deviceType === 'mobile';
   const [joystickInput, setJoystickInput] = useState({ x: 0, y: 0 });
@@ -201,8 +216,8 @@ export default function CityScene({
   // Use store for camera rotation to persist across game mode changes
   const { cameraRotation, setCameraRotation, incrementJump } = usePlayerStore();
   
-  const isMouseDownRef = useRef(false);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
+  const isMouseDownRef = useRef(false);
 
   const handleJoystickMove = useCallback((x: number, y: number) => {
     setJoystickInput({ x, y });
@@ -220,26 +235,34 @@ export default function CityScene({
     });
   }, [cameraRotation, setCameraRotation]);
 
-  // Desktop mouse controls for camera rotation
+  // Desktop mouse controls for camera rotation - LEFT CLICK to orbit
   useEffect(() => {
     if (isMobile) return;
 
     const handleMouseDown = (e: MouseEvent) => {
-      // Right click or left click for camera control
-      isMouseDownRef.current = true;
-      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+      if (e.button === 0) { // Left click
+        isMouseDownRef.current = true;
+        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (e.button === 0) {
+        isMouseDownRef.current = false;
+      }
     };
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isMouseDownRef.current) return;
-      const deltaX = (e.clientX - lastMousePosRef.current.x) * 0.005;
-      const deltaY = (e.clientY - lastMousePosRef.current.y) * 0.005;
+      
+      // Calculate delta from last position
+      const deltaX = (e.clientX - lastMousePosRef.current.x) * 0.003;
+      const deltaY = (e.clientY - lastMousePosRef.current.y) * 0.003;
+      
+      // Apply camera rotation only when mouse is held down
       handleCameraMove(-deltaX, deltaY);
+      
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
-    };
-
-    const handleMouseUp = () => {
-      isMouseDownRef.current = false;
     };
 
     const handleContextMenu = (e: MouseEvent) => {
@@ -247,14 +270,14 @@ export default function CityScene({
     };
 
     window.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('contextmenu', handleContextMenu);
 
     return () => {
       window.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('contextmenu', handleContextMenu);
     };
   }, [isMobile, handleCameraMove]);
@@ -268,12 +291,14 @@ export default function CityScene({
       >
         <Suspense fallback={null}>
           <SceneInner 
-            timeOfDay={timeOfDay} 
+            timeOfDay={effectiveTimeOfDay} 
             cameraView={cameraView}
             joystickInput={joystickInput}
             cameraRotation={cameraRotation}
             shopBrandings={shopBrandings}
             onShopClick={onShopClick}
+            onZombieTouchPlayer={onZombieTouchPlayer}
+            onTrapHitPlayer={onTrapHitPlayer}
           />
         </Suspense>
       </Canvas>
@@ -576,6 +601,114 @@ function Billboard({ position, rotation, isNight }: { position: [number, number,
   );
 }
 
+// Animated fountain water stream component
+function FountainWater({ isNight }: { isNight: boolean }) {
+  const groupRef = useRef<THREE.Group>(null);
+  
+  // Animate water streams
+  useEffect(() => {
+    let animationId: number;
+    let time = 0;
+    
+    const animate = () => {
+      time += 0.03;
+      if (groupRef.current) {
+        // Gentle pulsing animation for water height
+        const pulse = Math.sin(time * 2) * 0.1 + 1;
+        groupRef.current.scale.y = pulse;
+      }
+      animationId = requestAnimationFrame(animate);
+    };
+    
+    animate();
+    return () => cancelAnimationFrame(animationId);
+  }, []);
+  
+  const waterColor = isNight ? "#4A8ABB" : "#6BC8E8";
+  const waterEmissive = isNight ? "#3A6A9A" : "#4AA8C8";
+  
+  return (
+    <group ref={groupRef}>
+      {/* Central water jet - main upward stream */}
+      <mesh position={[0, 4.8, 0]}>
+        <coneGeometry args={[0.15, 1.8, 8]} />
+        <meshLambertMaterial 
+          color={waterColor} 
+          transparent 
+          opacity={0.7}
+          emissive={waterEmissive}
+          emissiveIntensity={isNight ? 0.4 : 0.1}
+        />
+      </mesh>
+      
+      {/* Water spray at top - splashing effect */}
+      <mesh position={[0, 5.6, 0]}>
+        <sphereGeometry args={[0.25, 8, 6]} />
+        <meshLambertMaterial 
+          color={waterColor} 
+          transparent 
+          opacity={0.5}
+          emissive={waterEmissive}
+          emissiveIntensity={isNight ? 0.3 : 0.05}
+        />
+      </mesh>
+      
+      {/* Falling water curtain - cascading down */}
+      <mesh position={[0, 4.2, 0]}>
+        <cylinderGeometry args={[0.6, 0.2, 0.8, 12, 1, true]} />
+        <meshLambertMaterial 
+          color={waterColor} 
+          transparent 
+          opacity={0.4}
+          side={THREE.DoubleSide}
+          emissive={waterEmissive}
+          emissiveIntensity={isNight ? 0.2 : 0}
+        />
+      </mesh>
+      
+      {/* Secondary falling streams into lower basin */}
+      {[0, Math.PI / 2, Math.PI, Math.PI * 1.5].map((angle, i) => (
+        <mesh 
+          key={`stream-${i}`} 
+          position={[
+            Math.cos(angle) * 1.2, 
+            2.8, 
+            Math.sin(angle) * 1.2
+          ]}
+          rotation={[0.3 * Math.cos(angle), 0, 0.3 * Math.sin(angle)]}
+        >
+          <coneGeometry args={[0.08, 1.2, 6]} />
+          <meshLambertMaterial 
+            color={waterColor} 
+            transparent 
+            opacity={0.5}
+            emissive={waterEmissive}
+            emissiveIntensity={isNight ? 0.25 : 0.05}
+          />
+        </mesh>
+      ))}
+      
+      {/* Ripple rings on water surface */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.65, 0]}>
+        <ringGeometry args={[0.5, 0.7, 16]} />
+        <meshLambertMaterial 
+          color="#8AD8F8" 
+          transparent 
+          opacity={0.3}
+        />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.64, 0]}>
+        <ringGeometry args={[1.2, 1.4, 16]} />
+        <meshLambertMaterial 
+          color="#8AD8F8" 
+          transparent 
+          opacity={0.2}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 // ROUNDABOUT with Fountain in center
 function Roundabout({ isNight }: { isNight: boolean }) {
   return (
@@ -620,6 +753,9 @@ function Roundabout({ isNight }: { isNight: boolean }) {
         <cylinderGeometry args={[1.2, 1.2, 0.3, 10]} />
         <meshLambertMaterial color={COLORS.water} />
       </mesh>
+      
+      {/* Animated water streams */}
+      <FountainWater isNight={isNight} />
     </group>
   );
 }
@@ -634,10 +770,11 @@ function LaneMarking({ position, rotation = 0 }: { position: [number, number, nu
   );
 }
 
-function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick }: InnerProps) {
+function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
+  const { zombies, zombiesPaused, traps, isActive: missionActive, slowedZombieIds, frozenZombieIds, freezeZombie, targetShop, phase: missionPhase } = useMissionStore();
 
   useEffect(() => {
     scene.background = null;
@@ -726,12 +863,16 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {mainBoulevardShops.map((shop, i) => {
         const branding = getBrandingAtPosition(shop.x, shop.z);
         if (branding) {
+          // During active mission (escape phase only), only target shop is clickable
+          // During inactive or completed mission, ALL shops are clickable
+          const isEscapePhase = missionActive && missionPhase === 'escape';
+          const isClickable = !isEscapePhase || branding.shopId === targetShop?.shopId;
           return (
             <BrandedShop 
               key={`main-${i}`} 
               branding={branding} 
               isNight={isNight} 
-              onClick={() => onShopClick?.(branding)}
+              onClick={isClickable ? () => onShopClick?.(branding) : undefined}
             />
           );
         }
@@ -740,12 +881,16 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {crossStreetShops.map((shop, i) => {
         const branding = getBrandingAtPosition(shop.x, shop.z);
         if (branding) {
+          // During active mission (escape phase only), only target shop is clickable
+          // During inactive or completed mission, ALL shops are clickable
+          const isEscapePhase = missionActive && missionPhase === 'escape';
+          const isClickable = !isEscapePhase || branding.shopId === targetShop?.shopId;
           return (
             <BrandedShop 
               key={`cross-${i}`} 
               branding={branding} 
               isNight={isNight} 
-              onClick={() => onShopClick?.(branding)}
+              onClick={isClickable ? () => onShopClick?.(branding) : undefined}
             />
           );
         }
@@ -786,6 +931,55 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           type={coin.type}
           isNight={isNight}
           onCollect={handleCollectItem}
+        />
+      ))}
+
+      {/* === ZOMBIES (Mission) === */}
+      {missionActive && zombies.map((zombie) => (
+        <ZombieCharacter
+          key={zombie.id}
+          id={zombie.id}
+          position={zombie.position}
+          isNight={isNight}
+          isPaused={zombiesPaused}
+          isSlowed={slowedZombieIds.has(zombie.id)}
+          isFrozen={frozenZombieIds.has(zombie.id)}
+          behaviorType={zombie.behaviorType}
+          onTouchPlayer={(id) => onZombieTouchPlayer?.()}
+        />
+      ))}
+
+      {/* === FIRE PIT TRAPS (Mission) === */}
+      {missionActive && traps.filter(t => t.type === 'firepit').map((trap) => (
+        <FirePitTrap
+          key={trap.id}
+          id={trap.id}
+          position={trap.position}
+          isActive={trap.isActive}
+          onPlayerHit={(id) => onTrapHitPlayer?.()}
+        />
+      ))}
+      
+      {/* === SWINGING AXE TRAPS (Mission) === */}
+      {missionActive && traps.filter(t => t.type === 'axe').map((trap) => (
+        <SwingingAxeTrap
+          key={trap.id}
+          id={trap.id}
+          position={trap.position}
+          rotation={trap.rotation}
+          isActive={trap.isActive}
+          onPlayerHit={(id) => onTrapHitPlayer?.()}
+        />
+      ))}
+      
+      {/* === THORNS TRAPS (Mission) === */}
+      {missionActive && traps.filter(t => t.type === 'thorns').map((trap) => (
+        <ThornsTrap
+          key={trap.id}
+          id={trap.id}
+          position={trap.position}
+          isActive={trap.isActive}
+          onPlayerHit={(id) => onTrapHitPlayer?.()}
         />
       ))}
 

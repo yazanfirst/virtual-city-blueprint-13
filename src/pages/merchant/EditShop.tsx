@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import BrandingEditor from "@/components/merchant/BrandingEditor";
 import ShopPreview from "@/components/merchant/ShopPreview";
 import ShopShowcaseWall from "@/components/merchant/ShopShowcaseWall";
+import { validateShopData } from "@/lib/validation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,9 +70,30 @@ const EditShop = () => {
 
     setLoading(true);
     try {
+      // Explicitly select fields to exclude admin_notes (internal admin field)
       const { data, error } = await supabase
         .from('shops')
-        .select('*')
+        .select(`
+          id,
+          merchant_id,
+          spot_id,
+          name,
+          category,
+          external_link,
+          logo_url,
+          primary_color,
+          accent_color,
+          facade_template,
+          signage_font,
+          texture_template,
+          texture_url,
+          status,
+          duplicate_brand,
+          branch_label,
+          branch_justification,
+          created_at,
+          updated_at
+        `)
         .eq('id', shopId)
         .single();
 
@@ -136,15 +158,33 @@ const EditShop = () => {
   const handleSubmitForReview = async () => {
     if (!shopId || !hasChanges()) return;
 
+    // Validate all inputs before submission
+    const validation = validateShopData({
+      name: formData.name,
+      category: formData.category,
+      externalLink: formData.externalLink,
+    });
+
+    if (!validation.valid) {
+      const firstError = Object.values(validation.errors)[0];
+      toast({
+        title: "Validation Error",
+        description: firstError,
+        variant: "destructive",
+      });
+      setShowConfirmDialog(false);
+      return;
+    }
+
     setSaving(true);
     try {
       // Update shop data and set status to pending_review for admin approval
       const { error } = await supabase
         .from('shops')
         .update({
-          name: formData.name,
-          category: formData.category || null,
-          external_link: formData.externalLink || null,
+          name: formData.name.trim(),
+          category: formData.category?.trim() || null,
+          external_link: formData.externalLink?.trim() || null,
           logo_url: formData.logoUrl || null,
           primary_color: formData.primaryColor,
           accent_color: formData.accentColor,

@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { useDeleteShopItem, useShopItems, useUpsertShopItem } from "@/hooks/useShopItems";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { validateShopItemData } from "@/lib/validation";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +48,14 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#
   const [editForm, setEditForm] = useState<SlotState>({ ...emptySlot });
   const uploadRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // Get user ID for storage path
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) setUserId(data.user.id);
+    });
+  }, []);
+
   useEffect(() => {
     if (!items) return;
     const next = Array(5)
@@ -67,6 +76,15 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#
   }, [items]);
 
   const handleFileUpload = async (file: File) => {
+    if (!userId) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to upload images.",
+        variant: "destructive",
+      });
+      return null;
+    }
+
     if (!file.type.startsWith("image/")) {
       toast({
         title: "Invalid file type",
@@ -86,7 +104,8 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#
     }
 
     const fileExt = file.name.split(".").pop();
-    const fileName = `items/${shopId}-${Date.now()}.${fileExt}`;
+    // Use user-specific path for storage security
+    const fileName = `${userId}/items/${shopId}-${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage.from("shop-logos").upload(fileName, file);
     if (uploadError) {
@@ -128,20 +147,20 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#
   const handleSave = async () => {
     if (editingSlot === null) return;
     
-    if (!editForm.title.trim()) {
-      toast({
-        title: "Title required",
-        description: "Please add a name for this item.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     const priceValue = editForm.price ? Number(editForm.price) : null;
-    if (editForm.price && Number.isNaN(priceValue)) {
+    
+    // Validate using Zod schema
+    const validation = validateShopItemData({
+      title: editForm.title,
+      description: editForm.description,
+      price: priceValue,
+    });
+
+    if (!validation.valid) {
+      const firstError = Object.values(validation.errors)[0];
       toast({
-        title: "Invalid price",
-        description: "Please enter a valid number for price.",
+        title: "Validation Error",
+        description: firstError,
         variant: "destructive",
       });
       return;

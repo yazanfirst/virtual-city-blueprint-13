@@ -1,11 +1,18 @@
-import React, { useMemo, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import React, { useMemo, useRef, useState } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, OrbitControls, Text } from "@react-three/drei";
 import * as THREE from "three";
 import { ShopBranding } from "@/hooks/use3DShops";
 import { Button } from "@/components/ui/button";
 import { ShopItem, useShopItems } from "@/hooks/useShopItems";
-import { X, ExternalLink, ChevronLeft, ChevronRight, Package } from "lucide-react";
+import { X, ExternalLink, ChevronLeft, ChevronRight, Package, ShoppingBag } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 interface ShopInteriorRoomProps {
   shop: ShopBranding;
@@ -41,8 +48,8 @@ const createBrickTexture = () => {
 
   if (!ctx) return null;
 
-  // Dark brick base
-  ctx.fillStyle = "#2a1810";
+  // Light cream mortar base
+  ctx.fillStyle = "#d4c4a8";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const brickWidth = 64;
@@ -53,24 +60,24 @@ const createBrickTexture = () => {
     for (let x = -brickWidth; x < canvas.width + brickWidth; x += brickWidth) {
       const offset = Math.floor(y / brickHeight) % 2 === 0 ? 0 : brickWidth / 2;
       
-      // Brick variations
-      const shade = 0.85 + Math.random() * 0.3;
-      const r = Math.floor(58 * shade);
-      const g = Math.floor(32 * shade);
-      const b = Math.floor(22 * shade);
+      // Bright terracotta bricks
+      const shade = 0.9 + Math.random() * 0.2;
+      const r = Math.floor(180 * shade);
+      const g = Math.floor(110 * shade);
+      const b = Math.floor(80 * shade);
       
       ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
       ctx.fillRect(x + offset + mortar, y + mortar, brickWidth - mortar * 2, brickHeight - mortar * 2);
       
-      // Subtle highlight
-      ctx.fillStyle = `rgba(255, 200, 150, 0.05)`;
-      ctx.fillRect(x + offset + mortar, y + mortar, brickWidth - mortar * 2, 2);
+      // Highlight
+      ctx.fillStyle = `rgba(255, 240, 220, 0.15)`;
+      ctx.fillRect(x + offset + mortar, y + mortar, brickWidth - mortar * 2, 3);
     }
   }
 
-  // Mortar color
+  // Mortar already set as background
   ctx.globalCompositeOperation = 'destination-over';
-  ctx.fillStyle = "#1a0f0a";
+  ctx.fillStyle = "#c4b49a";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -168,47 +175,48 @@ const OrnateFrame = ({
           }}
           className="group transition-transform duration-200 hover:scale-[1.02] focus:outline-none"
           style={{ 
-            width: '170px',
-            height: '115px',
+            width: '160px',
+            height: '110px',
             borderRadius: '4px',
             overflow: 'hidden',
             boxShadow: isSelected ? `0 0 20px ${accent}50` : 'none',
           }}
         >
           {hasItem && item ? (
-            <div className="relative h-full w-full bg-card/95 backdrop-blur-sm border border-border/30 overflow-hidden">
-              {/* Product image */}
-              <div className="relative h-[70px] w-full overflow-hidden bg-muted">
-                {item.image_url ? (
-                  <img 
-                    src={item.image_url} 
-                    alt={item.title} 
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" 
-                  />
-                ) : (
-                  <div 
-                    className="h-full w-full flex items-center justify-center"
-                    style={{ background: `linear-gradient(135deg, ${primary}30, ${accent}20)` }}
-                  >
-                    <Package className="h-6 w-6 text-muted-foreground/50" />
-                  </div>
-                )}
-                
-                {/* Price badge */}
-                {item.price != null && (
-                  <div 
-                    className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-white shadow"
-                    style={{ backgroundColor: accent }}
-                  >
-                    ${Number(item.price).toFixed(2)}
-                  </div>
-                )}
-              </div>
+            <div className="relative h-full w-full overflow-hidden">
+              {/* Full frame product image - covers entire frame */}
+              {item.image_url ? (
+                <img 
+                  src={item.image_url} 
+                  alt={item.title} 
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" 
+                />
+              ) : (
+                <div 
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ background: `linear-gradient(135deg, ${primary}40, ${accent}30)` }}
+                >
+                  <Package className="h-8 w-8 text-white/60" />
+                </div>
+              )}
               
-              {/* Product title */}
-              <div className="p-1.5 bg-background/80">
-                <p className="text-[11px] font-medium text-foreground truncate">{item.title}</p>
-                <p className="text-[9px] text-muted-foreground">Tap to view</p>
+              {/* Overlay gradient for text readability */}
+              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+              
+              {/* Price badge */}
+              {item.price != null && (
+                <div 
+                  className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold text-white shadow-lg"
+                  style={{ backgroundColor: accent }}
+                >
+                  ${Number(item.price).toFixed(2)}
+                </div>
+              )}
+              
+              {/* Product title overlay */}
+              <div className="absolute inset-x-0 bottom-0 p-1.5">
+                <p className="text-[11px] font-semibold text-white truncate drop-shadow-lg">{item.title}</p>
+                <p className="text-[9px] text-white/70">Tap to view</p>
               </div>
             </div>
           ) : (
@@ -242,69 +250,61 @@ const InteriorScene = ({
 
   return (
     <group>
-      {/* Optimized ambient lighting - no shadows */}
-      <ambientLight intensity={0.35} color="#fff5e6" />
-      <hemisphereLight args={["#ffeedd", "#2a1810", 0.5]} position={[0, 5, 0]} />
+      {/* Strong ambient lighting */}
+      <ambientLight intensity={1.2} color="#ffffff" />
+      <hemisphereLight args={["#ffffff", "#c4a882", 1.0]} position={[0, 5, 0]} />
       
-      {/* Single main ceiling light - efficient */}
+      {/* Main ceiling lights - very bright */}
       <pointLight 
         position={[0, 4.5, 0]} 
-        intensity={1.2} 
-        color="#fff5e6" 
-        distance={15}
-        decay={2}
+        intensity={2.5} 
+        color="#fffaf0" 
+        distance={25}
+        decay={1}
       />
+      <pointLight position={[-3, 4, -3]} intensity={1.2} color="#fff5e6" distance={12} />
+      <pointLight position={[3, 4, -3]} intensity={1.2} color="#fff5e6" distance={12} />
+      <pointLight position={[0, 4, 3]} intensity={0.8} color="#fff5e6" distance={10} />
 
-      {/* Floor - polished concrete look */}
+      {/* Floor - light wood */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[14, 14]} />
         <meshStandardMaterial 
-          color="#1a1512" 
-          roughness={0.4} 
-          metalness={0.1}
-        />
-      </mesh>
-      
-      {/* Subtle floor reflection lines */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
-        <planeGeometry args={[13.5, 13.5]} />
-        <meshStandardMaterial 
-          color="#2a2520" 
-          roughness={0.6}
-          transparent
-          opacity={0.3}
+          color="#8b7355" 
+          roughness={0.5} 
+          metalness={0.05}
         />
       </mesh>
 
-      {/* Walls with brick texture */}
+      {/* Walls - NO texture tint, full brightness */}
       {/* Front Wall */}
       <mesh position={[0, 2.5, -6]}>
         <boxGeometry args={[14, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#3a2820" />
+        <meshStandardMaterial map={brickTexture} color="#ffffff" />
       </mesh>
 
       {/* Back Wall */}
       <mesh position={[0, 2.5, 6]}>
         <boxGeometry args={[14, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#352318" />
+        <meshStandardMaterial map={brickTexture} color="#ffffff" />
       </mesh>
 
       {/* Left Wall */}
       <mesh position={[-7, 2.5, 0]} rotation={[0, Math.PI / 2, 0]}>
         <boxGeometry args={[12, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#3a2820" />
+        <meshStandardMaterial map={brickTexture} color="#ffffff" />
       </mesh>
 
       {/* Right Wall */}
       <mesh position={[7, 2.5, 0]} rotation={[0, -Math.PI / 2, 0]}>
         <boxGeometry args={[12, 5, 0.3]} />
-        <meshStandardMaterial map={brickTexture} color="#3a2820" />
+        <meshStandardMaterial map={brickTexture} color="#ffffff" />
       </mesh>
 
-      {/* Ceiling - dark wood beams look */}
+      {/* Ceiling - cream color */}
       <mesh position={[0, 5, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[14, 14]} />
-        <meshStandardMaterial color="#1a0f0a" roughness={0.95} />
+        <meshStandardMaterial color="#d4c4a8" roughness={0.9} />
       </mesh>
       
       {/* Ceiling light fixture */}
@@ -350,9 +350,44 @@ const InteriorScene = ({
   );
 };
 
+const ROOM_BOUNDS = {
+  x: 6.2,
+  z: 5.2,
+  yMin: 1.1,
+  yMax: 4.7,
+} as const;
+
+function RoomCameraClamp({
+  controlsRef,
+}: {
+  controlsRef: React.MutableRefObject<any>;
+}) {
+  const { camera } = useThree();
+
+  useFrame(() => {
+    const p = camera.position;
+
+    p.x = THREE.MathUtils.clamp(p.x, -ROOM_BOUNDS.x, ROOM_BOUNDS.x);
+    p.z = THREE.MathUtils.clamp(p.z, -ROOM_BOUNDS.z, ROOM_BOUNDS.z);
+    p.y = THREE.MathUtils.clamp(p.y, ROOM_BOUNDS.yMin, ROOM_BOUNDS.yMax);
+
+    const controls = controlsRef.current;
+    if (controls?.target) {
+      controls.target.x = THREE.MathUtils.clamp(controls.target.x, -2, 2);
+      controls.target.z = THREE.MathUtils.clamp(controls.target.z, -2, 2);
+      controls.target.y = THREE.MathUtils.clamp(controls.target.y, 1.6, 2.6);
+      controls.update?.();
+    }
+  });
+
+  return null;
+}
+
 const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
   const { data: items = [], isLoading } = useShopItems(shop.shopId);
+  const controlsRef = useRef<any>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const wallItems = useMemo(() => {
     const filled = Array.from({ length: 5 }, () => undefined as ShopItem | undefined);
@@ -369,6 +404,14 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
   const selectedItem = selectedSlot !== null ? wallItems[selectedSlot] : undefined;
   const filledSlots = wallItems.filter(Boolean);
   
+  const handleFrameClick = (slot: number) => {
+    const item = wallItems[slot];
+    if (item) {
+      setSelectedSlot(slot);
+      setIsModalOpen(true);
+    }
+  };
+
   const navigateItem = (direction: 'prev' | 'next') => {
     const filledIndices = wallItems.map((item, i) => item ? i : -1).filter(i => i !== -1);
     if (filledIndices.length === 0) return;
@@ -388,8 +431,8 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
 
   return (
     <div className="fixed inset-0 z-[250] bg-background flex flex-col">
-      {/* Header - mobile optimized */}
-      <div className="absolute top-0 left-0 right-0 z-20 px-3 py-2 sm:p-4 flex items-center justify-between bg-gradient-to-b from-background via-background/90 to-transparent">
+      {/* Header - compact for mobile landscape */}
+      <div className="absolute top-0 left-0 right-0 z-20 px-3 py-1.5 sm:p-4 landscape:py-1 flex items-center justify-between bg-gradient-to-b from-background via-background/90 to-transparent">
         <div className="flex items-center gap-2 min-w-0">
           {shop.logoUrl && (
             <img 
@@ -426,108 +469,43 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
 
       {/* 3D Canvas */}
       <Canvas 
-        camera={{ position: [0, 2.2, 3.5], fov: 65 }} 
+        camera={{ position: [0, 2.2, 4.2], fov: 65 }} 
         className="flex-1 touch-none"
         gl={{ antialias: true, powerPreference: "high-performance" }}
       >
-        <color attach="background" args={["#0f0a08"]} />
-        <fog attach="fog" args={["#0f0a08", 8, 18]} />
+        <color attach="background" args={["#e8dcc8"]} />
+        <fog attach="fog" args={["#e8dcc8", 15, 30]} />
         <React.Suspense fallback={null}>
           <InteriorScene 
             shop={shop} 
             items={wallItems} 
             selectedSlot={selectedSlot}
-            onSelectItem={setSelectedSlot} 
+            onSelectItem={handleFrameClick} 
           />
         </React.Suspense>
+
+        <RoomCameraClamp controlsRef={controlsRef} />
+
         <OrbitControls
+          ref={controlsRef}
           enablePan={false}
           enableDamping
           dampingFactor={0.08}
-          maxDistance={5}
-          minDistance={1.5}
-          target={[0, 2, -2]}
-          maxPolarAngle={Math.PI / 2.1}
+          maxDistance={4.5}
+          minDistance={1.6}
+          target={[0, 2, 0]}
+          maxPolarAngle={Math.PI / 2.05}
           minPolarAngle={Math.PI / 5}
           rotateSpeed={0.5}
         />
       </Canvas>
 
-      {/* Bottom Panel - Mobile landscape friendly */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 bg-gradient-to-t from-background via-background/95 to-transparent">
+      {/* Bottom hint panel */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 landscape:p-1.5 bg-gradient-to-t from-background via-background/95 to-transparent">
         <div className="max-w-xl mx-auto">
           {isLoading ? (
             <div className="text-center py-2">
               <p className="text-xs text-muted-foreground">Loading...</p>
-            </div>
-          ) : selectedItem ? (
-            <div 
-              className="rounded-xl border bg-card/95 backdrop-blur-xl shadow-xl overflow-hidden"
-              style={{ borderColor: `${accent}30` }}
-            >
-              <div className="flex items-stretch">
-                {/* Image */}
-                {selectedItem.image_url && (
-                  <div className="w-20 sm:w-28 shrink-0 bg-muted">
-                    <img 
-                      src={selectedItem.image_url} 
-                      alt={selectedItem.title}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                )}
-                
-                {/* Info */}
-                <div className="flex-1 p-2 sm:p-3 flex flex-col justify-between min-w-0">
-                  <div className="space-y-0.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">
-                        {selectedItem.title}
-                      </h3>
-                      {selectedItem.price != null && (
-                        <span 
-                          className="shrink-0 px-2 py-0.5 rounded-full text-xs font-bold text-white"
-                          style={{ backgroundColor: accent }}
-                        >
-                          ${Number(selectedItem.price).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                    {selectedItem.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {selectedItem.description}
-                      </p>
-                    )}
-                  </div>
-                  
-                  {/* Navigation */}
-                  {filledSlots.length > 1 && (
-                    <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-border/30">
-                      <span className="text-[10px] text-muted-foreground">
-                        {filledSlots.indexOf(selectedItem) + 1}/{filledSlots.length}
-                      </span>
-                      <div className="flex gap-1">
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          className="h-7 w-7"
-                          onClick={() => navigateItem('prev')}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          className="h-7 w-7"
-                          onClick={() => navigateItem('next')}
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           ) : filledSlots.length > 0 ? (
             <div className="text-center py-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/50">
@@ -544,7 +522,7 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
             </div>
           )}
           
-          {/* Controls hint - compact for mobile */}
+          {/* Controls hint */}
           <div className="flex items-center justify-center gap-3 mt-2 text-[10px] text-muted-foreground/70">
             <span>Drag to look</span>
             <span>•</span>
@@ -552,6 +530,107 @@ const ShopInteriorRoom = ({ shop, onExit }: ShopInteriorRoomProps) => {
           </div>
         </div>
       </div>
+
+      {/* Product Detail Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-md p-0 overflow-hidden max-h-[90vh]">
+          {selectedItem && (
+            <>
+              {/* Large Product Image */}
+              <div className="relative w-full aspect-[4/3] bg-muted">
+                {selectedItem.image_url ? (
+                  <img 
+                    src={selectedItem.image_url} 
+                    alt={selectedItem.title}
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <div 
+                    className="h-full w-full flex items-center justify-center"
+                    style={{ background: `linear-gradient(135deg, ${primary}30, ${accent}20)` }}
+                  >
+                    <Package className="h-16 w-16 text-muted-foreground/40" />
+                  </div>
+                )}
+                
+                {/* Price badge */}
+                {selectedItem.price != null && (
+                  <div 
+                    className="absolute top-4 right-4 px-3 py-1.5 rounded-full text-sm font-bold text-white shadow-lg"
+                    style={{ backgroundColor: accent }}
+                  >
+                    ${Number(selectedItem.price).toFixed(2)}
+                  </div>
+                )}
+              </div>
+              
+              {/* Content */}
+              <div className="p-4 space-y-3">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-bold">
+                    {selectedItem.title}
+                  </DialogTitle>
+                  {selectedItem.description && (
+                    <DialogDescription className="text-sm text-muted-foreground pt-1">
+                      {selectedItem.description}
+                    </DialogDescription>
+                  )}
+                </DialogHeader>
+                
+                {/* Navigation between items */}
+                {filledSlots.length > 1 && (
+                  <div className="flex items-center justify-between py-2 border-t border-border/50">
+                    <span className="text-xs text-muted-foreground">
+                      Item {filledSlots.indexOf(selectedItem) + 1} of {filledSlots.length}
+                    </span>
+                    <div className="flex gap-1">
+                      <Button 
+                        size="icon" 
+                        variant="outline" 
+                        className="h-8 w-8"
+                        onClick={() => navigateItem('prev')}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="outline" 
+                        className="h-8 w-8"
+                        onClick={() => navigateItem('next')}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Action buttons */}
+                <div className="flex gap-2 pt-2">
+                  {shop.externalLink && (
+                    <Button 
+                      className="flex-1 text-white" 
+                      style={{ backgroundColor: accent }} 
+                      asChild
+                    >
+                      <a href={shop.externalLink} target="_blank" rel="noopener noreferrer">
+                        <ShoppingBag className="h-4 w-4 mr-2" />
+                        Buy Now
+                      </a>
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    className={shop.externalLink ? "" : "flex-1"}
+                    onClick={() => setIsModalOpen(false)}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

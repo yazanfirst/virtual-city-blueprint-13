@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import LowPolyCharacter from './LowPolyCharacter';
 import { usePlayerStore } from '@/stores/playerStore';
+import { playSounds } from '@/hooks/useGameAudio';
 
 const PLAYER_RADIUS = 0.45;
 const STEP_HEIGHT = 0.28;
@@ -34,13 +35,14 @@ const LAMP_COLLIDERS = [
   { x: -30, z: -10 }, { x: -42, z: -10 }, { x: -54, z: -10 },
 ];
 
+// Bench colliders - tight box around seat only (1.5 wide x 0.5 deep bench)
 const BENCH_COLLIDERS = [
-  { minX: 8, maxX: 10, minZ: 39, maxZ: 41 },
-  { minX: -10, maxX: -8, minZ: 39, maxZ: 41 },
-  { minX: 8, maxX: 10, minZ: -49, maxZ: -47 },
-  { minX: -10, maxX: -8, minZ: -49, maxZ: -47 },
-  { minX: 43.5, maxX: 46.5, minZ: 37.5, maxZ: 40.5 },
-  { minX: -46.5, maxX: -43.5, minZ: 37.5, maxZ: 40.5 },
+  { minX: 8.25, maxX: 9.75, minZ: 39.75, maxZ: 40.25 },
+  { minX: -9.75, maxX: -8.25, minZ: 39.75, maxZ: 40.25 },
+  { minX: 8.25, maxX: 9.75, minZ: -48.25, maxZ: -47.75 },
+  { minX: -9.75, maxX: -8.25, minZ: -48.25, maxZ: -47.75 },
+  { minX: 44.25, maxX: 45.75, minZ: 37.75, maxZ: 38.25 },
+  { minX: -45.75, maxX: -44.25, minZ: 37.75, maxZ: 38.25 },
 ];
 
 type CircularPlatform = {
@@ -77,10 +79,12 @@ const PLATFORM_SURFACES: PlatformSurface[] = [
 ];
 
 const CYLINDER_COLLIDERS = [
-  ...TREE_COLLIDERS.map(({ x, z }) => ({ x, z, radius: 1.2, height: 6 })),
-  ...LAMP_COLLIDERS.map(({ x, z }) => ({ x, z, radius: 0.6, height: 5 })),
-  // Fountain pillar blocks the center so players stand on the rim, not inside
-  { x: 0, z: 0, radius: 1.2, height: 4.5 },
+  // Trees: trunk only (visual trunk is 0.2-0.3 radius, 3 height)
+  ...TREE_COLLIDERS.map(({ x, z }) => ({ x, z, radius: 0.3, height: 3.5 })),
+  // Lamps: pole only (visual pole is 0.1-0.12 radius)
+  ...LAMP_COLLIDERS.map(({ x, z }) => ({ x, z, radius: 0.18, height: 5 })),
+  // Fountain pillar (visual is 0.7-0.9 radius)
+  { x: 0, z: 0, radius: 0.95, height: 4.5 },
 ];
 
 // Building collision boxes and props with rectangular footprints
@@ -127,6 +131,7 @@ const PlayerController = ({
 }: PlayerControllerProps) => {
   const groupRef = useRef<THREE.Group>(null);
   const verticalVelocityRef = useRef(0);
+  const lastStepAtRef = useRef(0);
   const [keys, setKeys] = useState({
     forward: false,
     backward: false,
@@ -223,11 +228,13 @@ const PlayerController = ({
     return surface;
   }, []);
 
+
   const attemptJump = useCallback(() => {
     const groundInfo = getSurfaceHeight(positionRef.current.x, positionRef.current.z);
     const onGround = positionRef.current.y <= groundInfo.height + 0.001 && verticalVelocityRef.current === 0;
 
     if (!isJumping && onGround) {
+      playSounds.jump();
       verticalVelocityRef.current = JUMP_VELOCITY;
       setIsJumping(true);
     }
@@ -370,6 +377,14 @@ const PlayerController = ({
     // Apply jump/gravity
     const groundInfo = getSurfaceHeight(positionRef.current.x, positionRef.current.z);
     const groundHeight = groundInfo.height;
+
+    // Walking footsteps (soft)
+    const now = performance.now();
+    const onGroundForSteps = positionRef.current.y <= groundHeight + 0.001 && verticalVelocityRef.current === 0;
+    if (positionChanged && onGroundForSteps && !isJumping && now - lastStepAtRef.current > 450) {
+      playSounds.step();
+      lastStepAtRef.current = now;
+    }
 
     if (isJumping || positionRef.current.y > groundHeight) {
       verticalVelocityRef.current -= GRAVITY;

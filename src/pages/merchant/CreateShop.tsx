@@ -10,6 +10,7 @@ import { useCreateShop } from "@/hooks/useMerchantShops";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import BrandingEditor from "@/components/merchant/BrandingEditor";
 import ShopPreview from "@/components/merchant/ShopPreview";
+import { validateShopData } from "@/lib/validation";
 
 type FacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "cyber_tech" | "luxury_gold" | "urban_industrial" | "retro_vintage" | "nature_organic" | "led_display" | "pharaoh_gold" | "greek_marble" | "art_deco" | "japanese_zen" | "neon_cyberpunk";
 type SignageFont = "classic" | "bold" | "elegant" | "modern" | "playful";
@@ -103,7 +104,15 @@ const CreateShop = () => {
     switch (currentStep) {
       case 1: return !!formData.streetId;
       case 2: return !!formData.spotId;
-      case 3: return formData.name.trim().length >= 2;
+      case 3: {
+        const validation = validateShopData({
+          name: formData.name,
+          category: formData.category,
+          externalLink: formData.externalLink,
+          branchJustification: formData.branchJustification,
+        });
+        return validation.valid;
+      }
       case 4: return true;
       case 5: return true;
       default: return false;
@@ -111,12 +120,30 @@ const CreateShop = () => {
   };
 
   const handleSubmit = async () => {
+    // Validate all inputs before submission
+    const validation = validateShopData({
+      name: formData.name,
+      category: formData.category,
+      externalLink: formData.externalLink,
+      branchJustification: formData.branchJustification,
+    });
+
+    if (!validation.valid) {
+      const firstError = Object.values(validation.errors)[0];
+      toast({
+        title: "Validation Error",
+        description: firstError,
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       await createShop.mutateAsync({
         spot_id: formData.spotId,
-        name: formData.name,
-        category: formData.category || null,
-        external_link: formData.externalLink || null,
+        name: formData.name.trim(),
+        category: formData.category?.trim() || null,
+        external_link: formData.externalLink?.trim() || null,
         logo_url: formData.logoUrl || null,
         primary_color: formData.primaryColor,
         accent_color: formData.accentColor,
@@ -125,8 +152,8 @@ const CreateShop = () => {
         texture_template: formData.textureTemplate !== 'none' ? formData.textureTemplate : null,
         texture_url: formData.textureUrl || null,
         duplicate_brand: formData.duplicateBrand,
-        branch_label: formData.branchLabel || null,
-        branch_justification: formData.branchJustification || null,
+        branch_label: formData.branchLabel?.trim() || null,
+        branch_justification: formData.branchJustification?.trim() || null,
       });
 
       toast({
