@@ -54,10 +54,10 @@ const GameStartScreen = ({ streetName, category, onStartGame }: GameStartScreenP
           Start Game
         </Button>
 
-        {/* Controls Hint */}
         <div className="text-muted-foreground text-xs space-y-1">
           <p>Use <span className="text-foreground font-medium">WASD</span> or <span className="text-foreground font-medium">Arrow Keys</span> to move</p>
           <p>Hold <span className="text-foreground font-medium">Left Click</span> to rotate camera</p>
+          <p>Walk to a <span className="text-foreground font-medium">shop</span> and <span className="text-foreground font-medium">click</span> to enter and explore</p>
           <p>Press <span className="text-foreground font-medium">Space</span> to jump</p>
         </div>
       </div>
