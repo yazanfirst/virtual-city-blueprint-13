@@ -93,44 +93,54 @@ const StreetView = () => {
   // Transform spots data to shop brandings - MUST be before useEffect that uses it
   const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
 
-  // Tutorial triggers
+  // Track if user has exited a shop for first time (to show mission intro)
+  const [hasExitedShopOnce, setHasExitedShopOnce] = useState(false);
+
+  // Tutorial triggers - IN ORDER:
+  // 1. Movement tutorial when game starts
   useEffect(() => {
-    // Show movement tutorial when game first starts
     if (hasGameStarted && isMaximized && !isInsideShop) {
       tutorial.showTutorialStep('movement');
     }
   }, [hasGameStarted, isMaximized]);
 
+  // 2. Shop nearby tutorial
   useEffect(() => {
-    // Show shop_nearby tutorial when first time near a shop
     if (nearbyShop && hasGameStarted && !isInsideShop && !mission.isActive) {
       tutorial.showTutorialStep('shop_nearby');
     }
   }, [nearbyShop, hasGameStarted, isInsideShop, mission.isActive]);
 
+  // 3. Inside shop tutorial (exploration mode - not during mission)
   useEffect(() => {
-    // Show shop_inside tutorial when entering shop for first time (not during mission)
     if (isInsideShop && !mission.isActive) {
       tutorial.showTutorialStep('shop_inside');
     }
   }, [isInsideShop, mission.isActive]);
 
+  // 4. After exiting shop first time - introduce missions
   useEffect(() => {
-    // Show mission_escape tutorial when escape phase starts
-    if (mission.isActive && mission.phase === 'escape') {
-      tutorial.showTutorialStep('mission_escape');
+    if (hasExitedShopOnce && !isInsideShop && !mission.isActive) {
+      tutorial.showTutorialStep('shop_exit_missions');
+    }
+  }, [hasExitedShopOnce, isInsideShop, mission.isActive]);
+
+  // 5. Mission activated tutorial - right after clicking activate
+  useEffect(() => {
+    if (mission.isActive && mission.phase === 'escape' && !tutorial.isStepCompleted('mission_activated')) {
+      tutorial.showTutorialStep('mission_activated');
     }
   }, [mission.isActive, mission.phase]);
 
+  // 6. Inside target shop during mission (observation phase)
   useEffect(() => {
-    // Show mission_observation tutorial when entering target shop during mission
     if (mission.isActive && mission.phase === 'observation' && isInsideShop) {
       tutorial.showTutorialStep('mission_observation');
     }
   }, [mission.isActive, mission.phase, isInsideShop]);
 
+  // 7. Question phase tutorial
   useEffect(() => {
-    // Show mission_question tutorial when question phase starts
     if (mission.isActive && mission.phase === 'question' && showQuestionModal) {
       tutorial.showTutorialStep('mission_question');
     }
@@ -296,6 +306,12 @@ const StreetView = () => {
     // Restore outside state (camera + position) when exiting shop
     playerExitShop();
     setIsInsideShop(false);
+    
+    // Track first shop exit (not during mission) to show mission intro tutorial
+    if (!mission.isActive && !hasExitedShopOnce) {
+      setHasExitedShopOnce(true);
+    }
+    
     // If in mission observation phase, trigger questions
     if (mission.isActive && mission.phase === 'observation') {
       const questions = generateMissionQuestions(
@@ -659,11 +675,8 @@ const StreetView = () => {
                 if (mission.isActive && mission.phase === 'escape') {
                   mission.pauseZombies();
                 }
-                // Show mission_start tutorial first time opening mission panel
-                if (!mission.isActive) {
-                  tutorial.showTutorialStep('mission_start');
-                }
               }}
+
               className="relative flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg"
             >
               <Target className="h-4 w-4 text-primary" />
