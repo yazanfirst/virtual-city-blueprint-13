@@ -222,6 +222,10 @@ const StreetView = () => {
   const handleQuestionAnswer = (answer: string) => {
     const correct = mission.answerQuestion(answer);
     
+    // Freeze ALL zombies for 3 seconds after any question closes
+    // This gives player a fair chance to escape even if zombies were close
+    mission.freezeAllZombies(3000);
+    
     if (!correct) {
       // Wrong answer - close modal, show deceptive message, play notification
       playSounds.notification();

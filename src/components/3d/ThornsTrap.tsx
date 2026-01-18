@@ -35,7 +35,7 @@ export default function ThornsTrap({
   const [isOpen, setIsOpen] = useState(false);
   
   const playerPosition = usePlayerStore((state) => state.position);
-  const { zombies, slowZombie } = useMissionStore();
+  const { zombies, freezeZombie, frozenZombieIds } = useMissionStore();
   
   // Colors
   const baseColor = useMemo(() => new THREE.Color('#4A4A4A'), []);
@@ -83,19 +83,22 @@ export default function ThornsTrap({
       }
     }
     
-    // Check zombie collision (less frequent)
+    // Check zombie collision - freeze them for 2 seconds
     zombieCheckRef.current += delta;
     if (zombieCheckRef.current > 0.2) {
       zombieCheckRef.current = 0;
       
       for (const zombie of zombies) {
+        // Skip already frozen zombies
+        if (frozenZombieIds.has(zombie.id)) continue;
+        
         const zombiePos = new THREE.Vector3(...zombie.position);
         const dx = zombiePos.x - trapPos.x;
         const dz = zombiePos.z - trapPos.z;
         const distance = Math.sqrt(dx * dx + dz * dz);
         
         if (distance < ZOMBIE_HIT_DISTANCE) {
-          slowZombie(zombie.id);
+          freezeZombie(zombie.id, 2000); // Freeze for 2 seconds
         }
       }
     }
