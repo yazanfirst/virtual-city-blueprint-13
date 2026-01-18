@@ -280,7 +280,15 @@ export default function ZombieCharacter({
         <boxGeometry args={[0.14, 0.4, 0.14]} />
         <meshLambertMaterial color={clothingColor} />
       </mesh>
-      {/* Removed individual point lights for better performance */}
+
+      {/* Reduced glow for performance - only eye glow */}
+      <pointLight 
+        position={[0, 1.2, 0.2]} 
+        intensity={0.3} 
+        distance={2} 
+        color="#FF4444" 
+        decay={2}
+      />
     </group>
   );
 }

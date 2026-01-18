@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Play, DoorOpen } from "lucide-react";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
@@ -52,7 +52,6 @@ const StreetView = () => {
   const { data: spotsData } = useAllSpotsForStreet(streetId || "");
   const { data: spotsWithShops } = useSpotsWithShops(street?.id || "");
   const [isMaximized, setIsMaximized] = useState(false);
-  const [showStartScreen, setShowStartScreen] = useState(true); // Game start screen state
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
   const [selectedShop, setSelectedShop] = useState<ShopBranding | null>(null);
@@ -66,7 +65,7 @@ const StreetView = () => {
   const { coins, level, xp } = useGameStore();
   
   // Player state
-  const { resetToSafeSpawn, enterShop: playerEnterShop, exitShop: playerExitShop, nearbyShop } = usePlayerStore();
+  const { resetToSafeSpawn, enterShop: playerEnterShop, exitShop: playerExitShop } = usePlayerStore();
   
   // Mission state
   const mission = useMissionStore();
@@ -79,16 +78,8 @@ const StreetView = () => {
   useGameAudio();
 
   // Transform spots data to shop brandings - MUST be before useEffect that uses it
-  const shopBrandings = useMemo(() => {
-    return spotsData ? transformToShopBranding(spotsData) : [];
-  }, [spotsData]);
+  const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
   
-  // Handle starting the game (from start screen)
-  const handleStartGame = useCallback(() => {
-    setShowStartScreen(false);
-    setIsMaximized(true);
-  }, []);
-
   // Fetch all shop items for shops on this street
   useEffect(() => {
     const fetchAllShopItems = async () => {
@@ -161,7 +152,7 @@ const StreetView = () => {
     setShowShopModal(true);
   };
 
-  const handleEnterShop = useCallback((shop: ShopBranding) => {
+  const handleEnterShop = (shop: ShopBranding) => {
     // Check for mission trap (second entry after wrong answer)
     if (mission.isActive && mission.deceptiveMessageShown && shop.shopId === mission.targetShop?.shopId) {
       // Trigger jump scare modal (NO sound)
@@ -174,30 +165,7 @@ const StreetView = () => {
     setInteriorShop(shop);
     setIsInsideShop(true);
     setShowShopModal(false);
-  }, [mission, playerEnterShop]);
-
-  // Handle entering shop from proximity (E key or button)
-  const handleProximityEnter = useCallback(() => {
-    if (!nearbyShop || !shopBrandings) return;
-    const shop = shopBrandings.find(s => s.shopId === nearbyShop.shopId);
-    if (shop) {
-      handleEnterShop(shop);
-    }
-  }, [nearbyShop, shopBrandings, handleEnterShop]);
-
-  // Listen for E key to enter nearby shop
-  useEffect(() => {
-    if (!isMaximized || !nearbyShop) return;
-    
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'KeyE') {
-        handleProximityEnter();
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isMaximized, nearbyShop, handleProximityEnter]);
+  };
 
   const handleExitShop = () => {
     // Restore outside state (camera + position) when exiting shop
@@ -397,7 +365,6 @@ const StreetView = () => {
     </div>
   );
 
-
   // Game Mode (Maximized) Layout
   if (isMaximized) {
     const interiorOverlay = isInsideShop && interiorShop ? (
@@ -423,24 +390,6 @@ const StreetView = () => {
           {mission.isActive && (
             <div className="absolute top-14 left-2 md:left-4 pointer-events-none" style={{ zIndex: 150 }}>
               <HealthDisplay />
-            </div>
-          )}
-          
-          {/* Shop Proximity Indicator - "Press E to Enter" */}
-          {nearbyShop && !isInsideShop && !showShopModal && (
-            <div 
-              className="absolute bottom-20 left-1/2 -translate-x-1/2 pointer-events-auto animate-pulse"
-              style={{ zIndex: 160 }}
-            >
-              <button
-                onClick={handleProximityEnter}
-                className="flex items-center gap-3 px-6 py-3 rounded-xl bg-primary/90 backdrop-blur-md border-2 border-primary-foreground/20 text-primary-foreground shadow-lg hover:bg-primary transition-all"
-              >
-                <DoorOpen className="h-5 w-5" />
-                <span className="font-display font-bold text-sm md:text-base uppercase tracking-wider">
-                  Press E to Enter {nearbyShop.shopName}
-                </span>
-              </button>
             </div>
           )}
           
@@ -820,60 +769,17 @@ const StreetView = () => {
                   </Button>
                 </div>
                 
-                {/* Game Mode Button - Shows start screen first */}
+                {/* Maximize Button */}
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowStartScreen(true)}
+                  onClick={() => setIsMaximized(true)}
                   className="h-7 px-2 text-xs bg-background/80 backdrop-blur-md"
                 >
-                  <Play className="h-3 w-3 mr-1" />
-                  Play Game
+                  <Maximize2 className="h-3 w-3 mr-1" />
+                  Game Mode
                 </Button>
               </div>
-              
-              {/* Game Start Screen Overlay */}
-              {showStartScreen && !isMaximized && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/95 backdrop-blur-sm">
-                  <div className="text-center space-y-6 p-8">
-                    <div className="space-y-2">
-                      <h2 className="font-display text-3xl md:text-4xl font-bold text-foreground">
-                        {street.name}
-                      </h2>
-                      <p className="text-muted-foreground text-sm md:text-base">
-                        Explore the virtual shopping street
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <Button
-                        variant="cyber"
-                        size="lg"
-                        onClick={handleStartGame}
-                        className="w-full max-w-xs text-lg py-6"
-                      >
-                        <Play className="h-5 w-5 mr-2" />
-                        Start Game
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowStartScreen(false)}
-                        className="text-muted-foreground"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                    
-                    <div className="text-xs text-muted-foreground space-y-1 max-w-xs mx-auto">
-                      <p>🎮 WASD or Arrow keys to move</p>
-                      <p>🖱️ Hold left click + drag to rotate camera</p>
-                      <p>⏫ Space to jump</p>
-                      <p>🚪 Press E near shops to enter</p>
-                    </div>
-                  </div>
-                </div>
-              )}
               
               {/* Zoom/Controls Hint */}
               <div className="absolute bottom-2 left-2 z-10 bg-background/70 backdrop-blur-md rounded-lg px-3 py-1.5 flex items-center gap-3 text-xs text-muted-foreground">

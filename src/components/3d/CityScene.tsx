@@ -362,7 +362,7 @@ function GradientSky({ isNight }: { isNight: boolean }) {
 
   return (
     <mesh>
-      <sphereGeometry args={[300, 8, 8]} />
+      <sphereGeometry args={[300, 16, 16]} />
       <primitive object={skyMaterial} attach="material" />
     </mesh>
   );
@@ -372,10 +372,10 @@ function GradientSky({ isNight }: { isNight: boolean }) {
 function Cloud({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
   return (
     <group position={position} scale={scale}>
-      <mesh><dodecahedronGeometry args={[2.5, 0]} /><meshBasicMaterial color="#ffffff" /></mesh>
-      <mesh position={[2.5, -0.3, 0]}><dodecahedronGeometry args={[2, 0]} /><meshBasicMaterial color="#ffffff" /></mesh>
-      <mesh position={[-2.2, -0.2, 0]}><dodecahedronGeometry args={[1.8, 0]} /><meshBasicMaterial color="#ffffff" /></mesh>
-      <mesh position={[1, 0.5, 1]}><dodecahedronGeometry args={[1.5, 0]} /><meshBasicMaterial color="#ffffff" /></mesh>
+      <mesh><dodecahedronGeometry args={[2.5, 0]} /><meshLambertMaterial color="#ffffff" /></mesh>
+      <mesh position={[2.5, -0.3, 0]}><dodecahedronGeometry args={[2, 0]} /><meshLambertMaterial color="#ffffff" /></mesh>
+      <mesh position={[-2.2, -0.2, 0]}><dodecahedronGeometry args={[1.8, 0]} /><meshLambertMaterial color="#ffffff" /></mesh>
+      <mesh position={[1, 0.5, 1]}><dodecahedronGeometry args={[1.5, 0]} /><meshLambertMaterial color="#ffffff" /></mesh>
     </group>
   );
 }
@@ -385,7 +385,7 @@ function Tree({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
       <mesh position={[0, 1.5, 0]}>
-        <cylinderGeometry args={[0.2, 0.3, 3, 4]} />
+        <cylinderGeometry args={[0.2, 0.3, 3, 6]} />
         <meshLambertMaterial color="#5A3A1A" />
       </mesh>
       <mesh position={[0, 4, 0]}>
@@ -517,18 +517,19 @@ function TallBuilding({ position, height, color, isNight }: {
   );
 }
 
-// Street Lamp
+// Street Lamp - OPTIMIZED (no individual point lights)
 function Lamp({ position, isNight }: { position: [number, number, number]; isNight: boolean }) {
   return (
     <group position={position}>
       <mesh position={[0, 3, 0]}>
-        <cylinderGeometry args={[0.1, 0.12, 6, 4]} />
+        <cylinderGeometry args={[0.1, 0.12, 6, 6]} />
         <meshBasicMaterial color="#2A2A2A" />
       </mesh>
       <mesh position={[0, 6.2, 0]}>
-        <sphereGeometry args={[0.4, 4, 4]} />
+        <sphereGeometry args={[0.4, 6, 6]} />
         <meshBasicMaterial color={isNight ? "#FFD080" : "#E8E8E8"} />
       </mesh>
+      {/* Removed individual lamp lights for performance - using global ambient instead */}
     </group>
   );
 }
@@ -539,8 +540,9 @@ function Bench({ position, rotation = 0 }: { position: [number, number, number];
     <group position={position} rotation={[0, rotation, 0]}>
       <mesh position={[0, 0.5, 0]}><boxGeometry args={[1.5, 0.1, 0.5]} /><meshLambertMaterial color="#5A3A1A" /></mesh>
       <mesh position={[0, 0.8, -0.2]}><boxGeometry args={[1.5, 0.5, 0.1]} /><meshLambertMaterial color="#5A3A1A" /></mesh>
-      <mesh position={[-0.6, 0.25, 0]}><boxGeometry args={[0.1, 0.5, 0.4]} /><meshLambertMaterial color="#3A3A3A" /></mesh>
-      <mesh position={[0.6, 0.25, 0]}><boxGeometry args={[0.1, 0.5, 0.4]} /><meshLambertMaterial color="#3A3A3A" /></mesh>
+      {[-0.6, 0.6].map((x, i) => (
+        <mesh key={i} position={[x, 0.25, 0]}><boxGeometry args={[0.1, 0.5, 0.4]} /><meshLambertMaterial color="#3A3A3A" /></mesh>
+      ))}
     </group>
   );
 }
@@ -768,15 +770,11 @@ function LaneMarking({ position, rotation = 0 }: { position: [number, number, nu
   );
 }
 
-// Shop proximity detection distance
-const SHOP_ENTER_DISTANCE = 8;
-
 function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
   const { zombies, zombiesPaused, traps, isActive: missionActive, slowedZombieIds, frozenZombieIds, freezeZombie, targetShop, phase: missionPhase } = useMissionStore();
-  const { position: playerPosition, setNearbyShop } = usePlayerStore();
 
   useEffect(() => {
     scene.background = null;
@@ -796,40 +794,6 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
   const getBrandingAtPosition = (x: number, z: number): ShopBranding | undefined => {
     return brandingsByPosition.get(`${x},${z}`);
   };
-
-  // Check for nearby shops (for "Press E to Enter" prompt)
-  useEffect(() => {
-    const checkNearbyShops = () => {
-      let closestShop: { branding: ShopBranding; distance: number } | null = null;
-      
-      for (const branding of shopBrandings) {
-        if (!branding.hasShop) continue;
-        
-        const dx = playerPosition[0] - branding.position.x;
-        const dz = playerPosition[2] - branding.position.z;
-        const distance = Math.sqrt(dx * dx + dz * dz);
-        
-        if (distance < SHOP_ENTER_DISTANCE) {
-          if (!closestShop || distance < closestShop.distance) {
-            closestShop = { branding, distance };
-          }
-        }
-      }
-      
-      if (closestShop) {
-        setNearbyShop({
-          shopId: closestShop.branding.shopId || '',
-          spotId: closestShop.branding.spotId,
-          shopName: closestShop.branding.shopName || 'Shop',
-          distance: closestShop.distance,
-        });
-      } else {
-        setNearbyShop(null);
-      }
-    };
-    
-    checkNearbyShops();
-  }, [playerPosition, shopBrandings, setNearbyShop]);
 
   const handleCollectItem = useCallback((id: string, type: 'coin' | 'gem' | 'star') => {
     collectCoin(id);
