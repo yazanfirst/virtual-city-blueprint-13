@@ -65,7 +65,7 @@ const StreetView = () => {
   const { coins, level, xp } = useGameStore();
   
   // Player state
-  const { resetToSafeSpawn } = usePlayerStore();
+  const { resetToSafeSpawn, enterShop: playerEnterShop, exitShop: playerExitShop } = usePlayerStore();
   
   // Mission state
   const mission = useMissionStore();
@@ -124,6 +124,8 @@ const StreetView = () => {
     if (mission.isActive && mission.phase === 'escape') {
       if (shop.shopId === mission.targetShop?.shopId) {
         mission.enterShop();
+        // Save outside state before entering shop
+        playerEnterShop();
         setInteriorShop(shop);
         setIsInsideShop(true);
       }
@@ -158,12 +160,16 @@ const StreetView = () => {
       mission.triggerTrap();
       return;
     }
+    // Save outside state before entering shop (camera + position)
+    playerEnterShop();
     setInteriorShop(shop);
     setIsInsideShop(true);
     setShowShopModal(false);
   };
 
   const handleExitShop = () => {
+    // Restore outside state (camera + position) when exiting shop
+    playerExitShop();
     setIsInsideShop(false);
     // If in mission observation phase, trigger questions
     if (mission.isActive && mission.phase === 'observation') {
