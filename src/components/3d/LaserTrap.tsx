@@ -13,7 +13,9 @@ interface LaserTrapProps {
   onPlayerHit: (trapId: string) => void;
 }
 
-const PLAYER_HIT_DISTANCE = 0.25; // Player must actually touch the laser beam
+const PLAYER_RADIUS = 0.45;
+const BEAM_RADIUS = 0.08;
+const PLAYER_HIT_DISTANCE = PLAYER_RADIUS + BEAM_RADIUS; // Match player body width for reliable hits
 const PLAYER_JUMP_HEIGHT_THRESHOLD = 0.7; // Player must jump this high to avoid laser
 const ZOMBIE_HIT_DISTANCE = 0.8; // Distance for zombie detection
 
