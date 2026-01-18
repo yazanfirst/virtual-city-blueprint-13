@@ -352,9 +352,10 @@ const InteriorScene = ({
 
       {/* ═══════════════════════════════════════════════════════════════
           MUSTACHIO-STYLE WALL INSTRUCTION PANEL
-          Front wall, placed HIGH ENOUGH to never overlap product frames
+          Front wall, RIGHT SIDE (so it never covers the product frames)
+          Visible immediately when entering the shop
           ═══════════════════════════════════════════════════════════════ */}
-      <group position={[0, 3.95, -5.72]} rotation={[0, 0, 0]}>
+      <group position={[4.9, 3.2, -5.72]} rotation={[0, 0, 0]} scale={0.9}>
         {/* Outer ornate gold frame */}
         <mesh position={[0, 0, 0]}>
           <boxGeometry args={[2.55, 0.95, 0.08]} />
