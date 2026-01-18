@@ -415,7 +415,7 @@ const InteriorScene = ({
                   TAP FRAMES TO VIEW PRODUCTS
                 </p>
                 <p className="text-black font-black text-sm leading-tight tracking-tight uppercase">
-                  PRESS VISIT (TOP RIGHT) TO GO TO THE SHOP
+                  PRESS VISIT (TOP RIGHT) TO GO TO THE WEBSITE OF THIS SHOP OR
                 </p>
                 <p className="text-black font-black text-sm leading-tight tracking-tight uppercase">
                   PRESS EXIT TO LEAVE THE SHOP
