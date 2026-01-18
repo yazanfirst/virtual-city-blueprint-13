@@ -13,13 +13,15 @@ interface LaserTrapProps {
   onPlayerHit: (trapId: string) => void;
 }
 
-const PLAYER_HIT_DISTANCE = 0.25; // Player must actually touch the laser beam
-const PLAYER_JUMP_HEIGHT_THRESHOLD = 0.7; // Player must jump this high to avoid laser
-const ZOMBIE_HIT_DISTANCE = 0.8; // Distance for zombie detection
+// Collision thresholds
+const PLAYER_HIT_RADIUS = 0.4; // Player collision radius
+const LASER_BEAM_HEIGHT = 0.9; // Laser Y position
+const PLAYER_JUMP_CLEARANCE = 0.6; // Player must be this high above laser to clear it
+const ZOMBIE_HIT_DISTANCE = 0.6; // Distance for zombie detection
 
 /**
- * Laser beam trap that damages player and slows zombies
- * Visual: Red pulsing laser beam between two posts
+ * Laser beam trap that damages player and freezes zombies
+ * Uses swept collision detection to catch fast-moving players
  * Player can jump over the laser to avoid damage
  */
 export default function LaserTrap({
@@ -35,14 +37,52 @@ export default function LaserTrap({
   const pulseRef = useRef(0);
   const hitCooldownRef = useRef(0);
   const zombieCheckRef = useRef(0);
-  const zombieSlowCooldownRef = useRef<Record<string, number>>({});
+  const zombieFrozenUntilRef = useRef<Record<string, number>>({});
+  const lastPlayerPosRef = useRef<THREE.Vector3 | null>(null);
   
   const playerPosition = usePlayerStore((state) => state.position);
-  const { zombies, slowZombie } = useMissionStore();
+  const { zombies, freezeZombie } = useMissionStore();
   
   // Laser colors
   const laserColor = useMemo(() => new THREE.Color('#FF0000'), []);
   const postColor = useMemo(() => new THREE.Color('#333333'), []);
+  
+  // Helper: Get closest point on line segment to a point
+  const closestPointOnSegment = (point: THREE.Vector3, lineStart: THREE.Vector3, lineEnd: THREE.Vector3): THREE.Vector3 => {
+    const lineVec = lineEnd.clone().sub(lineStart);
+    const pointVec = point.clone().sub(lineStart);
+    const lineLenSq = lineVec.lengthSq();
+    if (lineLenSq === 0) return lineStart.clone();
+    
+    const t = Math.max(0, Math.min(1, pointVec.dot(lineVec) / lineLenSq));
+    return lineStart.clone().add(lineVec.multiplyScalar(t));
+  };
+  
+  // Helper: Check if line segment intersects with another line segment (2D, XZ plane)
+  const segmentsIntersect2D = (
+    a1: THREE.Vector3, a2: THREE.Vector3, 
+    b1: THREE.Vector3, b2: THREE.Vector3,
+    threshold: number
+  ): boolean => {
+    // Check if the swept path (a1->a2) passes within threshold of laser line (b1->b2)
+    // Sample multiple points along the movement path
+    const steps = Math.max(3, Math.ceil(a1.distanceTo(a2) / 0.2)); // Sample every 0.2 units
+    
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const samplePoint = a1.clone().lerp(a2, t);
+      const closest = closestPointOnSegment(samplePoint, b1, b2);
+      
+      const dx = samplePoint.x - closest.x;
+      const dz = samplePoint.z - closest.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      
+      if (dist < threshold) {
+        return true;
+      }
+    }
+    return false;
+  };
   
   useFrame((_, delta) => {
     if (!groupRef.current || !beamRef.current || !isActive) return;
@@ -61,75 +101,90 @@ export default function LaserTrap({
     const cos = Math.cos(rotation);
     const sin = Math.sin(rotation);
     
-    const start = new THREE.Vector3(
+    const laserStart = new THREE.Vector3(
       trapPos.x - halfLength * sin,
-      trapPos.y + 0.8,
+      trapPos.y + LASER_BEAM_HEIGHT,
       trapPos.z - halfLength * cos
     );
-    const end = new THREE.Vector3(
+    const laserEnd = new THREE.Vector3(
       trapPos.x + halfLength * sin,
-      trapPos.y + 0.8,
+      trapPos.y + LASER_BEAM_HEIGHT,
       trapPos.z + halfLength * cos
     );
     
-    const lineVec = end.clone().sub(start);
+    // Current player position
+    const currentPlayerPos = new THREE.Vector3(...playerPosition);
     
     // Check player collision (with cooldown)
     if (hitCooldownRef.current > 0) {
       hitCooldownRef.current -= delta;
     } else {
-      const playerPos = new THREE.Vector3(...playerPosition);
-      const playerToStart = playerPos.clone().sub(start);
+      // Player height check - can jump over laser
+      const playerAboveLaser = currentPlayerPos.y > (LASER_BEAM_HEIGHT + PLAYER_JUMP_CLEARANCE);
       
-      const t = Math.max(0, Math.min(1, playerToStart.dot(lineVec) / lineVec.lengthSq()));
-      const closestPoint = start.clone().add(lineVec.clone().multiplyScalar(t));
-      
-      // Only check X and Z distance (ignore Y for distance calc)
-      const dx = playerPos.x - closestPoint.x;
-      const dz = playerPos.z - closestPoint.z;
-      const horizontalDistance = Math.sqrt(dx * dx + dz * dz);
-      
-      // Player can avoid laser by jumping high enough
-      // Laser is at Y=0.9, so player needs to be above that
-      if (horizontalDistance < PLAYER_HIT_DISTANCE && playerPos.y < PLAYER_JUMP_HEIGHT_THRESHOLD) {
-        onPlayerHit(id);
-        hitCooldownRef.current = 1.5; // 1.5 second cooldown between hits
+      if (!playerAboveLaser) {
+        let hit = false;
+        
+        // Swept collision: check path from last frame to current frame
+        if (lastPlayerPosRef.current) {
+          // Use swept collision detection for fast movement
+          hit = segmentsIntersect2D(
+            lastPlayerPosRef.current,
+            currentPlayerPos,
+            laserStart,
+            laserEnd,
+            PLAYER_HIT_RADIUS
+          );
+        } else {
+          // First frame - just check current position
+          const closest = closestPointOnSegment(currentPlayerPos, laserStart, laserEnd);
+          const dx = currentPlayerPos.x - closest.x;
+          const dz = currentPlayerPos.z - closest.z;
+          const dist = Math.sqrt(dx * dx + dz * dz);
+          hit = dist < PLAYER_HIT_RADIUS;
+        }
+        
+        if (hit) {
+          onPlayerHit(id);
+          hitCooldownRef.current = 1.5; // 1.5 second cooldown between hits
+        }
       }
     }
     
-    // Update zombie slow cooldowns
-    for (const zombieId of Object.keys(zombieSlowCooldownRef.current)) {
-      zombieSlowCooldownRef.current[zombieId] -= delta;
-      if (zombieSlowCooldownRef.current[zombieId] <= 0) {
-        delete zombieSlowCooldownRef.current[zombieId];
+    // Store current position for next frame's swept collision
+    lastPlayerPosRef.current = currentPlayerPos.clone();
+    
+    // Update zombie freeze cooldowns
+    const now = Date.now();
+    for (const zombieId of Object.keys(zombieFrozenUntilRef.current)) {
+      if (zombieFrozenUntilRef.current[zombieId] <= now) {
+        delete zombieFrozenUntilRef.current[zombieId];
       }
     }
     
     // Check zombie collision (less frequent for performance)
     zombieCheckRef.current += delta;
-    if (zombieCheckRef.current > 0.15) { // Check every 150ms
+    if (zombieCheckRef.current > 0.1) { // Check every 100ms
       zombieCheckRef.current = 0;
       
       for (const zombie of zombies) {
-        // Skip if this zombie was recently slowed by this trap
-        if (zombieSlowCooldownRef.current[zombie.id] && zombieSlowCooldownRef.current[zombie.id] > 0) {
+        // Skip if this zombie was recently frozen by this trap
+        if (zombieFrozenUntilRef.current[zombie.id] && zombieFrozenUntilRef.current[zombie.id] > now) {
           continue;
         }
         
         const zombiePos = new THREE.Vector3(...zombie.position);
-        const zombieToStart = zombiePos.clone().sub(start);
+        const closest = closestPointOnSegment(zombiePos, laserStart, laserEnd);
         
-        const t = Math.max(0, Math.min(1, zombieToStart.dot(lineVec) / lineVec.lengthSq()));
-        const closestPoint = start.clone().add(lineVec.clone().multiplyScalar(t));
-        
-        const dx = zombiePos.x - closestPoint.x;
-        const dz = zombiePos.z - closestPoint.z;
+        const dx = zombiePos.x - closest.x;
+        const dz = zombiePos.z - closest.z;
         const distance = Math.sqrt(dx * dx + dz * dz);
         
         if (distance < ZOMBIE_HIT_DISTANCE) {
-          slowZombie(zombie.id);
-          // Set cooldown so we don't spam slow the same zombie
-          zombieSlowCooldownRef.current[zombie.id] = 3.5; // Slightly longer than slow duration
+          // Freeze zombie for 1 second (1000ms)
+          freezeZombie(zombie.id, 1000);
+          // Set cooldown so we don't spam freeze the same zombie (1.5s)
+          zombieFrozenUntilRef.current[zombie.id] = now + 1500;
         }
       }
     }
