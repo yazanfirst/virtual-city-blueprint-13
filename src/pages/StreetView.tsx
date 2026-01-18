@@ -481,6 +481,10 @@ const StreetView = () => {
               onClick={() => {
                 setShowMissions(true);
                 mission.setNotification(false); // Clear notification when opened
+                // Pause zombies when mission panel opens during active mission
+                if (mission.isActive && mission.phase === 'escape') {
+                  mission.pauseZombies();
+                }
               }}
               className="relative flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg"
             >
@@ -501,7 +505,13 @@ const StreetView = () => {
             <div 
               className="absolute inset-0 flex items-center justify-center pointer-events-auto"
               style={{ zIndex: 200 }}
-              onClick={() => setShowMissions(false)}
+              onClick={() => {
+                setShowMissions(false);
+                // Resume zombies when mission panel closes during escape phase
+                if (mission.isActive && mission.phase === 'escape') {
+                  mission.resumeZombies();
+                }
+              }}
             >
               <div 
                 className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md"
@@ -517,7 +527,13 @@ const StreetView = () => {
                     </h3>
                   </div>
                   <button 
-                    onClick={() => setShowMissions(false)} 
+                    onClick={() => {
+                      setShowMissions(false);
+                      // Resume zombies when mission panel closes during escape phase
+                      if (mission.isActive && mission.phase === 'escape') {
+                        mission.resumeZombies();
+                      }
+                    }}
                     className="text-muted-foreground hover:text-foreground p-1"
                   >
                     <X className="h-5 w-5" />
