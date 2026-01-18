@@ -15,12 +15,17 @@ import HealthDisplay from "@/components/mission/HealthDisplay";
 import MissionFailedModal from "@/components/mission/MissionFailedModal";
 import TrapHitFeedback from "@/components/mission/TrapHitFeedback";
 import JumpScareModal from "@/components/mission/JumpScareModal";
+import GameStartScreen from "@/components/3d/GameStartScreen";
+import ShopProximityIndicator from "@/components/3d/ShopProximityIndicator";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
 import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
+
+// Shop entry distance threshold (in world units)
+const SHOP_ENTRY_DISTANCE = 8;
 
 const PanelBox = ({ 
   title,
@@ -52,6 +57,7 @@ const StreetView = () => {
   const { data: spotsData } = useAllSpotsForStreet(streetId || "");
   const { data: spotsWithShops } = useSpotsWithShops(street?.id || "");
   const [isMaximized, setIsMaximized] = useState(false);
+  const [hasGameStarted, setHasGameStarted] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
   const [selectedShop, setSelectedShop] = useState<ShopBranding | null>(null);
@@ -60,12 +66,13 @@ const StreetView = () => {
   const [showMissions, setShowMissions] = useState(false);
   const [isInsideShop, setIsInsideShop] = useState(false);
   const [interiorShop, setInteriorShop] = useState<ShopBranding | null>(null);
+  const [nearbyShop, setNearbyShop] = useState<ShopBranding | null>(null);
 
   // Game state
   const { coins, level, xp } = useGameStore();
   
   // Player state
-  const { resetToSafeSpawn, enterShop: playerEnterShop, exitShop: playerExitShop } = usePlayerStore();
+  const { position: playerPosition, resetToSafeSpawn, enterShop: playerEnterShop, exitShop: playerExitShop } = usePlayerStore();
   
   // Mission state
   const mission = useMissionStore();
@@ -116,10 +123,61 @@ const StreetView = () => {
     fetchAllShopItems();
   }, [shopBrandings.length]); // use length instead of array to avoid infinite loop
 
+  // Proximity detection - find nearby shop
+  useEffect(() => {
+    if (!hasGameStarted || isInsideShop) {
+      setNearbyShop(null);
+      return;
+    }
+
+    const [px, , pz] = playerPosition;
+    let closest: ShopBranding | null = null;
+    let closestDist = Infinity;
+
+    for (const shop of shopBrandings) {
+      if (!shop.hasShop || shop.isSuspended) continue;
+      
+      // Calculate distance to shop front (z+4 offset for front of building)
+      const shopFrontX = shop.position.x;
+      const shopFrontZ = shop.position.z + Math.cos(shop.position.rotation) * 4;
+      const shopFrontXOffset = Math.sin(shop.position.rotation) * 4;
+      
+      const dx = px - (shopFrontX + shopFrontXOffset);
+      const dz = pz - shopFrontZ;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+
+      if (dist < SHOP_ENTRY_DISTANCE && dist < closestDist) {
+        closest = shop;
+        closestDist = dist;
+      }
+    }
+
+    setNearbyShop(closest);
+  }, [playerPosition, shopBrandings, hasGameStarted, isInsideShop]);
+
   // Find the spot ID for the selected shop (to highlight in 2D map)
   const selectedSpotId = selectedShop?.spotId || "";
 
+  // Check if player is close enough to enter shop
+  const isPlayerNearShop = (shop: ShopBranding): boolean => {
+    const [px, , pz] = playerPosition;
+    const shopFrontX = shop.position.x;
+    const shopFrontZ = shop.position.z + Math.cos(shop.position.rotation) * 4;
+    const shopFrontXOffset = Math.sin(shop.position.rotation) * 4;
+    
+    const dx = px - (shopFrontX + shopFrontXOffset);
+    const dz = pz - shopFrontZ;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    
+    return dist < SHOP_ENTRY_DISTANCE;
+  };
+
   const handleShopClick = (shop: ShopBranding) => {
+    // Check proximity first - player must be near the shop
+    if (!isPlayerNearShop(shop)) {
+      return; // Too far away, ignore click
+    }
+
     // During mission escape phase, only allow clicking target shop
     if (mission.isActive && mission.phase === 'escape') {
       if (shop.shopId === mission.targetShop?.shopId) {
@@ -392,6 +450,9 @@ const StreetView = () => {
               <HealthDisplay />
             </div>
           )}
+          
+          {/* Shop Proximity Indicator */}
+          <ShopProximityIndicator nearbyShop={nearbyShop} />
           
           {/* Shop Detail Modal */}
           {showShopModal && (
@@ -720,95 +781,112 @@ const StreetView = () => {
             </PanelBox>
           </div>
 
-          {/* Center Column - 3D Scene */}
+          {/* Center Column - 3D Scene or Start Screen */}
           <div className="lg:col-span-6">
             <div className="cyber-card h-full min-h-[400px] lg:min-h-[500px] p-0 overflow-hidden relative">
-              {/* Controls Bar */}
-              <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
-              {/* Camera View - Only desktop */}
-              <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 gap-1 hidden md:flex">
-                <Button
-                  variant={cameraView === "thirdPerson" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setCameraView("thirdPerson")}
-                  className="h-7 px-2 text-xs"
-                  title="Third Person View"
-                >
-                  <UserCircle className="h-3 w-3 mr-1" />
-                  3rd
-                </Button>
-                <Button
-                  variant={cameraView === "firstPerson" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setCameraView("firstPerson")}
-                  className="h-7 px-2 text-xs"
-                  title="First Person View"
-                >
-                  <Eye className="h-3 w-3 mr-1" />
-                  1st
-                </Button>
-              </div>
-
-                {/* Day/Night Toggle */}
-                <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 flex gap-1">
-                  <Button
-                    variant={timeOfDay === "day" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setTimeOfDay("day")}
-                    className="h-7 px-2 text-xs"
-                  >
-                    <Sun className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant={timeOfDay === "night" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setTimeOfDay("night")}
-                    className="h-7 px-2 text-xs"
-                  >
-                    <Moon className="h-3 w-3" />
-                  </Button>
-                </div>
-                
-                {/* Maximize Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsMaximized(true)}
-                  className="h-7 px-2 text-xs bg-background/80 backdrop-blur-md"
-                >
-                  <Maximize2 className="h-3 w-3 mr-1" />
-                  Game Mode
-                </Button>
-              </div>
-              
-              {/* Zoom/Controls Hint */}
-              <div className="absolute bottom-2 left-2 z-10 bg-background/70 backdrop-blur-md rounded-lg px-3 py-1.5 flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <ZoomIn className="h-3 w-3" /> Scroll to zoom
-                </span>
-                <span className="flex items-center gap-1">
-                  <Move className="h-3 w-3" /> Drag to rotate
-                </span>
-              </div>
-              
-              <CityScene 
-                streetId={street.id} 
-                timeOfDay={timeOfDay} 
-                cameraView={cameraView} 
-                shopBrandings={shopBrandings}
-                onShopClick={handleShopClick}
-                forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
-                onZombieTouchPlayer={handleZombieTouchPlayer}
-                onTrapHitPlayer={handleTrapHitPlayer}
-              />
-              
-              {/* Shop Detail Modal */}
-              {showShopModal && (
-                <ShopDetailModal
-                  shop={selectedShop}
-                  onClose={() => setShowShopModal(false)}
-                  onEnterShop={handleEnterShop}
+              {!hasGameStarted ? (
+                /* Start Game Screen */
+                <GameStartScreen 
+                  streetName={street.name}
+                  category={street.category}
+                  onStartGame={() => {
+                    setHasGameStarted(true);
+                    setIsMaximized(true); // Auto fullscreen on start
+                  }}
                 />
+              ) : (
+                <>
+                  {/* Controls Bar */}
+                  <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+                  {/* Camera View - Only desktop */}
+                  <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 gap-1 hidden md:flex">
+                    <Button
+                      variant={cameraView === "thirdPerson" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setCameraView("thirdPerson")}
+                      className="h-7 px-2 text-xs"
+                      title="Third Person View"
+                    >
+                      <UserCircle className="h-3 w-3 mr-1" />
+                      3rd
+                    </Button>
+                    <Button
+                      variant={cameraView === "firstPerson" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setCameraView("firstPerson")}
+                      className="h-7 px-2 text-xs"
+                      title="First Person View"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      1st
+                    </Button>
+                  </div>
+
+                    {/* Day/Night Toggle */}
+                    <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 flex gap-1">
+                      <Button
+                        variant={timeOfDay === "day" ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setTimeOfDay("day")}
+                        className="h-7 px-2 text-xs"
+                      >
+                        <Sun className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant={timeOfDay === "night" ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setTimeOfDay("night")}
+                        className="h-7 px-2 text-xs"
+                      >
+                        <Moon className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    
+                    {/* Maximize Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsMaximized(true)}
+                      className="h-7 px-2 text-xs bg-background/80 backdrop-blur-md"
+                    >
+                      <Maximize2 className="h-3 w-3 mr-1" />
+                      Game Mode
+                    </Button>
+                  </div>
+                  
+                  {/* Zoom/Controls Hint */}
+                  <div className="absolute bottom-2 left-2 z-10 bg-background/70 backdrop-blur-md rounded-lg px-3 py-1.5 flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <ZoomIn className="h-3 w-3" /> Scroll to zoom
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Move className="h-3 w-3" /> Drag to rotate
+                    </span>
+                  </div>
+                  
+                  <CityScene 
+                    streetId={street.id} 
+                    timeOfDay={timeOfDay} 
+                    cameraView={cameraView} 
+                    shopBrandings={shopBrandings}
+                    onShopClick={handleShopClick}
+                    forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
+                    onZombieTouchPlayer={handleZombieTouchPlayer}
+                    onTrapHitPlayer={handleTrapHitPlayer}
+                  />
+                  
+                  {/* Shop Proximity Indicator */}
+                  <ShopProximityIndicator nearbyShop={nearbyShop} />
+                  
+                  {/* Shop Detail Modal */}
+                  {showShopModal && (
+                    <ShopDetailModal
+                      shop={selectedShop}
+                      onClose={() => setShowShopModal(false)}
+                      onEnterShop={handleEnterShop}
+                    />
+                  )}
+                </>
               )}
             </div>
           </div>
