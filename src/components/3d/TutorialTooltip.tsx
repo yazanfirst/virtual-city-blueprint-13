@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Move, MousePointer, Store, LogOut, Target, Brain, AlertTriangle, Eye, Coins } from "lucide-react";
+import { X, Move, MousePointer, Store, LogOut, Target, AlertTriangle, Eye, Coins } from "lucide-react";
 import { TutorialStep } from "@/hooks/useTutorialProgress";
 import { Button } from "@/components/ui/button";
 
@@ -64,13 +64,7 @@ const tutorialContent: Record<TutorialStep, {
     hint: "Click EXIT when ready to answer questions",
     position: 'top-right',
   },
-  mission_question: {
-    icon: Brain,
-    title: "Answer Time!",
-    description: "Now answer questions about what you saw in the shop. Be careful - one wrong answer and the mission fails! Think about the items you just saw.",
-    hint: "Think carefully before answering",
-    position: 'center',
-  },
+  // mission_question tutorial removed - questions appear directly without instruction popup
 };
 
 const TutorialTooltip = ({ step, onDismiss }: TutorialTooltipProps) => {
@@ -111,48 +105,48 @@ const TutorialTooltip = ({ step, onDismiss }: TutorialTooltipProps) => {
         }`}
       />
       
-      {/* Tooltip card */}
+      {/* Tooltip card - Mobile optimized */}
       <div 
-        className={`absolute ${positionClasses[content.position]} transition-all duration-300 ${
+        className={`absolute ${positionClasses[content.position]} transition-all duration-300 w-full px-4 sm:px-0 sm:w-auto ${
           isVisible && !isExiting 
             ? 'opacity-100 scale-100' 
             : 'opacity-0 scale-95'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-background/95 backdrop-blur-lg border-2 border-primary/50 rounded-xl p-5 shadow-2xl max-w-sm mx-4">
+        <div className="bg-background/95 backdrop-blur-lg border-2 border-primary/50 rounded-xl p-4 sm:p-5 shadow-2xl max-w-[90vw] sm:max-w-sm mx-auto">
           {/* Close button */}
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-2 right-2 h-6 w-6"
+            className="absolute top-2 right-2 h-8 w-8 sm:h-6 sm:w-6"
             onClick={handleDismiss}
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5 sm:h-4 sm:w-4" />
           </Button>
 
           {/* Icon with glow */}
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-center mb-3 sm:mb-4">
             <div className="relative">
               <div className="absolute inset-0 bg-primary/30 rounded-full blur-lg animate-pulse" />
-              <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary/20 border-2 border-primary">
-                <Icon className="h-7 w-7 text-primary" />
+              <div className="relative flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full bg-primary/20 border-2 border-primary">
+                <Icon className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
               </div>
             </div>
           </div>
 
           {/* Title */}
-          <h3 className="font-display text-lg font-bold text-foreground text-center mb-2">
+          <h3 className="font-display text-base sm:text-lg font-bold text-foreground text-center mb-2">
             {content.title}
           </h3>
 
           {/* Description */}
-          <p className="text-muted-foreground text-sm text-center mb-4 leading-relaxed">
+          <p className="text-muted-foreground text-xs sm:text-sm text-center mb-3 sm:mb-4 leading-relaxed">
             {content.description}
           </p>
 
           {/* Hint */}
-          <div className="flex items-center justify-center gap-2 text-xs text-primary/80">
+          <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs text-primary/80">
             <MousePointer className="h-3 w-3 animate-bounce" />
             <span>{content.hint}</span>
           </div>
@@ -161,7 +155,7 @@ const TutorialTooltip = ({ step, onDismiss }: TutorialTooltipProps) => {
           <Button
             variant="cyber"
             size="sm"
-            className="w-full mt-4"
+            className="w-full mt-3 sm:mt-4 text-sm"
             onClick={handleDismiss}
           >
             Got it!

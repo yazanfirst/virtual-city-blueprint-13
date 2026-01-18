@@ -125,12 +125,7 @@ const StreetView = () => {
     }
   }, [mission.isActive, mission.phase]);
 
-  // 5. Question phase tutorial
-  useEffect(() => {
-    if (mission.isActive && mission.phase === 'question' && showQuestionModal) {
-      tutorial.showTutorialStep('mission_question');
-    }
-  }, [mission.isActive, mission.phase, showQuestionModal]);
+  // Question phase - no tutorial needed, questions appear directly
 
   // PAUSE GAME when ANY popup/modal is active
   const isAnyPopupOpen = tutorial.activeTooltip || showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;

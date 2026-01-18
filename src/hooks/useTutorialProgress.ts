@@ -7,8 +7,7 @@ export type TutorialStep =
   | 'shop_exit_missions'    // After first shop exit - introduce missions for coins
   | 'mission_activated'     // After clicking activate - what happens in mission
   | 'mission_escape'        // In escape phase - zombie chase and traps
-  | 'mission_observation'   // Inside target shop during mission - memorize & exit to answer
-  | 'mission_question';     // Question phase - answer carefully
+  | 'mission_observation';  // Inside target shop during mission - memorize & exit to answer
 
 const STORAGE_KEY = 'game_tutorial_progress';
 
