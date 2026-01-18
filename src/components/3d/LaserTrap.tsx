@@ -16,7 +16,7 @@ interface LaserTrapProps {
 const PLAYER_RADIUS = 0.45;
 const BEAM_RADIUS = 0.08;
 const PLAYER_HIT_DISTANCE = PLAYER_RADIUS + BEAM_RADIUS; // Match player body width for reliable hits
-const PLAYER_JUMP_HEIGHT_THRESHOLD = 0.7; // Player must jump this high to avoid laser
+const BEAM_AVOID_CLEARANCE = 0.1; // Extra height needed above the beam to avoid it
 const ZOMBIE_HIT_DISTANCE = 0.8; // Distance for zombie detection
 
 const getSegmentDistance2D = (
@@ -153,10 +153,10 @@ export default function LaserTrap({
         beamSegmentEnd
       );
       const minPlayerHeight = Math.min(lastPlayerPos.y, playerPos.y);
+      const beamHeight = start.y;
       
-      // Player can avoid laser by jumping high enough
-      // Laser is at Y=0.9, so player needs to be above that
-      if (segmentDistance < PLAYER_HIT_DISTANCE && minPlayerHeight < PLAYER_JUMP_HEIGHT_THRESHOLD) {
+      // Player can avoid laser by jumping high enough above the beam height.
+      if (segmentDistance < PLAYER_HIT_DISTANCE && minPlayerHeight < beamHeight + BEAM_AVOID_CLEARANCE) {
         onPlayerHit(id);
         hitCooldownRef.current = 1.5; // 1.5 second cooldown between hits
       }
