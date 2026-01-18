@@ -329,8 +329,7 @@ export default function CityScene({
 
 // ============ COMPONENTS ============
 
-// Gradient Sky - OPTIMIZED: reduced segments, cached geometry
-const skyGeometry = new THREE.SphereGeometry(300, 8, 8);
+// Gradient Sky
 function GradientSky({ isNight }: { isNight: boolean }) {
   const skyMaterial = useMemo(() => {
     const topColor = isNight ? "#0A1428" : "#5AB8E8";
@@ -362,47 +361,44 @@ function GradientSky({ isNight }: { isNight: boolean }) {
   }, [isNight]);
 
   return (
-    <mesh geometry={skyGeometry}>
+    <mesh>
+      <sphereGeometry args={[300, 8, 8]} />
       <primitive object={skyMaterial} attach="material" />
     </mesh>
   );
 }
 
-// Cloud - OPTIMIZED: cached geometries and material
-const cloudGeo1 = new THREE.DodecahedronGeometry(2.5, 0);
-const cloudGeo2 = new THREE.DodecahedronGeometry(2, 0);
-const cloudGeo3 = new THREE.DodecahedronGeometry(1.8, 0);
-const cloudGeo4 = new THREE.DodecahedronGeometry(1.5, 0);
-const cloudMaterial = new THREE.MeshBasicMaterial({ color: "#ffffff" });
-
-const Cloud = React.memo(function Cloud({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+// Cloud
+function Cloud({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
   return (
     <group position={position} scale={scale}>
-      <mesh geometry={cloudGeo1} material={cloudMaterial} />
-      <mesh position={[2.5, -0.3, 0]} geometry={cloudGeo2} material={cloudMaterial} />
-      <mesh position={[-2.2, -0.2, 0]} geometry={cloudGeo3} material={cloudMaterial} />
-      <mesh position={[1, 0.5, 1]} geometry={cloudGeo4} material={cloudMaterial} />
+      <mesh><dodecahedronGeometry args={[2.5, 0]} /><meshBasicMaterial color="#ffffff" /></mesh>
+      <mesh position={[2.5, -0.3, 0]}><dodecahedronGeometry args={[2, 0]} /><meshBasicMaterial color="#ffffff" /></mesh>
+      <mesh position={[-2.2, -0.2, 0]}><dodecahedronGeometry args={[1.8, 0]} /><meshBasicMaterial color="#ffffff" /></mesh>
+      <mesh position={[1, 0.5, 1]}><dodecahedronGeometry args={[1.5, 0]} /><meshBasicMaterial color="#ffffff" /></mesh>
     </group>
   );
-});
+}
 
-// Tree - OPTIMIZED: cached geometries and materials
-const treeTrunkGeo = new THREE.CylinderGeometry(0.2, 0.3, 3, 4);
-const treeLeaf1Geo = new THREE.IcosahedronGeometry(1.8, 0);
-const treeLeaf2Geo = new THREE.IcosahedronGeometry(1.3, 0);
-const treeTrunkMat = new THREE.MeshLambertMaterial({ color: "#5A3A1A" });
-const treeLeafMat1 = new THREE.MeshLambertMaterial({ color: "#3A7A3A" });
-const treeLeafMat2 = new THREE.MeshLambertMaterial({ color: "#4A8A4A" });
-
-const Tree = React.memo(function Tree({ position }: { position: [number, number, number] }) {
+// Tree
+function Tree({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
-      <mesh position={[0, 1.5, 0]} geometry={treeTrunkGeo} material={treeTrunkMat} />
-      <mesh position={[0, 4, 0]} geometry={treeLeaf1Geo} material={treeLeafMat1} />
-      <mesh position={[0.5, 5, 0.3]} geometry={treeLeaf2Geo} material={treeLeafMat2} />
+      <mesh position={[0, 1.5, 0]}>
+        <cylinderGeometry args={[0.2, 0.3, 3, 4]} />
+        <meshLambertMaterial color="#5A3A1A" />
+      </mesh>
+      <mesh position={[0, 4, 0]}>
+        <icosahedronGeometry args={[1.8, 0]} />
+        <meshLambertMaterial color="#3A7A3A" />
+      </mesh>
+      <mesh position={[0.5, 5, 0.3]}>
+        <icosahedronGeometry args={[1.3, 0]} />
+        <meshLambertMaterial color="#4A8A4A" />
+      </mesh>
     </group>
   );
-});
+}
 
 // Shop Building - FRONT FACES THE ROAD
 function Shop({ position, color, rotation = 0, isNight }: { 
@@ -521,39 +517,33 @@ function TallBuilding({ position, height, color, isNight }: {
   );
 }
 
-// Street Lamp - OPTIMIZED: cached geometries and materials
-const lampPoleGeo = new THREE.CylinderGeometry(0.1, 0.12, 6, 4);
-const lampBulbGeo = new THREE.SphereGeometry(0.4, 4, 4);
-const lampPoleMat = new THREE.MeshBasicMaterial({ color: "#2A2A2A" });
-const lampBulbDayMat = new THREE.MeshBasicMaterial({ color: "#E8E8E8" });
-const lampBulbNightMat = new THREE.MeshBasicMaterial({ color: "#FFD080" });
-
-const Lamp = React.memo(function Lamp({ position, isNight }: { position: [number, number, number]; isNight: boolean }) {
+// Street Lamp
+function Lamp({ position, isNight }: { position: [number, number, number]; isNight: boolean }) {
   return (
     <group position={position}>
-      <mesh position={[0, 3, 0]} geometry={lampPoleGeo} material={lampPoleMat} />
-      <mesh position={[0, 6.2, 0]} geometry={lampBulbGeo} material={isNight ? lampBulbNightMat : lampBulbDayMat} />
+      <mesh position={[0, 3, 0]}>
+        <cylinderGeometry args={[0.1, 0.12, 6, 4]} />
+        <meshBasicMaterial color="#2A2A2A" />
+      </mesh>
+      <mesh position={[0, 6.2, 0]}>
+        <sphereGeometry args={[0.4, 4, 4]} />
+        <meshBasicMaterial color={isNight ? "#FFD080" : "#E8E8E8"} />
+      </mesh>
     </group>
   );
-});
+}
 
-// Bench - OPTIMIZED: cached geometries and materials
-const benchSeatGeo = new THREE.BoxGeometry(1.5, 0.1, 0.5);
-const benchBackGeo = new THREE.BoxGeometry(1.5, 0.5, 0.1);
-const benchLegGeo = new THREE.BoxGeometry(0.1, 0.5, 0.4);
-const benchWoodMat = new THREE.MeshLambertMaterial({ color: "#5A3A1A" });
-const benchMetalMat = new THREE.MeshLambertMaterial({ color: "#3A3A3A" });
-
-const Bench = React.memo(function Bench({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+// Bench
+function Bench({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
-      <mesh position={[0, 0.5, 0]} geometry={benchSeatGeo} material={benchWoodMat} />
-      <mesh position={[0, 0.8, -0.2]} geometry={benchBackGeo} material={benchWoodMat} />
-      <mesh position={[-0.6, 0.25, 0]} geometry={benchLegGeo} material={benchMetalMat} />
-      <mesh position={[0.6, 0.25, 0]} geometry={benchLegGeo} material={benchMetalMat} />
+      <mesh position={[0, 0.5, 0]}><boxGeometry args={[1.5, 0.1, 0.5]} /><meshLambertMaterial color="#5A3A1A" /></mesh>
+      <mesh position={[0, 0.8, -0.2]}><boxGeometry args={[1.5, 0.5, 0.1]} /><meshLambertMaterial color="#5A3A1A" /></mesh>
+      <mesh position={[-0.6, 0.25, 0]}><boxGeometry args={[0.1, 0.5, 0.4]} /><meshLambertMaterial color="#3A3A3A" /></mesh>
+      <mesh position={[0.6, 0.25, 0]}><boxGeometry args={[0.1, 0.5, 0.4]} /><meshLambertMaterial color="#3A3A3A" /></mesh>
     </group>
   );
-});
+}
 
 // Lake
 function Lake({ position, scaleX, scaleZ }: { position: [number, number, number]; scaleX: number; scaleZ: number }) {
