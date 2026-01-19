@@ -213,7 +213,6 @@ export default function CityScene({
   const isMobile = deviceType === 'mobile';
   const [joystickInput, setJoystickInput] = useState({ x: 0, y: 0 });
   const [touchTarget, setTouchTarget] = useState<HTMLCanvasElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   
   // Use store for camera rotation to persist across game mode changes
   const { cameraRotation, setCameraRotation, incrementJump } = usePlayerStore();
@@ -236,12 +235,6 @@ export default function CityScene({
       polar: Math.max(0.1, Math.min(1.6, cameraRotation.polar + deltaY)),
     });
   }, [cameraRotation, setCameraRotation]);
-
-  useEffect(() => {
-    if (canvasRef.current) {
-      setTouchTarget(canvasRef.current);
-    }
-  }, []);
 
   // Desktop mouse controls for camera rotation - LEFT CLICK to orbit
   useEffect(() => {
@@ -297,7 +290,11 @@ export default function CityScene({
         style={{ touchAction: "none" }}
         camera={{ position: [0, 10, 50], fov: 50 }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
-        ref={canvasRef}
+        onCreated={(state) => {
+          if (state.gl.domElement instanceof HTMLCanvasElement) {
+            setTouchTarget(state.gl.domElement);
+          }
+        }}
       >
         <Suspense fallback={null}>
           <SceneInner 
