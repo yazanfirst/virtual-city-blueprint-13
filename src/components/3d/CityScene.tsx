@@ -212,6 +212,7 @@ export default function CityScene({
   const deviceType = useDeviceType();
   const isMobile = deviceType === 'mobile';
   const [joystickInput, setJoystickInput] = useState({ x: 0, y: 0 });
+  const canvasDpr = isMobile ? 1 : [1, 2];
   
   // Use store for camera rotation to persist across game mode changes
   const { cameraRotation, setCameraRotation, incrementJump } = usePlayerStore();
@@ -289,6 +290,7 @@ export default function CityScene({
         style={{ touchAction: "none" }}
         camera={{ position: [0, 10, 50], fov: 50 }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
+        dpr={canvasDpr}
       >
         <Suspense fallback={null}>
           <SceneInner 
