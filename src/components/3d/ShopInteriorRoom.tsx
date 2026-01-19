@@ -170,11 +170,15 @@ const OrnateFrame = ({
         className="pointer-events-auto"
       >
         <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+          }}
           onClick={(e) => {
             e.stopPropagation();
             onSelect(config.slot);
           }}
-          className="group transition-transform duration-200 hover:scale-[1.02] focus:outline-none"
+          className="group transition-transform duration-200 hover:scale-[1.02] focus:outline-none touch-manipulation select-none"
           style={{ 
             width: '160px',
             height: '110px',
@@ -541,17 +545,30 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
         
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {shop.externalLink && (
-            <Button size="sm" variant="outline" className="h-8 px-2 sm:px-3" asChild>
-              <a href={shop.externalLink} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-3.5 w-3.5 sm:mr-1.5" />
-                <span className="hidden sm:inline text-xs">Visit</span>
-              </a>
-            </Button>
+            <a 
+              href={shop.externalLink} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              onPointerDown={(e) => e.stopPropagation()}
+              className="h-10 px-3 sm:px-4 rounded-md flex items-center justify-center gap-1.5 bg-transparent border border-border text-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-accent"
+              data-control-ignore="true"
+            >
+              <ExternalLink className="h-4 w-4" />
+              <span className="hidden sm:inline text-xs">Visit</span>
+            </a>
           )}
-          <Button size="sm" variant="secondary" className="h-8 px-2 sm:px-3" onClick={onExit}>
-            <X className="h-3.5 w-3.5 sm:mr-1.5" />
+          <button 
+            type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onExit();
+            }}
+            className="h-10 px-3 sm:px-4 rounded-md flex items-center justify-center gap-1.5 bg-secondary text-secondary-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-secondary/80"
+            data-control-ignore="true"
+          >
+            <X className="h-4 w-4" />
             <span className="hidden sm:inline text-xs">Exit</span>
-          </Button>
+          </button>
         </div>
       </div>
 
@@ -673,22 +690,28 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
                       Item {filledSlots.indexOf(selectedItem) + 1} of {filledSlots.length}
                     </span>
                     <div className="flex gap-1">
-                      <Button 
-                        size="icon" 
-                        variant="outline" 
-                        className="h-8 w-8"
-                        onClick={() => navigateItem('prev')}
+                      <button 
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          navigateItem('prev');
+                        }}
+                        className="h-10 w-10 rounded-md flex items-center justify-center bg-transparent border border-border text-foreground touch-manipulation select-none active:scale-95 transition-all hover:bg-accent"
+                        data-control-ignore="true"
                       >
                         <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        size="icon" 
-                        variant="outline" 
-                        className="h-8 w-8"
-                        onClick={() => navigateItem('next')}
+                      </button>
+                      <button 
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          navigateItem('next');
+                        }}
+                        className="h-10 w-10 rounded-md flex items-center justify-center bg-transparent border border-border text-foreground touch-manipulation select-none active:scale-95 transition-all hover:bg-accent"
+                        data-control-ignore="true"
                       >
                         <ChevronRight className="h-4 w-4" />
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -696,24 +719,30 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
                 {/* Action buttons */}
                 <div className="flex gap-2 pt-2">
                   {shop.externalLink && (
-                    <Button 
-                      className="flex-1 text-white" 
-                      style={{ backgroundColor: accent }} 
-                      asChild
+                    <a 
+                      href={shop.externalLink} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="flex-1 h-11 rounded-md flex items-center justify-center gap-2 text-white font-medium touch-manipulation select-none active:scale-[0.98] transition-all"
+                      style={{ backgroundColor: accent }}
+                      data-control-ignore="true"
                     >
-                      <a href={shop.externalLink} target="_blank" rel="noopener noreferrer">
-                        <ShoppingBag className="h-4 w-4 mr-2" />
-                        Buy Now
-                      </a>
-                    </Button>
+                      <ShoppingBag className="h-4 w-4" />
+                      Buy Now
+                    </a>
                   )}
-                  <Button 
-                    variant="outline" 
-                    className={shop.externalLink ? "" : "flex-1"}
-                    onClick={() => setIsModalOpen(false)}
+                  <button 
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setIsModalOpen(false);
+                    }}
+                    className={`h-11 rounded-md flex items-center justify-center px-4 bg-transparent border border-border text-foreground font-medium touch-manipulation select-none active:scale-[0.98] transition-all hover:bg-accent ${shop.externalLink ? "" : "flex-1"}`}
+                    data-control-ignore="true"
                   >
                     Close
-                  </Button>
+                  </button>
                 </div>
               </div>
             </>

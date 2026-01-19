@@ -96,13 +96,35 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
   // Decoration visibility - always show for shops at night
   const showDecorations = hasShop && !isSuspended;
 
+  // Track pointer down position for tap detection
+  const pointerDownRef = React.useRef<{ x: number; y: number; time: number } | null>(null);
+
   return (
     <group 
       position={[position.x, 0, position.z]} 
       rotation={[0, position.rotation, 0]}
-      onClick={(e) => {
+      onPointerDown={(e) => {
         e.stopPropagation();
-        onClick?.();
+        pointerDownRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
+      }}
+      onPointerUp={(e) => {
+        e.stopPropagation();
+        if (!pointerDownRef.current) return;
+        
+        const dx = e.clientX - pointerDownRef.current.x;
+        const dy = e.clientY - pointerDownRef.current.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const elapsed = Date.now() - pointerDownRef.current.time;
+        
+        // Consider it a tap if moved less than 10px and took less than 300ms
+        if (dist < 10 && elapsed < 300) {
+          onClick?.();
+        }
+        pointerDownRef.current = null;
+      }}
+      onClick={(e) => {
+        // Keep onClick for desktop compatibility
+        e.stopPropagation();
       }}
       onPointerOver={(e) => {
         e.stopPropagation();

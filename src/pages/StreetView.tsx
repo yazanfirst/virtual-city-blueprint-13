@@ -617,62 +617,87 @@ const StreetView = () => {
 
               {/* Day/Night Toggle - Compact on mobile */}
               <div className="bg-background/80 backdrop-blur-md rounded-lg p-0.5 md:p-1 flex gap-0.5 md:gap-1">
-                <Button
-                  variant={timeOfDay === "day" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setTimeOfDay("day")}
-                  className="h-6 w-6 md:h-8 md:w-8 p-0 md:px-3"
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    setTimeOfDay("day");
+                  }}
+                  className={`h-8 w-8 md:h-8 md:w-8 p-0 md:px-3 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all ${
+                    timeOfDay === "day" 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-transparent text-foreground hover:bg-accent"
+                  }`}
+                  data-control-ignore="true"
                 >
-                  <Sun className="h-3 w-3 md:h-4 md:w-4" />
-                </Button>
-                <Button
-                  variant={timeOfDay === "night" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setTimeOfDay("night")}
-                  className="h-6 w-6 md:h-8 md:w-8 p-0 md:px-3"
+                  <Sun className="h-4 w-4 md:h-4 md:w-4" />
+                </button>
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    setTimeOfDay("night");
+                  }}
+                  className={`h-8 w-8 md:h-8 md:w-8 p-0 md:px-3 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all ${
+                    timeOfDay === "night" 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-transparent text-foreground hover:bg-accent"
+                  }`}
+                  data-control-ignore="true"
                 >
-                  <Moon className="h-3 w-3 md:h-4 md:w-4" />
-                </Button>
+                  <Moon className="h-4 w-4 md:h-4 md:w-4" />
+                </button>
               </div>
               
               {/* Map Toggle - Mobile friendly */}
-              <Button
-                variant={show2DMap ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShow2DMap(!show2DMap)}
-                className="bg-background/80 backdrop-blur-md h-6 w-6 md:h-8 md:w-auto p-0 md:px-3"
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setShow2DMap(!show2DMap);
+                }}
+                className={`h-8 w-8 md:h-8 md:w-auto p-0 md:px-3 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all ${
+                  show2DMap 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-background/80 backdrop-blur-md border border-border text-foreground hover:bg-accent"
+                }`}
                 style={{ zIndex: 160 }}
+                data-control-ignore="true"
               >
-                <MapIcon className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                <MapIcon className="h-4 w-4 md:h-4 md:w-4 md:mr-2" />
                 <span className="hidden md:inline">{show2DMap ? "Hide" : "Map"}</span>
-              </Button>
+              </button>
               
               {/* Exit Game Mode */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handlePauseGame}
-                className="bg-background/80 backdrop-blur-md h-6 md:h-8 px-2 md:px-3"
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  handlePauseGame();
+                }}
+                className="bg-background/80 backdrop-blur-md h-8 md:h-8 px-3 md:px-3 rounded-md border border-border flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all text-foreground hover:bg-accent"
+                data-control-ignore="true"
               >
-                <Minimize2 className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                <Minimize2 className="h-4 w-4 md:h-4 md:w-4 md:mr-2" />
                 <span className="hidden md:inline">Exit</span>
-              </Button>
+              </button>
             </div>
           </div>
           
           {/* Left side - Mission Tab Button */}
           <div className="absolute top-10 md:top-16 left-2 md:left-4 pointer-events-auto" style={{ zIndex: 150 }}>
             <button
-              onClick={() => {
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
                 setShowMissions(true);
-                mission.setNotification(false); // Clear notification when opened
-                // Pause zombies when mission panel opens during active mission
+                mission.setNotification(false);
                 if (mission.isActive && mission.phase === 'escape') {
                   mission.pauseZombies();
                 }
               }}
-
-              className="relative flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg"
+              className="relative flex items-center gap-2 px-4 py-3 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg touch-manipulation select-none active:scale-95"
+              data-control-ignore="true"
             >
               <Target className="h-4 w-4 text-primary" />
               <span className="font-display text-xs md:text-sm font-bold uppercase tracking-wider">Missions</span>
@@ -971,36 +996,53 @@ const StreetView = () => {
 
                     {/* Day/Night Toggle */}
                     <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 flex gap-1">
-                      <Button
-                        variant={timeOfDay === "day" ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => setTimeOfDay("day")}
-                        className="h-10 w-10 p-0 touch-manipulation md:h-7 md:w-7"
+                      <button
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          setTimeOfDay("day");
+                        }}
+                        className={`h-10 w-10 p-0 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all md:h-7 md:w-7 ${
+                          timeOfDay === "day" 
+                            ? "bg-primary text-primary-foreground" 
+                            : "bg-transparent text-foreground hover:bg-accent"
+                        }`}
                         aria-label="Day mode"
+                        data-control-ignore="true"
                       >
                         <Sun className="h-4 w-4 md:h-3 md:w-3" />
-                      </Button>
-                      <Button
-                        variant={timeOfDay === "night" ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => setTimeOfDay("night")}
-                        className="h-10 w-10 p-0 touch-manipulation md:h-7 md:w-7"
+                      </button>
+                      <button
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          setTimeOfDay("night");
+                        }}
+                        className={`h-10 w-10 p-0 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all md:h-7 md:w-7 ${
+                          timeOfDay === "night" 
+                            ? "bg-primary text-primary-foreground" 
+                            : "bg-transparent text-foreground hover:bg-accent"
+                        }`}
                         aria-label="Night mode"
+                        data-control-ignore="true"
                       >
                         <Moon className="h-4 w-4 md:h-3 md:w-3" />
-                      </Button>
+                      </button>
                     </div>
 
                     {/* Maximize Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => (isGamePaused ? handleResumeGame() : setIsMaximized(true))}
-                      className="h-10 px-3 text-sm touch-manipulation bg-background/80 backdrop-blur-md md:h-7 md:px-2 md:text-xs"
+                    <button
+                      type="button"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        isGamePaused ? handleResumeGame() : setIsMaximized(true);
+                      }}
+                      className="h-10 px-3 text-sm rounded-md flex items-center justify-center bg-background/80 backdrop-blur-md border border-border text-foreground touch-manipulation select-none active:scale-95 transition-all hover:bg-accent md:h-7 md:px-2 md:text-xs"
+                      data-control-ignore="true"
                     >
                       <Maximize2 className="h-4 w-4 mr-2 md:h-3 md:w-3 md:mr-1" />
                       {isGamePaused ? "Resume" : "Game Mode"}
-                    </Button>
+                    </button>
                   </div>
                   
                   {/* Zoom/Controls Hint */}

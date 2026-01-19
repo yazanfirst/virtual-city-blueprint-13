@@ -44,15 +44,18 @@ const GameStartScreen = ({ streetName, category, onStartGame }: GameStartScreenP
         </div>
 
         {/* Start Button */}
-        <Button 
-          variant="cyber" 
-          size="lg"
-          onClick={onStartGame}
-          className="px-8 sm:px-12 py-4 sm:py-6 text-base sm:text-lg font-bold group"
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            onStartGame();
+          }}
+          className="px-10 sm:px-12 py-5 sm:py-6 text-base sm:text-lg font-bold group bg-primary text-primary-foreground rounded-lg shadow-lg hover:bg-primary/90 touch-manipulation select-none active:scale-[0.98] transition-all inline-flex items-center justify-center"
+          data-control-ignore="true"
         >
           <Play className="h-5 w-5 sm:h-6 sm:w-6 mr-2 sm:mr-3 group-hover:scale-110 transition-transform" />
           Start Game
-        </Button>
+        </button>
 
         <div className="text-muted-foreground text-[10px] sm:text-xs space-y-0.5 sm:space-y-1">
           <p>Use <span className="text-foreground font-medium">WASD</span> or <span className="text-foreground font-medium">Arrow Keys</span> to move</p>
