@@ -67,6 +67,8 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      let shouldPreventDefault = false;
+
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         const { clientX, clientY, identifier } = touch;
@@ -89,6 +91,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
           });
           
           onJoystickMove(normalizedX, -normalizedY);
+          shouldPreventDefault = true;
         }
         
         // Handle camera - PUBG style: drag right = rotate camera right (azimuth increases)
@@ -107,14 +110,12 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
             // Negative deltaX for natural camera rotation (drag left = look left)
             onCameraMove(-deltaX * 0.012, deltaY * 0.008);
             lastCameraPosRef.current = { x: clientX, y: clientY };
+            shouldPreventDefault = true;
           }
         }
       }
 
-      if (
-        (joystickTouchIdRef.current !== null && joystickStartRef.current !== null) ||
-        (cameraTouchIdRef.current !== null && cameraDragActiveRef.current)
-      ) {
+      if (shouldPreventDefault) {
         e.preventDefault();
       }
     };
