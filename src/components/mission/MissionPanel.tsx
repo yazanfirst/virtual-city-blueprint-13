@@ -6,18 +6,18 @@ import { ShopBranding } from '@/hooks/use3DShops';
 import { ShopItem } from '@/hooks/useShopItems';
 import { selectMissionTargetShop } from '@/lib/missionShopSelection';
 
-type ObservationPhase = 'inactive' | 'observation' | 'question' | 'failed' | 'completed';
+type DiamondRunPhase = 'inactive' | 'rules' | 'running' | 'failed' | 'completed';
 
 interface MissionPanelProps {
   shops: ShopBranding[];
   shopItemsMap: Map<string, ShopItem[]>;
   onActivate: () => void;
   isCompact?: boolean;
-  observationPhase?: ObservationPhase;
-  onActivateObservation?: () => void;
-  observationCanActivate?: boolean;
-  observationRewardLabel?: string;
-  onResetObservation?: () => void;
+  diamondRunPhase?: DiamondRunPhase;
+  onActivateDiamondRun?: () => void;
+  diamondRunCanActivate?: boolean;
+  diamondRunRewardLabel?: string;
+  onResetDiamondRun?: () => void;
 }
 
 export default function MissionPanel({
@@ -25,11 +25,11 @@ export default function MissionPanel({
   shopItemsMap,
   onActivate,
   isCompact = false,
-  observationPhase = 'inactive',
-  onActivateObservation,
-  observationCanActivate = true,
-  observationRewardLabel = '',
-  onResetObservation,
+  diamondRunPhase = 'inactive',
+  onActivateDiamondRun,
+  diamondRunCanActivate = true,
+  diamondRunRewardLabel = '',
+  onResetDiamondRun,
 }: MissionPanelProps) {
   const {
     phase,
@@ -220,8 +220,8 @@ export default function MissionPanel({
     return null;
   })();
 
-  const observationCard = (() => {
-    if (observationPhase === 'inactive') {
+  const diamondRunCard = (() => {
+    if (diamondRunPhase === 'inactive') {
       return (
         <div className={`bg-card/90 backdrop-blur-md border border-border/50 rounded-xl ${isCompact ? 'p-3' : 'p-4 md:p-6'} shadow-xl`}>
           <div className={`flex items-center gap-3 ${isCompact ? 'mb-2' : 'mb-4'} pb-3 border-b border-border/30`}>
@@ -230,21 +230,21 @@ export default function MissionPanel({
             </div>
             <div>
               <h3 className={`font-display font-bold uppercase tracking-wider text-foreground ${isCompact ? 'text-xs' : 'text-sm md:text-base'}`}>
-                Diamond 1 – Observation Test
+                Diamond Run – The Choice Test
               </h3>
-              <p className={`text-muted-foreground ${isCompact ? 'text-[10px]' : 'text-xs'}`}>Logic / Observation</p>
+              <p className={`text-muted-foreground ${isCompact ? 'text-[10px]' : 'text-xs'}`}>Movement / Decision</p>
             </div>
           </div>
-          {observationRewardLabel && (
+          {diamondRunRewardLabel && (
             <p className={`text-muted-foreground ${isCompact ? 'text-[10px] mb-3' : 'text-xs mb-4'}`}>
-              Reward: {observationRewardLabel}
+              Reward: {diamondRunRewardLabel}
             </p>
           )}
           <Button
             variant="cyber"
             className="w-full"
-            onClick={onActivateObservation}
-            disabled={!observationCanActivate}
+            onClick={onActivateDiamondRun}
+            disabled={!diamondRunCanActivate}
           >
             <Play className="h-4 w-4 mr-2" />
             Activate
@@ -253,53 +253,53 @@ export default function MissionPanel({
       );
     }
 
-    if (observationPhase === 'observation') {
+    if (diamondRunPhase === 'rules') {
       return (
         <div className={`bg-blue-950/90 backdrop-blur-md border border-blue-500/50 rounded-xl ${isCompact ? 'p-3' : 'p-4'} shadow-xl`}>
           <div className="flex items-center gap-2 mb-2">
             <Diamond className="h-5 w-5 text-blue-300" />
             <span className={`font-display font-bold uppercase tracking-wider text-blue-300 ${isCompact ? 'text-xs' : 'text-sm'}`}>
-              OBSERVATION
+              TEST MODE
             </span>
           </div>
           <p className={`text-blue-200 ${isCompact ? 'text-xs' : 'text-sm'}`}>
-            Focus mode is active. Memorize the pattern once — no repeats.
+            Three paths. One is correct. Choose fast.
           </p>
         </div>
       );
     }
 
-    if (observationPhase === 'question') {
+    if (diamondRunPhase === 'running') {
       return (
         <div className={`bg-purple-950/90 backdrop-blur-md border border-purple-500/50 rounded-xl ${isCompact ? 'p-3' : 'p-4'} shadow-xl`}>
           <div className="flex items-center gap-2 mb-2">
             <Diamond className="h-5 w-5 text-purple-300" />
             <span className={`font-display font-bold uppercase tracking-wider text-purple-300 ${isCompact ? 'text-xs' : 'text-sm'}`}>
-              ANSWER NOW
+              RUN NOW
             </span>
           </div>
           <p className={`text-purple-200 ${isCompact ? 'text-xs' : 'text-sm'}`}>
-            The timer is running. Choose carefully.
+            The alarm is live. Pick the right gate.
           </p>
         </div>
       );
     }
 
-    if (observationPhase === 'failed') {
+    if (diamondRunPhase === 'failed') {
       return (
         <div className={`bg-red-950/90 backdrop-blur-md border border-red-500/50 rounded-xl ${isCompact ? 'p-3' : 'p-4'} shadow-xl`}>
           <div className="flex items-center gap-2 mb-2">
             <X className="h-5 w-5 text-red-400" />
             <span className={`font-display font-bold uppercase tracking-wider text-red-400 ${isCompact ? 'text-xs' : 'text-sm'}`}>
-              OBSERVATION FAILED
+              TEST FAILED
             </span>
           </div>
           <Button
             variant="outline"
             size="sm"
             className="w-full border-red-500/50 text-red-300 hover:bg-red-900/50"
-            onClick={onResetObservation}
-            disabled={!onResetObservation}
+            onClick={onResetDiamondRun}
+            disabled={!onResetDiamondRun}
           >
             Reset
           </Button>
@@ -307,21 +307,21 @@ export default function MissionPanel({
       );
     }
 
-    if (observationPhase === 'completed') {
+    if (diamondRunPhase === 'completed') {
       return (
         <div className={`bg-green-950/90 backdrop-blur-md border border-green-500/50 rounded-xl ${isCompact ? 'p-3' : 'p-4'} shadow-xl`}>
           <div className="flex items-center gap-2 mb-2">
             <CheckCircle className="h-5 w-5 text-green-400" />
             <span className={`font-display font-bold uppercase tracking-wider text-green-400 ${isCompact ? 'text-xs' : 'text-sm'}`}>
-              OBSERVATION COMPLETE
+              TEST COMPLETE
             </span>
           </div>
           <Button
             variant="outline"
             size="sm"
             className="w-full border-green-500/50 text-green-300 hover:bg-green-900/50"
-            onClick={onResetObservation}
-            disabled={!onResetObservation}
+            onClick={onResetDiamondRun}
+            disabled={!onResetDiamondRun}
           >
             Play Again
           </Button>
@@ -332,14 +332,14 @@ export default function MissionPanel({
     return null;
   })();
 
-  if (!zombieCard && !observationCard) {
+  if (!zombieCard && !diamondRunCard) {
     return null;
   }
 
   return (
     <div className={`grid gap-3 ${isCompact ? '' : 'md:grid-cols-2'}`}>
       {zombieCard}
-      {observationCard}
+      {diamondRunCard}
     </div>
   );
 }

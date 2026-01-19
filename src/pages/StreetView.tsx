@@ -28,39 +28,21 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Shop entry distance threshold (in world units)
 const SHOP_ENTRY_DISTANCE = 8;
-const OBSERVATION_DURATION_MS = 4000;
-const QUESTION_DURATION_SECONDS = 12;
-const OBSERVATION_REWARD = { coins: 60, xp: 40 };
+const DIAMOND_RUN_RULES_MS = 2500;
+const DIAMOND_RUN_DURATION_SECONDS = 14;
+const DIAMOND_RUN_REWARD = { coins: 90, xp: 60 };
+const DIAMOND_RUN_GATE_DISTANCE = 4.5;
+const DIAMOND_RUN_BACKTRACK_LIMIT = 2;
+const DIAMOND_RUN_MIN_PROGRESS = 0.4;
+const DIAMOND_RUN_STALL_MS = 1800;
 
-type ObservationPhase = "inactive" | "observation" | "question" | "failed" | "completed";
+type DiamondRunPhase = "inactive" | "rules" | "running" | "failed" | "completed";
 
-type ObservationPattern = {
-  sequence: string[];
-  questionText: string;
-  correctAnswer: string;
-  options: string[];
+type DiamondRunGate = {
+  id: string;
+  label: string;
+  position: { x: number; y: number; z: number };
 };
-
-const OBSERVATION_PATTERNS: ObservationPattern[] = [
-  {
-    sequence: ["▲", "●", "■", "◆"],
-    questionText: "Which symbol appeared third in the sequence?",
-    correctAnswer: "■",
-    options: ["▲", "■", "◆", "●"],
-  },
-  {
-    sequence: ["◆", "■", "●", "▲"],
-    questionText: "Which symbol came first?",
-    correctAnswer: "◆",
-    options: ["●", "◆", "▲", "■"],
-  },
-  {
-    sequence: ["●", "◆", "▲", "■"],
-    questionText: "Which symbol was last?",
-    correctAnswer: "■",
-    options: ["◆", "▲", "■", "●"],
-  },
-];
 
 const PanelBox = ({ 
   title,
@@ -116,12 +98,15 @@ const StreetView = () => {
   const [showFailedModal, setShowFailedModal] = useState(false);
   const [showJumpScare, setShowJumpScare] = useState(false);
   const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
-  const [observationPhase, setObservationPhase] = useState<ObservationPhase>("inactive");
-  const [observationPattern, setObservationPattern] = useState<ObservationPattern | null>(null);
-  const [observationTimeLeft, setObservationTimeLeft] = useState(QUESTION_DURATION_SECONDS);
-  const [showObservationQuestion, setShowObservationQuestion] = useState(false);
-  const observationTimerRef = useRef<number | null>(null);
-  const observationIntervalRef = useRef<number | null>(null);
+  const [diamondRunPhase, setDiamondRunPhase] = useState<DiamondRunPhase>("inactive");
+  const [diamondRunGateIndex, setDiamondRunGateIndex] = useState<number | null>(null);
+  const [diamondRunTimeLeft, setDiamondRunTimeLeft] = useState(DIAMOND_RUN_DURATION_SECONDS);
+  const [diamondRunGates, setDiamondRunGates] = useState<DiamondRunGate[]>([]);
+  const [diamondRunStartZ, setDiamondRunStartZ] = useState<number | null>(null);
+  const diamondRunTimerRef = useRef<number | null>(null);
+  const diamondRunIntervalRef = useRef<number | null>(null);
+  const diamondRunLastProgressRef = useRef<number | null>(null);
+  const diamondRunLastZRef = useRef<number | null>(null);
   
   // Game audio
   useGameAudio();
@@ -166,11 +151,11 @@ const StreetView = () => {
 
   useEffect(() => {
     return () => {
-      if (observationTimerRef.current) {
-        window.clearTimeout(observationTimerRef.current);
+      if (diamondRunTimerRef.current) {
+        window.clearTimeout(diamondRunTimerRef.current);
       }
-      if (observationIntervalRef.current) {
-        window.clearInterval(observationIntervalRef.current);
+      if (diamondRunIntervalRef.current) {
+        window.clearInterval(diamondRunIntervalRef.current);
       }
     };
   }, []);
@@ -178,7 +163,7 @@ const StreetView = () => {
   // Question phase - no tutorial needed, questions appear directly
 
   // PAUSE GAME when ANY popup/modal is active
-  const isAnyPopupOpen = tutorial.activeTooltip || showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare || showObservationQuestion || observationPhase === "observation";
+  const isAnyPopupOpen = tutorial.activeTooltip || showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare || diamondRunPhase === "rules" || diamondRunPhase === "running";
   
   useEffect(() => {
     if (isAnyPopupOpen) {
@@ -190,69 +175,68 @@ const StreetView = () => {
   }, [isAnyPopupOpen, mission.isActive]);
 
   useEffect(() => {
-    if (observationPhase !== "observation") {
+    if (diamondRunPhase !== "rules") {
       return;
     }
 
-    if (observationTimerRef.current) {
-      window.clearTimeout(observationTimerRef.current);
+    if (diamondRunTimerRef.current) {
+      window.clearTimeout(diamondRunTimerRef.current);
     }
 
-    observationTimerRef.current = window.setTimeout(() => {
-      setObservationPhase("question");
-      setShowObservationQuestion(true);
-      setObservationTimeLeft(QUESTION_DURATION_SECONDS);
-    }, OBSERVATION_DURATION_MS);
+    diamondRunTimerRef.current = window.setTimeout(() => {
+      setDiamondRunPhase("running");
+      setDiamondRunTimeLeft(DIAMOND_RUN_DURATION_SECONDS);
+      diamondRunLastProgressRef.current = Date.now();
+    }, DIAMOND_RUN_RULES_MS);
 
     return () => {
-      if (observationTimerRef.current) {
-        window.clearTimeout(observationTimerRef.current);
+      if (diamondRunTimerRef.current) {
+        window.clearTimeout(diamondRunTimerRef.current);
       }
     };
-  }, [observationPhase]);
+  }, [diamondRunPhase]);
 
   useEffect(() => {
-    if (observationPhase !== "question") {
+    if (diamondRunPhase !== "running") {
       return;
     }
 
-    if (observationIntervalRef.current) {
-      window.clearInterval(observationIntervalRef.current);
+    if (diamondRunIntervalRef.current) {
+      window.clearInterval(diamondRunIntervalRef.current);
     }
-    if (observationTimerRef.current) {
-      window.clearTimeout(observationTimerRef.current);
+    if (diamondRunTimerRef.current) {
+      window.clearTimeout(diamondRunTimerRef.current);
     }
 
-    setObservationTimeLeft(QUESTION_DURATION_SECONDS);
+    setDiamondRunTimeLeft(DIAMOND_RUN_DURATION_SECONDS);
 
-    observationIntervalRef.current = window.setInterval(() => {
-      setObservationTimeLeft((prev) => Math.max(prev - 1, 0));
+    diamondRunIntervalRef.current = window.setInterval(() => {
+      setDiamondRunTimeLeft((prev) => Math.max(prev - 1, 0));
     }, 1000);
 
-    observationTimerRef.current = window.setTimeout(() => {
-      setObservationPhase("failed");
-      setShowObservationQuestion(false);
-    }, QUESTION_DURATION_SECONDS * 1000);
+    diamondRunTimerRef.current = window.setTimeout(() => {
+      setDiamondRunPhase("failed");
+    }, DIAMOND_RUN_DURATION_SECONDS * 1000);
 
     return () => {
-      if (observationIntervalRef.current) {
-        window.clearInterval(observationIntervalRef.current);
+      if (diamondRunIntervalRef.current) {
+        window.clearInterval(diamondRunIntervalRef.current);
       }
-      if (observationTimerRef.current) {
-        window.clearTimeout(observationTimerRef.current);
+      if (diamondRunTimerRef.current) {
+        window.clearTimeout(diamondRunTimerRef.current);
       }
     };
-  }, [observationPhase]);
+  }, [diamondRunPhase]);
 
   // Resume game when tutorial tooltip is dismissed
   const handleTutorialDismiss = useCallback(() => {
     tutorial.dismissTooltip();
     // Resume zombies only if no other popups are open
-    const otherPopupsOpen = showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare || showObservationQuestion || observationPhase === "observation";
+    const otherPopupsOpen = showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare || diamondRunPhase === "rules" || diamondRunPhase === "running";
     if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
       mission.resumeZombies();
     }
-  }, [tutorial, mission, showMissions, show2DMap, showShopModal, showQuestionModal, showFailedModal, showJumpScare, showObservationQuestion, observationPhase]);
+  }, [tutorial, mission, showMissions, show2DMap, showShopModal, showQuestionModal, showFailedModal, showJumpScare, diamondRunPhase]);
   // Fetch all shop items for shops on this street
   useEffect(() => {
     const fetchAllShopItems = async () => {
@@ -320,6 +304,52 @@ const StreetView = () => {
 
     setNearbyShop(closest);
   }, [playerPosition, shopBrandings, hasGameStarted, isInsideShop]);
+
+  useEffect(() => {
+    if (diamondRunPhase !== "running" || diamondRunGateIndex === null) {
+      return;
+    }
+
+    if (diamondRunStartZ === null) {
+      return;
+    }
+
+    const [px, , pz] = playerPosition;
+
+    if (pz > diamondRunStartZ + DIAMOND_RUN_BACKTRACK_LIMIT) {
+      handleDiamondRunFail();
+      return;
+    }
+
+    const lastZ = diamondRunLastZRef.current;
+    if (lastZ !== null && lastZ - pz >= DIAMOND_RUN_MIN_PROGRESS) {
+      diamondRunLastProgressRef.current = Date.now();
+      diamondRunLastZRef.current = pz;
+    } else if (lastZ === null) {
+      diamondRunLastZRef.current = pz;
+    }
+
+    const lastProgress = diamondRunLastProgressRef.current;
+    if (lastProgress && Date.now() - lastProgress > DIAMOND_RUN_STALL_MS) {
+      handleDiamondRunFail();
+      return;
+    }
+
+    for (let i = 0; i < diamondRunGates.length; i++) {
+      const gate = diamondRunGates[i];
+      const dx = px - gate.position.x;
+      const dz = pz - gate.position.z;
+      const distance = Math.sqrt(dx * dx + dz * dz);
+      if (distance <= DIAMOND_RUN_GATE_DISTANCE) {
+        if (i === diamondRunGateIndex) {
+          handleDiamondRunSuccess();
+        } else {
+          handleDiamondRunFail();
+        }
+        break;
+      }
+    }
+  }, [diamondRunPhase, diamondRunGateIndex, diamondRunGates, diamondRunStartZ, playerPosition]);
 
   // Find the spot ID for the selected shop (to highlight in 2D map)
   const selectedSpotId = selectedShop?.spotId || "";
@@ -419,51 +449,63 @@ const StreetView = () => {
     setShowFailedModal(false);
   };
 
-  const handleObservationActivate = () => {
-    if (mission.isActive) {
-      mission.resetMission();
-    }
-
-    const selection = OBSERVATION_PATTERNS[Math.floor(Math.random() * OBSERVATION_PATTERNS.length)];
-    setObservationPattern(selection);
-    setObservationPhase("observation");
-    setShowObservationQuestion(false);
-    setShowMissions(false);
-  };
-
-  const handleObservationAnswer = (answer: string) => {
-    if (!observationPattern) return;
-
-    if (observationIntervalRef.current) {
-      window.clearInterval(observationIntervalRef.current);
-    }
-    if (observationTimerRef.current) {
-      window.clearTimeout(observationTimerRef.current);
-    }
-
-    setShowObservationQuestion(false);
-
-    if (answer === observationPattern.correctAnswer) {
-      addCoins(OBSERVATION_REWARD.coins);
-      addXP(OBSERVATION_REWARD.xp);
-      setObservationPhase("completed");
+  const handleDiamondRunActivate = () => {
+    if (mission.isActive || diamondRunPhase !== "inactive") {
       return;
     }
 
-    setObservationPhase("failed");
+    const startZ = playerPosition[2];
+    const gateZ = startZ - 28;
+    const gates: DiamondRunGate[] = [
+      { id: "left", label: "Gate A", position: { x: -12, y: 0, z: gateZ } },
+      { id: "center", label: "Gate B", position: { x: 0, y: 0, z: gateZ } },
+      { id: "right", label: "Gate C", position: { x: 12, y: 0, z: gateZ } },
+    ];
+
+    setDiamondRunGateIndex(Math.floor(Math.random() * gates.length));
+    setDiamondRunGates(gates);
+    setDiamondRunStartZ(startZ);
+    diamondRunLastZRef.current = startZ;
+    diamondRunLastProgressRef.current = Date.now();
+    setDiamondRunPhase("rules");
+    setShowMissions(false);
+    playSounds.notification();
   };
 
-  const handleObservationReset = () => {
-    if (observationIntervalRef.current) {
-      window.clearInterval(observationIntervalRef.current);
+  const handleDiamondRunFail = () => {
+    if (diamondRunIntervalRef.current) {
+      window.clearInterval(diamondRunIntervalRef.current);
     }
-    if (observationTimerRef.current) {
-      window.clearTimeout(observationTimerRef.current);
+    if (diamondRunTimerRef.current) {
+      window.clearTimeout(diamondRunTimerRef.current);
     }
-    setObservationPhase("inactive");
-    setObservationPattern(null);
-    setShowObservationQuestion(false);
-    setObservationTimeLeft(QUESTION_DURATION_SECONDS);
+    setDiamondRunPhase("failed");
+  };
+
+  const handleDiamondRunSuccess = () => {
+    if (diamondRunIntervalRef.current) {
+      window.clearInterval(diamondRunIntervalRef.current);
+    }
+    if (diamondRunTimerRef.current) {
+      window.clearTimeout(diamondRunTimerRef.current);
+    }
+    addCoins(DIAMOND_RUN_REWARD.coins);
+    addXP(DIAMOND_RUN_REWARD.xp);
+    setDiamondRunPhase("completed");
+  };
+
+  const handleDiamondRunReset = () => {
+    if (diamondRunIntervalRef.current) {
+      window.clearInterval(diamondRunIntervalRef.current);
+    }
+    if (diamondRunTimerRef.current) {
+      window.clearTimeout(diamondRunTimerRef.current);
+    }
+    setDiamondRunPhase("inactive");
+    setDiamondRunGateIndex(null);
+    setDiamondRunGates([]);
+    setDiamondRunStartZ(null);
+    setDiamondRunTimeLeft(DIAMOND_RUN_DURATION_SECONDS);
   };
   
   const handleZombieTouchPlayer = () => {
@@ -701,6 +743,12 @@ const StreetView = () => {
             forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
             onZombieTouchPlayer={handleZombieTouchPlayer}
             onTrapHitPlayer={handleTrapHitPlayer}
+            diamondRunActive={diamondRunPhase === "rules" || diamondRunPhase === "running"}
+            diamondRunGates={diamondRunGates.map((gate) => ({
+              id: gate.id,
+              label: gate.label,
+              position: [gate.position.x, gate.position.y, gate.position.z],
+            }))}
           />
           
           {/* Health Display (Lives) */}
@@ -722,53 +770,23 @@ const StreetView = () => {
             />
           )}
 
-          {/* Observation Mission Focus Overlay */}
-          {observationPhase === "observation" && observationPattern && (
-            <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm pointer-events-none" style={{ zIndex: 180 }}>
-              <div className="pointer-events-none rounded-xl border border-blue-400/40 bg-slate-900/70 px-6 py-5 text-center shadow-xl">
-                <div className="flex items-center justify-center gap-2 text-blue-200 uppercase tracking-widest text-xs mb-3">
+          {/* Diamond Run Test Mode Overlay */}
+          {(diamondRunPhase === "rules" || diamondRunPhase === "running") && (
+            <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 180 }}>
+              <div className="absolute inset-0 bg-red-950/30" />
+              <div className="absolute top-20 left-1/2 -translate-x-1/2 rounded-xl border border-red-400/40 bg-slate-950/80 px-6 py-4 text-center shadow-xl">
+                <div className="flex items-center justify-center gap-2 text-red-200 uppercase tracking-widest text-xs mb-2">
                   <Diamond className="h-4 w-4" />
-                  Focus Mode
+                  Test Mode
                 </div>
-                <div className="text-2xl md:text-3xl font-bold text-white tracking-[0.4em]">
-                  {observationPattern.sequence.join("  ")}
-                </div>
-                <p className="mt-3 text-[11px] text-blue-200/80 uppercase tracking-widest">
-                  Observe once. No repeats.
+                <p className="text-sm md:text-base font-semibold text-white">
+                  Three paths. One is correct. Choose fast.
                 </p>
-              </div>
-            </div>
-          )}
-
-          {/* Observation Question Modal */}
-          {showObservationQuestion && observationPattern && (
-            <div
-              className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm pointer-events-auto"
-              style={{ zIndex: 220 }}
-            >
-              <div className="w-[90vw] max-w-md rounded-xl border border-border/50 bg-background/95 p-5 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-4">
-                  <div className="flex items-center gap-2 text-primary">
-                    <Diamond className="h-4 w-4" />
-                    <span className="font-display text-sm font-bold uppercase tracking-wider">Diamond 1 – Observation Test</span>
-                  </div>
-                  <span className="text-xs font-semibold text-muted-foreground">
-                    {observationTimeLeft}s
-                  </span>
-                </div>
-                <p className="text-sm text-foreground mb-4">{observationPattern.questionText}</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {observationPattern.options.map((option) => (
-                    <Button
-                      key={option}
-                      variant="outline"
-                      className="h-10 text-lg font-semibold"
-                      onClick={() => handleObservationAnswer(option)}
-                    >
-                      {option}
-                    </Button>
-                  ))}
-                </div>
+                {diamondRunPhase === "running" && (
+                  <p className="mt-2 text-xs text-red-200/80 uppercase tracking-widest">
+                    Alarm: {diamondRunTimeLeft}s
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -890,7 +908,7 @@ const StreetView = () => {
               onClick={() => {
                 setShowMissions(false);
                 // Resume zombies when mission panel closes during escape phase (if no other popups open)
-                const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare || showObservationQuestion || observationPhase === "observation";
+                const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare || diamondRunPhase === "rules" || diamondRunPhase === "running";
                 if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
                   mission.resumeZombies();
                 }
@@ -913,7 +931,7 @@ const StreetView = () => {
             onClick={() => {
               setShowMissions(false);
               // Resume zombies when mission panel closes during escape phase (if no other popups open)
-              const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare || showObservationQuestion || observationPhase === "observation";
+              const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare || diamondRunPhase === "rules" || diamondRunPhase === "running";
               if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
                 mission.resumeZombies();
               }
@@ -929,11 +947,11 @@ const StreetView = () => {
                     shops={shopBrandings}
                     shopItemsMap={shopItemsMap}
                     onActivate={handleMissionActivate}
-                    observationPhase={observationPhase}
-                    onActivateObservation={handleObservationActivate}
-                    observationCanActivate={!mission.isActive}
-                    observationRewardLabel={`${OBSERVATION_REWARD.coins} coins + ${OBSERVATION_REWARD.xp} XP`}
-                    onResetObservation={handleObservationReset}
+                    diamondRunPhase={diamondRunPhase}
+                    onActivateDiamondRun={handleDiamondRunActivate}
+                    diamondRunCanActivate={!mission.isActive && diamondRunPhase === "inactive"}
+                    diamondRunRewardLabel={`${DIAMOND_RUN_REWARD.coins} coins + ${DIAMOND_RUN_REWARD.xp} XP`}
+                    onResetDiamondRun={handleDiamondRunReset}
                     isCompact
                   />
                 </div>

@@ -29,6 +29,14 @@ type CitySceneProps = {
   forcedTimeOfDay?: "day" | "night" | null; // For mission control
   onZombieTouchPlayer?: () => void;
   onTrapHitPlayer?: () => void;
+  diamondRunActive?: boolean;
+  diamondRunGates?: DiamondRunGate[];
+};
+
+export type DiamondRunGate = {
+  id: string;
+  label: string;
+  position: [number, number, number];
 };
 
 type InnerProps = {
@@ -206,6 +214,8 @@ export default function CityScene({
   forcedTimeOfDay = null,
   onZombieTouchPlayer,
   onTrapHitPlayer,
+  diamondRunActive = false,
+  diamondRunGates = [],
 }: CitySceneProps) {
   // Use forced time of day if provided (for mission night mode)
   const effectiveTimeOfDay = forcedTimeOfDay ?? timeOfDay;
@@ -303,6 +313,13 @@ export default function CityScene({
             onZombieTouchPlayer={onZombieTouchPlayer}
             onTrapHitPlayer={onTrapHitPlayer}
           />
+          {diamondRunActive && diamondRunGates.length > 0 && (
+            <>
+              {diamondRunGates.map((gate) => (
+                <DiamondRunGateMarker key={gate.id} gate={gate} />
+              ))}
+            </>
+          )}
         </Suspense>
       </Canvas>
       {isMobile && (
@@ -331,6 +348,26 @@ export default function CityScene({
 }
 
 // ============ COMPONENTS ============
+
+function DiamondRunGateMarker({ gate }: { gate: DiamondRunGate }) {
+  return (
+    <group position={gate.position}>
+      <mesh position={[0, 2, 0]}>
+        <boxGeometry args={[4, 4, 0.6]} />
+        <meshStandardMaterial color="#4f46e5" emissive="#1e1b4b" emissiveIntensity={0.8} />
+      </mesh>
+      <Text
+        position={[0, 4.2, 0]}
+        fontSize={1}
+        color="#e0e7ff"
+        anchorX="center"
+        anchorY="middle"
+      >
+        {gate.label}
+      </Text>
+    </group>
+  );
+}
 
 // Gradient Sky
 function GradientSky({ isNight }: { isNight: boolean }) {
