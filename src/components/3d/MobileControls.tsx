@@ -52,7 +52,6 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
           joystickStartRef.current = { x: clientX, y: clientY };
           setJoystickPos({ x: 0, y: 0 });
           onJoystickMove(0, 0);
-          e.preventDefault();
           continue;
         }
 
@@ -140,7 +139,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
     };
 
     // Attach to window so joystick works anywhere on screen while avoiding UI blocking.
-    window.addEventListener('touchstart', handleTouchStart, { passive: false });
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
     window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
