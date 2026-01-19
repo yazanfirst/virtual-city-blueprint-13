@@ -21,6 +21,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
   const lastCameraPosRef = useRef<{ x: number; y: number } | null>(null);
   const cameraDragActiveRef = useRef(false);
   const joystickStartRef = useRef<{ x: number; y: number } | null>(null);
+  const moveListenerActiveRef = useRef(false);
 
   const JOYSTICK_RADIUS = 56;
   const JOYSTICK_HANDLE_RADIUS = 24;
@@ -35,6 +36,20 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
       const dx = clientX - centerX;
       const dy = clientY - centerY;
       return Math.sqrt(dx * dx + dy * dy) <= JOYSTICK_RADIUS;
+    };
+
+    const ensureMoveListener = () => {
+      if (!moveListenerActiveRef.current) {
+        window.addEventListener('touchmove', handleTouchMove, { passive: false });
+        moveListenerActiveRef.current = true;
+      }
+    };
+
+    const removeMoveListener = () => {
+      if (moveListenerActiveRef.current) {
+        window.removeEventListener('touchmove', handleTouchMove);
+        moveListenerActiveRef.current = false;
+      }
     };
 
     const handleTouchStart = (e: TouchEvent) => {
@@ -52,7 +67,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
           joystickStartRef.current = { x: clientX, y: clientY };
           setJoystickPos({ x: 0, y: 0 });
           onJoystickMove(0, 0);
-          e.preventDefault();
+          ensureMoveListener();
           continue;
         }
 
@@ -62,11 +77,14 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
           cameraTouchIdRef.current = identifier;
           lastCameraPosRef.current = { x: clientX, y: clientY };
           cameraDragActiveRef.current = false;
+          ensureMoveListener();
         }
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      let shouldPreventDefault = false;
+
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         const { clientX, clientY, identifier } = touch;
@@ -89,6 +107,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
           });
           
           onJoystickMove(normalizedX, -normalizedY);
+          shouldPreventDefault = true;
         }
         
         // Handle camera - PUBG style: drag right = rotate camera right (azimuth increases)
@@ -107,14 +126,12 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
             // Negative deltaX for natural camera rotation (drag left = look left)
             onCameraMove(-deltaX * 0.012, deltaY * 0.008);
             lastCameraPosRef.current = { x: clientX, y: clientY };
+            shouldPreventDefault = true;
           }
         }
       }
 
-      if (
-        (joystickTouchIdRef.current !== null && joystickStartRef.current !== null) ||
-        (cameraTouchIdRef.current !== null && cameraDragActiveRef.current)
-      ) {
+      if (shouldPreventDefault && e.cancelable) {
         e.preventDefault();
       }
     };
@@ -136,17 +153,20 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
           cameraDragActiveRef.current = false;
         }
       }
+
+      if (joystickTouchIdRef.current === null && cameraTouchIdRef.current === null) {
+        removeMoveListener();
+      }
     };
 
-    // Attach to window so the overlay doesn't block UI interactions
-    window.addEventListener('touchstart', handleTouchStart, { passive: false });
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    // Attach to window so joystick works anywhere on screen while avoiding UI blocking.
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
     window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     return () => {
       window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
+      removeMoveListener();
       window.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('touchcancel', handleTouchEnd);
     };
