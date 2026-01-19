@@ -4,10 +4,9 @@ type MobileControlsProps = {
   onJoystickMove: (x: number, y: number) => void;
   onCameraMove: (deltaX: number, deltaY: number) => void;
   onJump?: () => void;
-  touchTarget?: HTMLElement | null;
 };
 
-const MobileControls = ({ onJoystickMove, onCameraMove, onJump, touchTarget }: MobileControlsProps) => {
+const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControlsProps) => {
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
   const [jumpPressed, setJumpPressed] = useState(false);
   const joystickRef = useRef<HTMLDivElement>(null);
@@ -140,21 +139,19 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump, touchTarget }: M
       }
     };
 
-    const interactionTarget = touchTarget ?? window;
-
-    // Attach to the canvas so UI buttons remain fully responsive on mobile.
-    interactionTarget.addEventListener('touchstart', handleTouchStart, { passive: false });
-    interactionTarget.addEventListener('touchmove', handleTouchMove, { passive: false });
+    // Attach to window so joystick works anywhere on screen while avoiding UI blocking.
+    window.addEventListener('touchstart', handleTouchStart, { passive: false });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
     window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     return () => {
-      interactionTarget.removeEventListener('touchstart', handleTouchStart);
-      interactionTarget.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [onJoystickMove, onCameraMove, touchTarget]);
+  }, [onJoystickMove, onCameraMove]);
 
   useEffect(() => {
     return () => {
