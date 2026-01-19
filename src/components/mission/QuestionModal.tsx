@@ -67,13 +67,18 @@ export default function QuestionModal({
               {question.questionText}
             </p>
           </div>
-          
+
           {/* Options */}
           <div className="space-y-2">
             {question.options.map((option, index) => (
               <button
                 key={index}
-                onClick={() => !hasAnswered && setSelectedOption(option)}
+                onPointerDown={() => {
+                  if (!hasAnswered) setSelectedOption(option);
+                }}
+                onClick={() => {
+                  if (!hasAnswered) setSelectedOption(option);
+                }}
                 disabled={hasAnswered}
                 className={`w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-lg border transition-all duration-200 touch-manipulation select-none ${
                   selectedOption === option
@@ -96,23 +101,23 @@ export default function QuestionModal({
               </button>
             ))}
           </div>
-          
+
           {/* Warning */}
           <div className="flex items-center gap-2 text-amber-400/80 text-[10px] sm:text-xs">
             <AlertTriangle className="h-3 w-3 flex-shrink-0" />
             <span>Choose carefully. Wrong answers have consequences.</span>
           </div>
+        </div>
 
-          {/* Confirm Button (sticky so it's always reachable) */}
-          <div className="sticky bottom-0 pt-3 bg-slate-950/90 backdrop-blur">
-            <Button
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm sm:text-base py-2 sm:py-3"
-              onClick={handleConfirm}
-              disabled={!selectedOption || hasAnswered}
-            >
-              Confirm Answer
-            </Button>
-          </div>
+        {/* Confirm Button (fixed footer so it's always reachable, incl. landscape) */}
+        <div className="shrink-0 border-t border-slate-800/60 bg-slate-950/90 backdrop-blur px-4 sm:px-6 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+          <Button
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm sm:text-base py-2 sm:py-3 touch-manipulation"
+            onClick={handleConfirm}
+            disabled={!selectedOption || hasAnswered}
+          >
+            Confirm Answer
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

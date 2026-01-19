@@ -132,10 +132,15 @@ const ShopDetailModal = ({ shop, onClose, onEnterShop }: ShopDetailModalProps) =
           
           {/* Close button */}
           <button
-            onClick={onClose}
-            className="absolute top-3 right-3 h-8 w-8 rounded-full bg-background/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-background/40 transition-colors"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="absolute top-3 right-3 h-11 w-11 md:h-8 md:w-8 rounded-full bg-background/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-background/40 transition-colors touch-manipulation active:scale-95"
+            aria-label="Close"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5 md:h-4 md:w-4" />
           </button>
         </div>
         

@@ -119,10 +119,13 @@ const TutorialTooltip = ({ step, onDismiss }: TutorialTooltipProps) => {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-2 right-2 h-8 w-8 sm:h-6 sm:w-6"
-            onClick={handleDismiss}
+            className="absolute top-2 right-2 h-11 w-11 sm:h-10 sm:w-10 md:h-8 md:w-8 touch-manipulation"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDismiss();
+            }}
           >
-            <X className="h-5 w-5 sm:h-4 sm:w-4" />
+            <X className="h-6 w-6 sm:h-5 sm:w-5 md:h-4 md:w-4" />
           </Button>
 
           {/* Icon with glow */}

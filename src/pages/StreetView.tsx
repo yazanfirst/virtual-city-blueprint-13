@@ -951,28 +951,30 @@ const StreetView = () => {
                         variant={timeOfDay === "day" ? "default" : "ghost"}
                         size="sm"
                         onClick={() => setTimeOfDay("day")}
-                        className="h-7 px-2 text-xs"
+                        className="h-10 w-10 p-0 touch-manipulation md:h-7 md:w-7"
+                        aria-label="Day mode"
                       >
-                        <Sun className="h-3 w-3" />
+                        <Sun className="h-4 w-4 md:h-3 md:w-3" />
                       </Button>
                       <Button
                         variant={timeOfDay === "night" ? "default" : "ghost"}
                         size="sm"
                         onClick={() => setTimeOfDay("night")}
-                        className="h-7 px-2 text-xs"
+                        className="h-10 w-10 p-0 touch-manipulation md:h-7 md:w-7"
+                        aria-label="Night mode"
                       >
-                        <Moon className="h-3 w-3" />
+                        <Moon className="h-4 w-4 md:h-3 md:w-3" />
                       </Button>
                     </div>
-                    
+
                     {/* Maximize Button */}
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => (isGamePaused ? handleResumeGame() : setIsMaximized(true))}
-                      className="h-7 px-2 text-xs bg-background/80 backdrop-blur-md"
+                      className="h-10 px-3 text-sm touch-manipulation bg-background/80 backdrop-blur-md md:h-7 md:px-2 md:text-xs"
                     >
-                      <Maximize2 className="h-3 w-3 mr-1" />
+                      <Maximize2 className="h-4 w-4 mr-2 md:h-3 md:w-3 md:mr-1" />
                       {isGamePaused ? "Resume" : "Game Mode"}
                     </Button>
                   </div>
@@ -999,7 +1001,12 @@ const StreetView = () => {
                   />
                   
                   {/* Shop Proximity Indicator */}
-                  <ShopProximityIndicator nearbyShop={nearbyShop} />
+                  <ShopProximityIndicator
+                    nearbyShop={nearbyShop}
+                    onPress={() => {
+                      if (nearbyShop) handleShopClick(nearbyShop);
+                    }}
+                  />
                   
                   {/* Shop Detail Modal */}
                   {showShopModal && (
