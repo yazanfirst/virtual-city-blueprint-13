@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon } from "lucide-react";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Diamond } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
@@ -28,6 +28,39 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Shop entry distance threshold (in world units)
 const SHOP_ENTRY_DISTANCE = 8;
+const OBSERVATION_DURATION_MS = 4000;
+const QUESTION_DURATION_SECONDS = 12;
+const OBSERVATION_REWARD = { coins: 60, xp: 40 };
+
+type ObservationPhase = "inactive" | "observation" | "question" | "failed" | "completed";
+
+type ObservationPattern = {
+  sequence: string[];
+  questionText: string;
+  correctAnswer: string;
+  options: string[];
+};
+
+const OBSERVATION_PATTERNS: ObservationPattern[] = [
+  {
+    sequence: ["▲", "●", "■", "◆"],
+    questionText: "Which symbol appeared third in the sequence?",
+    correctAnswer: "■",
+    options: ["▲", "■", "◆", "●"],
+  },
+  {
+    sequence: ["◆", "■", "●", "▲"],
+    questionText: "Which symbol came first?",
+    correctAnswer: "◆",
+    options: ["●", "◆", "▲", "■"],
+  },
+  {
+    sequence: ["●", "◆", "▲", "■"],
+    questionText: "Which symbol was last?",
+    correctAnswer: "■",
+    options: ["◆", "▲", "■", "●"],
+  },
+];
 
 const PanelBox = ({ 
   title,
@@ -72,7 +105,7 @@ const StreetView = () => {
   const [nearbyShop, setNearbyShop] = useState<ShopBranding | null>(null);
 
   // Game state
-  const { coins, level, xp, resetGame } = useGameStore();
+  const { coins, level, xp, resetGame, addCoins, addXP } = useGameStore();
   
   // Player state
   const { position: playerPosition, resetToSafeSpawn, resetPlayer, enterShop: playerEnterShop, exitShop: playerExitShop } = usePlayerStore();
@@ -83,6 +116,12 @@ const StreetView = () => {
   const [showFailedModal, setShowFailedModal] = useState(false);
   const [showJumpScare, setShowJumpScare] = useState(false);
   const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
+  const [observationPhase, setObservationPhase] = useState<ObservationPhase>("inactive");
+  const [observationPattern, setObservationPattern] = useState<ObservationPattern | null>(null);
+  const [observationTimeLeft, setObservationTimeLeft] = useState(QUESTION_DURATION_SECONDS);
+  const [showObservationQuestion, setShowObservationQuestion] = useState(false);
+  const observationTimerRef = useRef<number | null>(null);
+  const observationIntervalRef = useRef<number | null>(null);
   
   // Game audio
   useGameAudio();
@@ -125,10 +164,21 @@ const StreetView = () => {
     }
   }, [mission.isActive, mission.phase]);
 
+  useEffect(() => {
+    return () => {
+      if (observationTimerRef.current) {
+        window.clearTimeout(observationTimerRef.current);
+      }
+      if (observationIntervalRef.current) {
+        window.clearInterval(observationIntervalRef.current);
+      }
+    };
+  }, []);
+
   // Question phase - no tutorial needed, questions appear directly
 
   // PAUSE GAME when ANY popup/modal is active
-  const isAnyPopupOpen = tutorial.activeTooltip || showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+  const isAnyPopupOpen = tutorial.activeTooltip || showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare || showObservationQuestion || observationPhase === "observation";
   
   useEffect(() => {
     if (isAnyPopupOpen) {
@@ -139,15 +189,70 @@ const StreetView = () => {
     }
   }, [isAnyPopupOpen, mission.isActive]);
 
+  useEffect(() => {
+    if (observationPhase !== "observation") {
+      return;
+    }
+
+    if (observationTimerRef.current) {
+      window.clearTimeout(observationTimerRef.current);
+    }
+
+    observationTimerRef.current = window.setTimeout(() => {
+      setObservationPhase("question");
+      setShowObservationQuestion(true);
+      setObservationTimeLeft(QUESTION_DURATION_SECONDS);
+    }, OBSERVATION_DURATION_MS);
+
+    return () => {
+      if (observationTimerRef.current) {
+        window.clearTimeout(observationTimerRef.current);
+      }
+    };
+  }, [observationPhase]);
+
+  useEffect(() => {
+    if (observationPhase !== "question") {
+      return;
+    }
+
+    if (observationIntervalRef.current) {
+      window.clearInterval(observationIntervalRef.current);
+    }
+    if (observationTimerRef.current) {
+      window.clearTimeout(observationTimerRef.current);
+    }
+
+    setObservationTimeLeft(QUESTION_DURATION_SECONDS);
+
+    observationIntervalRef.current = window.setInterval(() => {
+      setObservationTimeLeft((prev) => Math.max(prev - 1, 0));
+    }, 1000);
+
+    observationTimerRef.current = window.setTimeout(() => {
+      setObservationPhase("failed");
+      setShowObservationQuestion(false);
+    }, QUESTION_DURATION_SECONDS * 1000);
+
+    return () => {
+      if (observationIntervalRef.current) {
+        window.clearInterval(observationIntervalRef.current);
+      }
+      if (observationTimerRef.current) {
+        window.clearTimeout(observationTimerRef.current);
+      }
+    };
+  }, [observationPhase]);
+
   // Resume game when tutorial tooltip is dismissed
   const handleTutorialDismiss = useCallback(() => {
     tutorial.dismissTooltip();
     // Resume zombies only if no other popups are open
-    const otherPopupsOpen = showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+    const otherPopupsOpen = showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare || showObservationQuestion || observationPhase === "observation";
     if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
       mission.resumeZombies();
     }
-  }, [tutorial, mission, showMissions, show2DMap, showShopModal, showQuestionModal, showFailedModal, showJumpScare]);
+  }, [tutorial, mission, showMissions, show2DMap, showShopModal, showQuestionModal, showFailedModal, showJumpScare, showObservationQuestion, observationPhase]);
   // Fetch all shop items for shops on this street
   useEffect(() => {
     const fetchAllShopItems = async () => {
@@ -312,6 +417,53 @@ const StreetView = () => {
   const handleMissionActivate = () => {
     // Mission is now active, night mode will be forced
     setShowFailedModal(false);
+  };
+
+  const handleObservationActivate = () => {
+    if (mission.isActive) {
+      mission.resetMission();
+    }
+
+    const selection = OBSERVATION_PATTERNS[Math.floor(Math.random() * OBSERVATION_PATTERNS.length)];
+    setObservationPattern(selection);
+    setObservationPhase("observation");
+    setShowObservationQuestion(false);
+    setShowMissions(false);
+  };
+
+  const handleObservationAnswer = (answer: string) => {
+    if (!observationPattern) return;
+
+    if (observationIntervalRef.current) {
+      window.clearInterval(observationIntervalRef.current);
+    }
+    if (observationTimerRef.current) {
+      window.clearTimeout(observationTimerRef.current);
+    }
+
+    setShowObservationQuestion(false);
+
+    if (answer === observationPattern.correctAnswer) {
+      addCoins(OBSERVATION_REWARD.coins);
+      addXP(OBSERVATION_REWARD.xp);
+      setObservationPhase("completed");
+      return;
+    }
+
+    setObservationPhase("failed");
+  };
+
+  const handleObservationReset = () => {
+    if (observationIntervalRef.current) {
+      window.clearInterval(observationIntervalRef.current);
+    }
+    if (observationTimerRef.current) {
+      window.clearTimeout(observationTimerRef.current);
+    }
+    setObservationPhase("inactive");
+    setObservationPattern(null);
+    setShowObservationQuestion(false);
+    setObservationTimeLeft(QUESTION_DURATION_SECONDS);
   };
   
   const handleZombieTouchPlayer = () => {
@@ -569,6 +721,57 @@ const StreetView = () => {
               onEnterShop={handleEnterShop}
             />
           )}
+
+          {/* Observation Mission Focus Overlay */}
+          {observationPhase === "observation" && observationPattern && (
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm pointer-events-none" style={{ zIndex: 180 }}>
+              <div className="pointer-events-none rounded-xl border border-blue-400/40 bg-slate-900/70 px-6 py-5 text-center shadow-xl">
+                <div className="flex items-center justify-center gap-2 text-blue-200 uppercase tracking-widest text-xs mb-3">
+                  <Diamond className="h-4 w-4" />
+                  Focus Mode
+                </div>
+                <div className="text-2xl md:text-3xl font-bold text-white tracking-[0.4em]">
+                  {observationPattern.sequence.join("  ")}
+                </div>
+                <p className="mt-3 text-[11px] text-blue-200/80 uppercase tracking-widest">
+                  Observe once. No repeats.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Observation Question Modal */}
+          {showObservationQuestion && observationPattern && (
+            <div
+              className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm pointer-events-auto"
+              style={{ zIndex: 220 }}
+            >
+              <div className="w-[90vw] max-w-md rounded-xl border border-border/50 bg-background/95 p-5 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-4">
+                  <div className="flex items-center gap-2 text-primary">
+                    <Diamond className="h-4 w-4" />
+                    <span className="font-display text-sm font-bold uppercase tracking-wider">Diamond 1 – Observation Test</span>
+                  </div>
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    {observationTimeLeft}s
+                  </span>
+                </div>
+                <p className="text-sm text-foreground mb-4">{observationPattern.questionText}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {observationPattern.options.map((option) => (
+                    <Button
+                      key={option}
+                      variant="outline"
+                      className="h-10 text-lg font-semibold"
+                      onClick={() => handleObservationAnswer(option)}
+                    >
+                      {option}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           
           {/* Top Controls Bar - Compact for mobile */}
           <div className="absolute top-2 md:top-4 left-2 md:left-4 right-2 md:right-4 flex items-center justify-between pointer-events-none" style={{ zIndex: 150 }}>
@@ -687,7 +890,7 @@ const StreetView = () => {
               onClick={() => {
                 setShowMissions(false);
                 // Resume zombies when mission panel closes during escape phase (if no other popups open)
-                const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+                const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare || showObservationQuestion || observationPhase === "observation";
                 if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
                   mission.resumeZombies();
                 }
@@ -710,7 +913,7 @@ const StreetView = () => {
             onClick={() => {
               setShowMissions(false);
               // Resume zombies when mission panel closes during escape phase (if no other popups open)
-              const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+              const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare || showObservationQuestion || observationPhase === "observation";
               if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
                 mission.resumeZombies();
               }
@@ -726,6 +929,11 @@ const StreetView = () => {
                     shops={shopBrandings}
                     shopItemsMap={shopItemsMap}
                     onActivate={handleMissionActivate}
+                    observationPhase={observationPhase}
+                    onActivateObservation={handleObservationActivate}
+                    observationCanActivate={!mission.isActive}
+                    observationRewardLabel={`${OBSERVATION_REWARD.coins} coins + ${OBSERVATION_REWARD.xp} XP`}
+                    onResetObservation={handleObservationReset}
                     isCompact
                   />
                 </div>
