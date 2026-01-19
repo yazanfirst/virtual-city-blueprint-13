@@ -71,8 +71,11 @@ export default function MissionPanel({
         
         <Button
           variant="cyber"
-          className="w-full"
-          onClick={handleActivate}
+          className="w-full touch-manipulation select-none active:scale-[0.98]"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            if (canActivate) handleActivate();
+          }}
           disabled={!canActivate}
         >
           <Play className="h-4 w-4 mr-2" />

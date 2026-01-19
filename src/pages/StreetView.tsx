@@ -559,7 +559,14 @@ const StreetView = () => {
           )}
           
           {/* Shop Proximity Indicator */}
-          <ShopProximityIndicator nearbyShop={nearbyShop} />
+          <ShopProximityIndicator 
+            nearbyShop={nearbyShop} 
+            onPress={() => {
+              if (nearbyShop) {
+                handleShopClick(nearbyShop);
+              }
+            }}
+          />
           
           {/* Shop Detail Modal */}
           {showShopModal && (
@@ -683,7 +690,10 @@ const StreetView = () => {
           {showMissions && (
             <div 
               className="absolute inset-0 flex items-center justify-center pointer-events-auto"
-              style={{ zIndex: 200 }}
+              style={{ zIndex: 200, touchAction: 'manipulation' }}
+              data-control-ignore="true"
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               onClick={() => {
                 setShowMissions(false);
                 // Resume zombies when mission panel closes during escape phase (if no other popups open)
@@ -695,6 +705,8 @@ const StreetView = () => {
             >
               <div 
                 className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md"
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/30">
@@ -707,17 +719,18 @@ const StreetView = () => {
                     </h3>
                   </div>
                   <button 
-            onClick={() => {
-              setShowMissions(false);
-              // Resume zombies when mission panel closes during escape phase (if no other popups open)
-              const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
-              if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
-                mission.resumeZombies();
-              }
-            }}
-                    className="text-muted-foreground hover:text-foreground p-1"
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setShowMissions(false);
+                      const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+                      if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
+                        mission.resumeZombies();
+                      }
+                    }}
+                    className="text-muted-foreground hover:text-foreground p-3 -m-2 touch-manipulation select-none active:scale-95"
                   >
-                    <X className="h-5 w-5" />
+                    <X className="h-6 w-6" />
                   </button>
                 </div>
                 
@@ -737,19 +750,30 @@ const StreetView = () => {
           {show2DMap && spotsWithShops && (
             <div 
               className="absolute inset-0 md:inset-auto md:top-16 md:left-4 flex items-center justify-center md:block pointer-events-auto"
-              style={{ zIndex: 200 }}
+              style={{ zIndex: 200, touchAction: 'manipulation' }}
+              data-control-ignore="true"
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
             >
-              <div className="bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-3 md:p-4 shadow-lg w-[90vw] max-w-sm md:max-w-md max-h-[80vh] overflow-auto">
+              <div 
+                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-3 md:p-4 shadow-lg w-[90vw] max-w-sm md:max-w-md max-h-[80vh] overflow-auto"
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
                     <MapIcon className="h-4 w-4 text-primary" />
                     Street Map
                   </h3>
                   <button 
-                    onClick={() => setShow2DMap(false)}
-                    className="text-muted-foreground hover:text-foreground text-xl leading-none p-1"
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setShow2DMap(false);
+                    }}
+                    className="text-muted-foreground hover:text-foreground p-3 -m-2 touch-manipulation select-none active:scale-95 text-xl leading-none"
                   >
-                    ×
+                    <X className="h-5 w-5" />
                   </button>
                 </div>
                 <div className="overflow-auto">

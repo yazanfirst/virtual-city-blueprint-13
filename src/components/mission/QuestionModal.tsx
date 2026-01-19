@@ -112,8 +112,11 @@ export default function QuestionModal({
         {/* Confirm Button (fixed footer so it's always reachable, incl. landscape) */}
         <div className="shrink-0 border-t border-slate-800/60 bg-slate-950/90 backdrop-blur px-4 sm:px-6 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
           <Button
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm sm:text-base py-2 sm:py-3 touch-manipulation"
-            onClick={handleConfirm}
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm sm:text-base py-3 sm:py-4 touch-manipulation select-none active:scale-[0.98]"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              if (selectedOption && !hasAnswered) handleConfirm();
+            }}
             disabled={!selectedOption || hasAnswered}
           >
             Confirm Answer

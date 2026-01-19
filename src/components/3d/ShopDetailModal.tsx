@@ -88,6 +88,10 @@ const ShopDetailModal = ({ shop, onClose, onEnterShop }: ShopDetailModalProps) =
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6"
+      style={{ touchAction: 'manipulation' }}
+      data-control-ignore="true"
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
       onClick={onClose}
     >
       {/* Backdrop */}
@@ -96,6 +100,8 @@ const ShopDetailModal = ({ shop, onClose, onEnterShop }: ShopDetailModalProps) =
       {/* Modal */}
       <div
         className="relative w-full max-w-md max-h-[90vh] bg-background border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        onPointerDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         style={{
           borderColor: shop.hasShop ? shop.primaryColor : undefined,
@@ -133,14 +139,14 @@ const ShopDetailModal = ({ shop, onClose, onEnterShop }: ShopDetailModalProps) =
           {/* Close button */}
           <button
             type="button"
-            onClick={(e) => {
+            onPointerDown={(e) => {
               e.stopPropagation();
               onClose();
             }}
-            className="absolute top-3 right-3 h-11 w-11 md:h-8 md:w-8 rounded-full bg-background/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-background/40 transition-colors touch-manipulation active:scale-95"
+            className="absolute top-3 right-3 h-12 w-12 md:h-9 md:w-9 rounded-full bg-background/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-background/40 transition-colors touch-manipulation select-none active:scale-95"
             aria-label="Close"
           >
-            <X className="h-5 w-5 md:h-4 md:w-4" />
+            <X className="h-6 w-6 md:h-5 md:w-5" />
           </button>
         </div>
         

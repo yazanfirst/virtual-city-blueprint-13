@@ -38,6 +38,10 @@ export default function JumpScareModal({
   return (
     <div 
       className="fixed inset-0 z-[400] flex items-center justify-center bg-black"
+      style={{ touchAction: 'manipulation' }}
+      data-control-ignore="true"
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
       {/* Scary Zombie Face Jump Scare */}
@@ -91,16 +95,22 @@ export default function JumpScareModal({
           {/* Buttons */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
             <Button
-              onClick={onRetry}
-              className="bg-red-600 hover:bg-red-700 text-white font-bold px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                onRetry();
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-lg touch-manipulation select-none active:scale-[0.98]"
             >
               <RotateCcw className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Try Again
             </Button>
             <Button
               variant="outline"
-              onClick={onExit}
-              className="border-gray-500/50 text-gray-300 hover:bg-gray-900/50 px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-lg"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                onExit();
+              }}
+              className="border-gray-500/50 text-gray-300 hover:bg-gray-900/50 px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-lg touch-manipulation select-none active:scale-[0.98]"
             >
               <Home className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
               Exit

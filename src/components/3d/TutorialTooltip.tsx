@@ -96,7 +96,10 @@ const TutorialTooltip = ({ step, onDismiss }: TutorialTooltipProps) => {
   return (
     <div 
       className="fixed inset-0 z-[200] pointer-events-auto"
-      onClick={handleDismiss}
+      style={{ touchAction: 'manipulation' }}
+      data-control-ignore="true"
+      onPointerDown={handleDismiss}
+      onTouchStart={(e) => e.stopPropagation()}
     >
       {/* Semi-transparent backdrop */}
       <div 
@@ -112,20 +115,21 @@ const TutorialTooltip = ({ step, onDismiss }: TutorialTooltipProps) => {
             ? 'opacity-100 scale-100' 
             : 'opacity-0 scale-95'
         }`}
-        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
       >
         <div className="bg-background/95 backdrop-blur-lg border-2 border-primary/50 rounded-xl p-4 sm:p-5 shadow-2xl max-w-[90vw] sm:max-w-sm mx-auto">
           {/* Close button */}
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-2 right-2 h-11 w-11 sm:h-10 sm:w-10 md:h-8 md:w-8 touch-manipulation"
-            onClick={(e) => {
+            className="absolute top-2 right-2 h-12 w-12 sm:h-11 sm:w-11 md:h-9 md:w-9 touch-manipulation select-none active:scale-95"
+            onPointerDown={(e) => {
               e.stopPropagation();
               handleDismiss();
             }}
           >
-            <X className="h-6 w-6 sm:h-5 sm:w-5 md:h-4 md:w-4" />
+            <X className="h-6 w-6 sm:h-5 sm:w-5 md:h-5 md:w-5" />
           </Button>
 
           {/* Icon with glow */}
@@ -158,8 +162,11 @@ const TutorialTooltip = ({ step, onDismiss }: TutorialTooltipProps) => {
           <Button
             variant="cyber"
             size="sm"
-            className="w-full mt-3 sm:mt-4 text-sm"
-            onClick={handleDismiss}
+            className="w-full mt-3 sm:mt-4 text-sm touch-manipulation select-none active:scale-[0.98]"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              handleDismiss();
+            }}
           >
             Got it!
           </Button>
