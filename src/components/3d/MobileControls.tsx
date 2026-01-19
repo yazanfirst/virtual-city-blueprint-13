@@ -4,9 +4,10 @@ type MobileControlsProps = {
   onJoystickMove: (x: number, y: number) => void;
   onCameraMove: (deltaX: number, deltaY: number) => void;
   onJump?: () => void;
+  touchTarget?: HTMLElement | null;
 };
 
-const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControlsProps) => {
+const MobileControls = ({ onJoystickMove, onCameraMove, onJump, touchTarget }: MobileControlsProps) => {
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
   const [jumpPressed, setJumpPressed] = useState(false);
   const joystickRef = useRef<HTMLDivElement>(null);
@@ -139,19 +140,21 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
       }
     };
 
-    // Attach to window so the overlay doesn't block UI interactions
-    window.addEventListener('touchstart', handleTouchStart, { passive: false });
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    const interactionTarget = touchTarget ?? window;
+
+    // Attach to the canvas so UI buttons remain fully responsive on mobile.
+    interactionTarget.addEventListener('touchstart', handleTouchStart, { passive: false });
+    interactionTarget.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
     window.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
     return () => {
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
+      interactionTarget.removeEventListener('touchstart', handleTouchStart);
+      interactionTarget.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('touchend', handleTouchEnd);
       window.removeEventListener('touchcancel', handleTouchEnd);
     };
-  }, [onJoystickMove, onCameraMove]);
+  }, [onJoystickMove, onCameraMove, touchTarget]);
 
   useEffect(() => {
     return () => {
