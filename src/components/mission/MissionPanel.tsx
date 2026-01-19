@@ -137,14 +137,17 @@ export default function MissionPanel({
         <p className={`text-red-200 ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
           The zombies got you. Better luck next time.
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full border-red-500/50 text-red-300 hover:bg-red-900/50"
-          onClick={handleRetry}
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            handleRetry();
+          }}
+          className="w-full h-10 rounded-md flex items-center justify-center border border-red-500/50 text-red-300 hover:bg-red-900/50 touch-manipulation select-none active:scale-[0.98] transition-all text-sm font-medium"
+          data-control-ignore="true"
         >
           Try Again
-        </Button>
+        </button>
       </div>
     );
   }
@@ -161,14 +164,17 @@ export default function MissionPanel({
         <p className={`text-green-200 ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
           Your memory served you well. The zombies have vanished.
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full border-green-500/50 text-green-300 hover:bg-green-900/50"
-          onClick={handleRetry}
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            handleRetry();
+          }}
+          className="w-full h-10 rounded-md flex items-center justify-center border border-green-500/50 text-green-300 hover:bg-green-900/50 touch-manipulation select-none active:scale-[0.98] transition-all text-sm font-medium"
+          data-control-ignore="true"
         >
           Play Again
-        </Button>
+        </button>
       </div>
     );
   }
