@@ -34,7 +34,8 @@ const DIAMOND_RUN_REWARD = { coins: 90, xp: 60 };
 const DIAMOND_RUN_GATE_DISTANCE = 4.5;
 const DIAMOND_RUN_BACKTRACK_LIMIT = 2;
 const DIAMOND_RUN_MIN_PROGRESS = 0.4;
-const DIAMOND_RUN_STALL_MS = 1800;
+const DIAMOND_RUN_STALL_MS = 3500;
+const DIAMOND_RUN_START_GRACE_MS = 2500;
 
 type DiamondRunPhase = "inactive" | "rules" | "running" | "failed" | "completed";
 
@@ -107,6 +108,8 @@ const StreetView = () => {
   const diamondRunIntervalRef = useRef<number | null>(null);
   const diamondRunLastProgressRef = useRef<number | null>(null);
   const diamondRunLastZRef = useRef<number | null>(null);
+  const diamondRunStartTimeRef = useRef<number | null>(null);
+  const diamondRunHasProgressRef = useRef(false);
   
   // Game audio
   useGameAudio();
@@ -187,6 +190,8 @@ const StreetView = () => {
       setDiamondRunPhase("running");
       setDiamondRunTimeLeft(DIAMOND_RUN_DURATION_SECONDS);
       diamondRunLastProgressRef.current = Date.now();
+      diamondRunStartTimeRef.current = Date.now();
+      diamondRunHasProgressRef.current = false;
     }, DIAMOND_RUN_RULES_MS);
 
     return () => {
@@ -316,7 +321,14 @@ const StreetView = () => {
 
     const [px, , pz] = playerPosition;
 
-    if (pz > diamondRunStartZ + DIAMOND_RUN_BACKTRACK_LIMIT) {
+    const startTime = diamondRunStartTimeRef.current;
+    const now = Date.now();
+    if (startTime && now - startTime < DIAMOND_RUN_START_GRACE_MS) {
+      diamondRunLastZRef.current = pz;
+      return;
+    }
+
+    if (diamondRunHasProgressRef.current && pz > diamondRunStartZ + DIAMOND_RUN_BACKTRACK_LIMIT) {
       handleDiamondRunFail();
       return;
     }
@@ -325,12 +337,13 @@ const StreetView = () => {
     if (lastZ !== null && lastZ - pz >= DIAMOND_RUN_MIN_PROGRESS) {
       diamondRunLastProgressRef.current = Date.now();
       diamondRunLastZRef.current = pz;
+      diamondRunHasProgressRef.current = true;
     } else if (lastZ === null) {
       diamondRunLastZRef.current = pz;
     }
 
     const lastProgress = diamondRunLastProgressRef.current;
-    if (lastProgress && Date.now() - lastProgress > DIAMOND_RUN_STALL_MS) {
+    if (diamondRunHasProgressRef.current && lastProgress && now - lastProgress > DIAMOND_RUN_STALL_MS) {
       handleDiamondRunFail();
       return;
     }
