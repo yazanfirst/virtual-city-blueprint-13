@@ -33,13 +33,17 @@ export interface TrapData {
   isActive: boolean;
 }
 
-export type MissionFailReason = 'zombie' | 'firepit' | 'axe' | 'thorns' | 'trap' | 'jumpscare' | 'unknown';
+export type MissionFailReason = 'zombie' | 'firepit' | 'axe' | 'thorns' | 'trap' | 'jumpscare' | 'time' | 'unknown';
 
 interface MissionState {
   // Mission status
   isActive: boolean;
   phase: MissionPhase;
   missionNumber: number;
+
+  // Mission timer
+  timeRemaining: number;
+  timeLimit: number;
   
   // Lives system (3 hearts)
   lives: number;
@@ -114,6 +118,7 @@ interface MissionState {
   freezeAllZombies: (duration?: number) => void;
   setNotification: (has: boolean) => void;
   getSafeSpawnPosition: () => [number, number, number];
+  updateTimer: (delta: number) => void;
 }
 
 // Generate zombie spawn positions with varied behavior types
@@ -170,12 +175,16 @@ function generateTrapPositions(): TrapData[] {
 
 // Safe spawn position (away from traps)
 const SAFE_SPAWN_POSITION: [number, number, number] = [0, 0.5, 45];
+const ZOMBIE_MISSION_TIME_LIMIT = 90;
 
 export const useMissionStore = create<MissionState>((set, get) => ({
   // Initial state
   isActive: false,
   phase: 'inactive',
   missionNumber: 1,
+
+  timeRemaining: ZOMBIE_MISSION_TIME_LIMIT,
+  timeLimit: ZOMBIE_MISSION_TIME_LIMIT,
   
   // Lives
   lives: 3,
@@ -250,6 +259,8 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       trapTriggered: false,
       deceptiveMessageShown: false,
       lives: 3,
+      timeRemaining: ZOMBIE_MISSION_TIME_LIMIT,
+      timeLimit: ZOMBIE_MISSION_TIME_LIMIT,
       failReason: 'unknown',
       recentlyUsedShopIds: [...state.recentlyUsedShopIds, targetShop.shopId].slice(-5),
     });
@@ -412,6 +423,8 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       trapTriggered: false,
       deceptiveMessageShown: false,
       lives: 3,
+      timeRemaining: ZOMBIE_MISSION_TIME_LIMIT,
+      timeLimit: ZOMBIE_MISSION_TIME_LIMIT,
       failReason: 'unknown',
     });
   },
@@ -483,4 +496,19 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   setNotification: (has: boolean) => set({ hasNotification: has }),
   
   getSafeSpawnPosition: (): [number, number, number] => SAFE_SPAWN_POSITION,
+
+  updateTimer: (delta: number) => {
+    const state = get();
+    if (!state.isActive || state.phase === 'inactive' || state.phase === 'completed' || state.phase === 'failed') {
+      return;
+    }
+
+    const newTime = state.timeRemaining - delta;
+    if (newTime <= 0) {
+      set({ timeRemaining: 0 });
+      get().failMission('time');
+    } else {
+      set({ timeRemaining: newTime });
+    }
+  },
 }));

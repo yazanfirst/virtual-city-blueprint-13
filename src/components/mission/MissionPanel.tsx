@@ -67,7 +67,7 @@ export default function MissionPanel({
         
         <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
           Escape the zombies, find the target shop, and remember everything you see. Trust your memory — you may only get one chance.
-          There is no countdown timer in this mission.
+          Finish before the countdown reaches zero.
         </p>
         
         <Button

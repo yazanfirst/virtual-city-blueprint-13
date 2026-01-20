@@ -18,6 +18,7 @@ import QuestionModal from "@/components/mission/QuestionModal";
 import HealthDisplay from "@/components/mission/HealthDisplay";
 import MissionFailedModal from "@/components/mission/MissionFailedModal";
 import TrapHitFeedback from "@/components/mission/TrapHitFeedback";
+import MissionTimer from "@/components/mission/MissionTimer";
 import JumpScareModal from "@/components/mission/JumpScareModal";
 import GameStartScreen from "@/components/3d/GameStartScreen";
 import ShopProximityIndicator from "@/components/3d/ShopProximityIndicator";
@@ -586,6 +587,13 @@ const StreetView = () => {
           {mission.isActive && (
             <div className="absolute top-14 left-2 md:left-4 pointer-events-none" style={{ zIndex: 150 }}>
               <HealthDisplay />
+            </div>
+          )}
+
+          {/* Zombie Mission Timer */}
+          {mission.isActive && (
+            <div className="absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none" style={{ zIndex: 150 }}>
+              <MissionTimer />
             </div>
           )}
           
