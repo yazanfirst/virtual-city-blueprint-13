@@ -116,31 +116,31 @@ const StreetView = () => {
   // Tutorial triggers - IN ORDER:
   // 1. Movement tutorial when game starts
   useEffect(() => {
-    if (hasGameStarted && isMaximized && !isInsideShop) {
+    if (hasGameStarted && isMaximized && !isInsideShop && !mission.isActive && !ghostHunt.isActive) {
       tutorial.showTutorialStep('movement');
     }
-  }, [hasGameStarted, isMaximized]);
+  }, [hasGameStarted, isMaximized, isInsideShop, mission.isActive, ghostHunt.isActive, tutorial]);
 
   // 2. Shop nearby tutorial
   useEffect(() => {
-    if (nearbyShop && hasGameStarted && !isInsideShop && !mission.isActive) {
+    if (nearbyShop && hasGameStarted && !isInsideShop && !mission.isActive && !ghostHunt.isActive) {
       tutorial.showTutorialStep('shop_nearby');
     }
-  }, [nearbyShop, hasGameStarted, isInsideShop, mission.isActive]);
+  }, [nearbyShop, hasGameStarted, isInsideShop, mission.isActive, ghostHunt.isActive, tutorial]);
 
   // 3. Shop exit tutorial (after first exit - not during mission) - introduce missions
   useEffect(() => {
-    if (hasExitedShopOnce && !isInsideShop && !mission.isActive) {
+    if (hasExitedShopOnce && !isInsideShop && !mission.isActive && !ghostHunt.isActive) {
       tutorial.showTutorialStep('shop_exit_missions');
     }
-  }, [hasExitedShopOnce, isInsideShop, mission.isActive]);
+  }, [hasExitedShopOnce, isInsideShop, mission.isActive, ghostHunt.isActive, tutorial]);
 
   // 4. Mission activated tutorial - right after clicking activate
   useEffect(() => {
     if (mission.isActive && mission.phase === 'escape' && !tutorial.isStepCompleted('mission_activated')) {
       tutorial.showTutorialStep('mission_activated');
     }
-  }, [mission.isActive, mission.phase]);
+  }, [mission.isActive, mission.phase, tutorial]);
 
   // Question phase - no tutorial needed, questions appear directly
 
@@ -329,6 +329,7 @@ const StreetView = () => {
   const handleMissionActivate = () => {
     // Mission is now active, night mode will be forced
     ghostHunt.resetMission();
+    tutorial.dismissTooltip();
     setShowGhostHuntFailed(false);
     setShowGhostHuntComplete(false);
     setShowFailedModal(false);
@@ -833,6 +834,7 @@ const StreetView = () => {
                     <GhostHuntPanel
                       onActivate={() => {
                         mission.resetMission();
+                        tutorial.dismissTooltip();
                         setShowQuestionModal(false);
                         setShowFailedModal(false);
                         setShowJumpScare(false);
