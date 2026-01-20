@@ -568,10 +568,10 @@ const StreetView = () => {
             onTrapHitPlayer={handleTrapHitPlayer}
           />
           
-          {/* Health Display (Lives) - for both missions */}
-          {(mission.isActive || (ghostHunt.isActive && ghostHunt.phase === 'hunting')) && (
+          {/* Health Display (Lives) - Only for Mission 1 (zombie), Ghost Hunt has its own UI */}
+          {mission.isActive && !ghostHunt.isActive && (
             <div className="absolute top-14 left-2 md:left-4 pointer-events-none" style={{ zIndex: 150 }}>
-              <HealthDisplay lives={ghostHunt.isActive ? ghostHunt.playerLives : undefined} />
+              <HealthDisplay />
             </div>
           )}
           
