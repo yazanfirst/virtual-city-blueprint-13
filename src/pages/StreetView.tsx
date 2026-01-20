@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Ghost } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
@@ -62,6 +62,7 @@ const PanelBox = ({
 
 const StreetView = () => {
   const { streetId } = useParams<{ streetId: string }>();
+  const navigate = useNavigate();
   const { data: street, isLoading } = useStreetBySlug(streetId || "");
   const { data: spotsData } = useAllSpotsForStreet(streetId || "");
   const { data: spotsWithShops } = useSpotsWithShops(street?.id || "");
@@ -116,31 +117,31 @@ const StreetView = () => {
   // Tutorial triggers - IN ORDER:
   // 1. Movement tutorial when game starts
   useEffect(() => {
-    if (hasGameStarted && isMaximized && !isInsideShop) {
+    if (hasGameStarted && isMaximized && !isInsideShop && !mission.isActive && !ghostHunt.isActive) {
       tutorial.showTutorialStep('movement');
     }
-  }, [hasGameStarted, isMaximized]);
+  }, [hasGameStarted, isMaximized, isInsideShop, mission.isActive, ghostHunt.isActive, tutorial]);
 
   // 2. Shop nearby tutorial
   useEffect(() => {
-    if (nearbyShop && hasGameStarted && !isInsideShop && !mission.isActive) {
+    if (nearbyShop && hasGameStarted && !isInsideShop && !mission.isActive && !ghostHunt.isActive) {
       tutorial.showTutorialStep('shop_nearby');
     }
-  }, [nearbyShop, hasGameStarted, isInsideShop, mission.isActive]);
+  }, [nearbyShop, hasGameStarted, isInsideShop, mission.isActive, ghostHunt.isActive, tutorial]);
 
   // 3. Shop exit tutorial (after first exit - not during mission) - introduce missions
   useEffect(() => {
-    if (hasExitedShopOnce && !isInsideShop && !mission.isActive) {
+    if (hasExitedShopOnce && !isInsideShop && !mission.isActive && !ghostHunt.isActive) {
       tutorial.showTutorialStep('shop_exit_missions');
     }
-  }, [hasExitedShopOnce, isInsideShop, mission.isActive]);
+  }, [hasExitedShopOnce, isInsideShop, mission.isActive, ghostHunt.isActive, tutorial]);
 
   // 4. Mission activated tutorial - right after clicking activate
   useEffect(() => {
     if (mission.isActive && mission.phase === 'escape' && !tutorial.isStepCompleted('mission_activated')) {
       tutorial.showTutorialStep('mission_activated');
     }
-  }, [mission.isActive, mission.phase]);
+  }, [mission.isActive, mission.phase, tutorial]);
 
   // Question phase - no tutorial needed, questions appear directly
 
@@ -328,6 +329,10 @@ const StreetView = () => {
   
   const handleMissionActivate = () => {
     // Mission is now active, night mode will be forced
+    ghostHunt.resetMission();
+    tutorial.dismissTooltip();
+    setShowGhostHuntFailed(false);
+    setShowGhostHuntComplete(false);
     setShowFailedModal(false);
   };
   
@@ -387,12 +392,15 @@ const StreetView = () => {
     setIsGamePaused(false);
     setIsMaximized(false);
     setHasGameStarted(false);
+    setHasExitedShopOnce(false);
     setShowMissions(false);
     setShow2DMap(false);
     setShowShopModal(false);
     setShowQuestionModal(false);
     setShowFailedModal(false);
     setShowJumpScare(false);
+    setShowGhostHuntFailed(false);
+    setShowGhostHuntComplete(false);
     setSelectedShop(null);
     setInteriorShop(null);
     setIsInsideShop(false);
@@ -401,6 +409,12 @@ const StreetView = () => {
     resetPlayer();
     resetGame();
     mission.resetMission();
+    ghostHunt.resetMission();
+  };
+
+  const handleExitToCityMap = () => {
+    handleExitGame();
+    navigate("/city-map");
   };
   
   const handleQuestionAnswer = (answer: string) => {
@@ -569,9 +583,9 @@ const StreetView = () => {
           />
           
           {/* Health Display (Lives) - for both missions */}
-          {(mission.isActive || (ghostHunt.isActive && ghostHunt.phase === 'hunting')) && (
+          {mission.isActive && (
             <div className="absolute top-14 left-2 md:left-4 pointer-events-none" style={{ zIndex: 150 }}>
-              <HealthDisplay lives={ghostHunt.isActive ? ghostHunt.playerLives : undefined} />
+              <HealthDisplay />
             </div>
           )}
           
@@ -597,10 +611,18 @@ const StreetView = () => {
           {/* Top Controls Bar - Compact for mobile */}
           <div className="absolute top-2 md:top-4 left-2 md:left-4 right-2 md:right-4 flex items-center justify-between pointer-events-none" style={{ zIndex: 150 }}>
             <div className="flex items-center gap-1 md:gap-3 pointer-events-auto">
-              <Button variant="ghost" size="icon" asChild className="bg-background/80 backdrop-blur-md h-8 w-8 md:h-10 md:w-10">
-                <Link to="/city-map">
-                  <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
-                </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="bg-background/80 backdrop-blur-md h-8 w-8 md:h-10 md:w-10"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleExitToCityMap();
+                }}
+                type="button"
+                aria-label="Back to city map"
+              >
+                <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
               </Button>
               <div className="bg-background/80 backdrop-blur-md rounded-lg px-2 py-1 md:px-4 md:py-2 hidden sm:block">
                 <h1 className="font-display text-sm md:text-lg font-bold text-foreground">
@@ -825,8 +847,14 @@ const StreetView = () => {
                   ) : (
                     <GhostHuntPanel
                       onActivate={() => {
+                        mission.resetMission();
+                        tutorial.dismissTooltip();
+                        setShowQuestionModal(false);
+                        setShowFailedModal(false);
+                        setShowJumpScare(false);
                         setShowMissions(false);
                       }}
+                      isUnlocked={mission.phase === 'completed'}
                       isCompact
                     />
                   )}
@@ -1026,10 +1054,17 @@ const StreetView = () => {
         <div className="container mx-auto max-w-7xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/city-map">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(event) => {
+              event.stopPropagation();
+              handleExitToCityMap();
+            }}
+            type="button"
+            aria-label="Back to city map"
+          >
+            <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground">

@@ -5,11 +5,13 @@ import { useGhostHuntStore } from '@/stores/ghostHuntStore';
 interface GhostHuntPanelProps {
   onActivate: () => void;
   isCompact?: boolean;
+  isUnlocked?: boolean;
 }
 
 export default function GhostHuntPanel({
   onActivate,
   isCompact = false,
+  isUnlocked = false,
 }: GhostHuntPanelProps) {
   const {
     isActive,
@@ -50,9 +52,15 @@ export default function GhostHuntPanel({
           </div>
         </div>
         
-        <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
-          Paranormal activity detected. Use your EMF detector to locate invisible ghosts, reveal them with your flashlight, and capture them before time runs out.
-        </p>
+        {isUnlocked ? (
+          <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
+            Paranormal activity detected. Use your EMF detector to locate invisible ghosts, reveal them with your flashlight, and capture them before time runs out.
+          </p>
+        ) : (
+          <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
+            Complete Mission 1 to unlock the Ghost Hunt.
+          </p>
+        )}
         
         <div className={`bg-purple-950/30 rounded-lg p-2 mb-3 border border-purple-500/20 ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
           <div className="flex items-center justify-between text-muted-foreground">
@@ -66,11 +74,14 @@ export default function GhostHuntPanel({
           className="w-full touch-manipulation select-none active:scale-[0.98] bg-purple-600 hover:bg-purple-500 border-purple-400"
           onPointerDown={(e) => {
             e.stopPropagation();
-            handleActivate();
+            if (isUnlocked) {
+              handleActivate();
+            }
           }}
+          disabled={!isUnlocked}
         >
           <Play className="h-4 w-4 mr-2" />
-          Start Ghost Hunt
+          {isUnlocked ? 'Start Ghost Hunt' : 'Locked'}
         </Button>
       </div>
     );
