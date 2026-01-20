@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon } from "lucide-react";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Ghost } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
@@ -10,6 +10,10 @@ import ShopDetailModal from "@/components/3d/ShopDetailModal";
 import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import MissionPanel from "@/components/mission/MissionPanel";
+import GhostHuntPanel from "@/components/mission/GhostHuntPanel";
+import GhostHuntUI from "@/components/mission/GhostHuntUI";
+import GhostHuntFailedModal from "@/components/mission/GhostHuntFailedModal";
+import GhostHuntCompleteModal from "@/components/mission/GhostHuntCompleteModal";
 import QuestionModal from "@/components/mission/QuestionModal";
 import HealthDisplay from "@/components/mission/HealthDisplay";
 import MissionFailedModal from "@/components/mission/MissionFailedModal";
@@ -20,11 +24,13 @@ import ShopProximityIndicator from "@/components/3d/ShopProximityIndicator";
 import TutorialTooltip from "@/components/3d/TutorialTooltip";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
+import { useGhostHuntStore } from "@/stores/ghostHuntStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useTutorialProgress } from "@/hooks/useTutorialProgress";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
 import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
+import { useFlashlightReveal } from "@/hooks/useFlashlightReveal";
 
 // Shop entry distance threshold (in world units)
 const SHOP_ENTRY_DISTANCE = 8;
@@ -79,13 +85,20 @@ const StreetView = () => {
   
   // Mission state
   const mission = useMissionStore();
+  const ghostHunt = useGhostHuntStore();
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showFailedModal, setShowFailedModal] = useState(false);
   const [showJumpScare, setShowJumpScare] = useState(false);
+  const [showGhostHuntFailed, setShowGhostHuntFailed] = useState(false);
+  const [showGhostHuntComplete, setShowGhostHuntComplete] = useState(false);
+  const [missionTab, setMissionTab] = useState<'zombie' | 'ghost'>('zombie');
   const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
   
   // Game audio
   useGameAudio();
+  
+  // Flashlight reveal logic for ghost hunt
+  useFlashlightReveal();
 
   // Tutorial system
   const tutorial = useTutorialProgress();
@@ -546,15 +559,15 @@ const StreetView = () => {
             cameraView={cameraView}
             shopBrandings={shopBrandings}
             onShopClick={handleShopClick}
-            forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
+            forcedTimeOfDay={(mission.isActive && mission.phase !== 'completed') || (ghostHunt.isActive && ghostHunt.phase === 'hunting') ? "night" : null}
             onZombieTouchPlayer={handleZombieTouchPlayer}
             onTrapHitPlayer={handleTrapHitPlayer}
           />
           
-          {/* Health Display (Lives) */}
-          {mission.isActive && (
+          {/* Health Display (Lives) - for both missions */}
+          {(mission.isActive || (ghostHunt.isActive && ghostHunt.phase === 'hunting')) && (
             <div className="absolute top-14 left-2 md:left-4 pointer-events-none" style={{ zIndex: 150 }}>
-              <HealthDisplay />
+              <HealthDisplay lives={ghostHunt.isActive ? ghostHunt.playerLives : undefined} />
             </div>
           )}
           
@@ -729,7 +742,7 @@ const StreetView = () => {
               }}
             >
               <div 
-                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md"
+                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md max-h-[80vh] overflow-auto"
                 onPointerDown={(e) => e.stopPropagation()}
                 onTouchStart={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
@@ -759,16 +772,105 @@ const StreetView = () => {
                   </button>
                 </div>
                 
-                <div className="text-center py-4 text-muted-foreground">
-                  <MissionPanel
-                    shops={shopBrandings}
-                    shopItemsMap={shopItemsMap}
-                    onActivate={handleMissionActivate}
-                    isCompact
-                  />
+                {/* Mission Tabs */}
+                <div className="flex gap-2 mb-4">
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setMissionTab('zombie');
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold uppercase tracking-wider transition-all touch-manipulation active:scale-95 flex items-center justify-center gap-2 ${
+                      missionTab === 'zombie'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <Target className="h-3 w-3" />
+                    Zombie Escape
+                  </button>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setMissionTab('ghost');
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold uppercase tracking-wider transition-all touch-manipulation active:scale-95 flex items-center justify-center gap-2 ${
+                      missionTab === 'ghost'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <Ghost className="h-3 w-3" />
+                    Ghost Hunt
+                  </button>
+                </div>
+                
+                {/* Mission Content */}
+                <div className="py-2">
+                  {missionTab === 'zombie' ? (
+                    <MissionPanel
+                      shops={shopBrandings}
+                      shopItemsMap={shopItemsMap}
+                      onActivate={() => {
+                        handleMissionActivate();
+                        setShowMissions(false);
+                      }}
+                      isCompact
+                    />
+                  ) : (
+                    <GhostHuntPanel
+                      onActivate={() => {
+                        setShowMissions(false);
+                      }}
+                      isCompact
+                    />
+                  )}
                 </div>
               </div>
             </div>
+          )}
+          
+          {/* Ghost Hunt UI Overlay */}
+          {ghostHunt.isActive && ghostHunt.phase !== 'inactive' && (
+            <GhostHuntUI 
+              onComplete={() => setShowGhostHuntComplete(true)}
+              onFailed={() => setShowGhostHuntFailed(true)}
+            />
+          )}
+          
+          {/* Ghost Hunt Failed Modal */}
+          {showGhostHuntFailed && (
+            <GhostHuntFailedModal
+              reason={ghostHunt.timeRemaining <= 0 ? 'time' : 'death'}
+              capturedCount={ghostHunt.capturedCount}
+              requiredCaptures={ghostHunt.requiredCaptures}
+              onRetry={() => {
+                setShowGhostHuntFailed(false);
+                resetToSafeSpawn();
+                ghostHunt.resetMission();
+                ghostHunt.startMission();
+              }}
+              onExit={() => {
+                setShowGhostHuntFailed(false);
+                resetToSafeSpawn();
+                ghostHunt.resetMission();
+              }}
+            />
+          )}
+          
+          {/* Ghost Hunt Complete Modal */}
+          {showGhostHuntComplete && (
+            <GhostHuntCompleteModal
+              capturedCount={ghostHunt.capturedCount}
+              totalGhosts={ghostHunt.totalGhosts}
+              nextDifficulty={ghostHunt.difficultyLevel}
+              timeBonus={Math.floor(ghostHunt.timeRemaining * 2)}
+              onContinue={() => {
+                setShowGhostHuntComplete(false);
+                ghostHunt.resetMission();
+              }}
+            />
           )}
           
           {/* 2D Map Overlay - Full screen on mobile, positioned on desktop */}
