@@ -801,7 +801,6 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
   const { zombies, zombiesPaused, traps, isActive: missionActive, slowedZombieIds, frozenZombieIds, freezeZombie, targetShop, phase: missionPhase } = useMissionStore();
-  const { isActive: ghostHuntActive } = useGhostHuntStore();
 
   useEffect(() => {
     scene.background = null;
@@ -961,8 +960,8 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
         />
       ))}
 
-      {/* === ZOMBIES (Mission 1 ONLY - not during Ghost Hunt) === */}
-      {missionActive && !ghostHuntActive && zombies.map((zombie) => (
+      {/* === ZOMBIES (Mission) === */}
+      {missionActive && zombies.map((zombie) => (
         <ZombieCharacter
           key={zombie.id}
           id={zombie.id}
@@ -976,8 +975,8 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
         />
       ))}
 
-      {/* === FIRE PIT TRAPS (Mission 1 ONLY) === */}
-      {missionActive && !ghostHuntActive && traps.filter(t => t.type === 'firepit').map((trap) => (
+      {/* === FIRE PIT TRAPS (Mission) === */}
+      {missionActive && traps.filter(t => t.type === 'firepit').map((trap) => (
         <FirePitTrap
           key={trap.id}
           id={trap.id}
@@ -987,8 +986,8 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
         />
       ))}
       
-      {/* === SWINGING AXE TRAPS (Mission 1 ONLY) === */}
-      {missionActive && !ghostHuntActive && traps.filter(t => t.type === 'axe').map((trap) => (
+      {/* === SWINGING AXE TRAPS (Mission) === */}
+      {missionActive && traps.filter(t => t.type === 'axe').map((trap) => (
         <SwingingAxeTrap
           key={trap.id}
           id={trap.id}
@@ -999,8 +998,8 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
         />
       ))}
       
-      {/* === THORNS TRAPS (Mission 1 ONLY) === */}
-      {missionActive && !ghostHuntActive && traps.filter(t => t.type === 'thorns').map((trap) => (
+      {/* === THORNS TRAPS (Mission) === */}
+      {missionActive && traps.filter(t => t.type === 'thorns').map((trap) => (
         <ThornsTrap
           key={trap.id}
           id={trap.id}
