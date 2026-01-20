@@ -190,7 +190,7 @@ export default function MissionPanel({
           </span>
         </div>
         <p className={`text-yellow-200 ${isCompact ? 'text-xs' : 'text-sm'}`}>
-          You may return to the shop one last time.
+          You may return to the shop one last time. A security feed will play when you enter.
         </p>
         <p className={`text-yellow-300/60 text-[10px] mt-2 italic`}>
           Protection is ending...

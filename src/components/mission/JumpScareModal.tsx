@@ -13,21 +13,31 @@ export default function JumpScareModal({
   onRetry,
   onExit,
 }: JumpScareModalProps) {
+  const [showCutscene, setShowCutscene] = useState(false);
   const [showZombie, setShowZombie] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
   
   useEffect(() => {
     if (isOpen) {
-      // Immediately show scary zombie
-      setShowZombie(true);
-      
-      // After 1.5 seconds, show the message
-      const timer = setTimeout(() => {
+      setShowCutscene(true);
+      setShowZombie(false);
+      setShowMessage(false);
+
+      const cutsceneTimer = setTimeout(() => {
+        setShowCutscene(false);
+        setShowZombie(true);
+      }, 1200);
+
+      const messageTimer = setTimeout(() => {
         setShowMessage(true);
-      }, 1500);
-      
-      return () => clearTimeout(timer);
+      }, 2200);
+
+      return () => {
+        clearTimeout(cutsceneTimer);
+        clearTimeout(messageTimer);
+      };
     } else {
+      setShowCutscene(false);
       setShowZombie(false);
       setShowMessage(false);
     }
@@ -44,8 +54,34 @@ export default function JumpScareModal({
       onTouchStart={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
+      {/* Video-style cutscene before the jump scare */}
+      {showCutscene && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-[92vw] max-w-3xl aspect-video rounded-2xl border border-emerald-400/40 bg-black/90 cutscene-screen shadow-[0_0_60px_rgba(16,185,129,0.35)]">
+            <div className="absolute top-3 left-4 flex items-center gap-2 text-[10px] uppercase tracking-[0.4em] text-emerald-200/80">
+              <span className="inline-flex h-2 w-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)]" />
+              Rec
+            </div>
+            <div className="absolute top-3 right-4 text-[10px] uppercase tracking-[0.4em] text-emerald-200/70">
+              Shop cam
+            </div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+              <p className="text-2xl sm:text-3xl md:text-4xl font-display font-bold uppercase text-emerald-200 drop-shadow-[0_0_12px_rgba(16,185,129,0.6)]">
+                Returning to the shop...
+              </p>
+              <p className="mt-3 text-xs sm:text-sm text-emerald-100/70 tracking-[0.3em] uppercase">
+                Surveillance feed active
+              </p>
+              <div className="mt-6 h-2 w-full max-w-xs rounded-full bg-emerald-900/50 overflow-hidden border border-emerald-400/30">
+                <div className="h-full w-2/3 bg-gradient-to-r from-emerald-300 via-emerald-400 to-emerald-200 animate-pulse" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Scary Zombie Face Jump Scare */}
-      {showZombie && !showMessage && (
+      {showZombie && !showMessage && !showCutscene && (
         <div className="absolute inset-0 flex items-center justify-center animate-in zoom-in-150 duration-200">
           <div className="relative">
             {/* Glowing zombie face - smaller on mobile */}
