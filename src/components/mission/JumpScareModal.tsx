@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Skull, RotateCcw, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import jumpscareVideo from '@/assets/jumpscare-video.mp4';
 
 interface JumpScareModalProps {
   isOpen: boolean;
@@ -13,25 +14,51 @@ export default function JumpScareModal({
   onRetry,
   onExit,
 }: JumpScareModalProps) {
-  const [showZombie, setShowZombie] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
   
   useEffect(() => {
     if (isOpen) {
-      // Immediately show scary zombie
-      setShowZombie(true);
+      // Immediately show scary video
+      setShowVideo(true);
+      setShowMessage(false);
       
-      // After 1.5 seconds, show the message
+      // Play video from start
+      if (videoRef.current) {
+        videoRef.current.currentTime = 0;
+        videoRef.current.play().catch(() => {});
+      }
+      
+      // After 7 seconds, show the message
       const timer = setTimeout(() => {
         setShowMessage(true);
-      }, 1500);
+        setShowVideo(false);
+      }, 7000);
       
       return () => clearTimeout(timer);
     } else {
-      setShowZombie(false);
+      setShowVideo(false);
       setShowMessage(false);
     }
   }, [isOpen]);
+
+  // Also handle video timeupdate to stop at 7 seconds
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleTimeUpdate = () => {
+      if (video.currentTime >= 7) {
+        video.pause();
+        setShowMessage(true);
+        setShowVideo(false);
+      }
+    };
+
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    return () => video.removeEventListener('timeupdate', handleTimeUpdate);
+  }, []);
   
   if (!isOpen) return null;
   
@@ -44,22 +71,21 @@ export default function JumpScareModal({
       onTouchStart={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Scary Zombie Face Jump Scare */}
-      {showZombie && !showMessage && (
+      {/* Scary Video Jump Scare - First 7 seconds */}
+      {showVideo && !showMessage && (
         <div className="absolute inset-0 flex items-center justify-center animate-in zoom-in-150 duration-200">
-          <div className="relative">
-            {/* Glowing zombie face - smaller on mobile */}
-            <div className="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 rounded-full bg-gradient-to-b from-green-900 to-green-950 border-4 border-green-500 shadow-[0_0_100px_rgba(34,197,94,0.8)] flex items-center justify-center animate-pulse">
-              <Skull className="h-24 w-24 sm:h-32 sm:w-32 md:h-40 md:w-40 text-green-400 drop-shadow-[0_0_30px_rgba(34,197,94,1)]" />
-            </div>
-            
-            {/* Scary eyes */}
-            <div className="absolute top-12 sm:top-16 left-8 sm:left-12 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-red-500 animate-ping" />
-            <div className="absolute top-12 sm:top-16 right-8 sm:right-12 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-red-500 animate-ping" />
-          </div>
+          <video
+            ref={videoRef}
+            src={jumpscareVideo}
+            className="w-full h-full object-cover"
+            autoPlay
+            muted={false}
+            playsInline
+            webkit-playsinline="true"
+          />
           
-          {/* Scary text */}
-          <div className="absolute bottom-16 sm:bottom-20 text-center">
+          {/* Scary text overlay */}
+          <div className="absolute bottom-16 sm:bottom-20 left-0 right-0 text-center">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-display font-bold text-red-500 animate-pulse drop-shadow-[0_0_20px_rgba(239,68,68,0.8)]">
               GOTCHA!
             </h1>
@@ -67,7 +93,7 @@ export default function JumpScareModal({
         </div>
       )}
       
-      {/* Message after jump scare */}
+      {/* Message after jump scare video */}
       {showMessage && (
         <div className="bg-gradient-to-b from-red-950 to-black border-2 border-red-500/50 rounded-2xl p-5 sm:p-8 shadow-2xl max-w-md w-[92vw] sm:w-[90vw] text-center animate-in fade-in-0 duration-500 mx-4">
           {/* Icon */}
