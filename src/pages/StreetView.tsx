@@ -398,6 +398,7 @@ const StreetView = () => {
   
   const handleQuestionAnswer = (answer: string) => {
     const correct = mission.answerQuestion(answer);
+    const updatedPhase = useMissionStore.getState().phase;
     
     // Freeze ALL zombies for 3 seconds after any question closes
     // This gives player a fair chance to escape even if zombies were close
@@ -410,12 +411,12 @@ const StreetView = () => {
         // Wrong answer - close modal, show deceptive message, play notification
         playSounds.notification();
         setShowQuestionModal(false);
-      } else if (mission.phase === 'completed') {
+      } else if (updatedPhase === 'completed') {
         // All correct - mission complete
         setShowQuestionModal(false);
       }
     } else if (mission.missionNumber === 2) {
-      if (mission.phase === 'hunt' || mission.phase === 'completed') {
+      if (updatedPhase === 'hunt' || updatedPhase === 'completed') {
         setShowQuestionModal(false);
       }
     }
