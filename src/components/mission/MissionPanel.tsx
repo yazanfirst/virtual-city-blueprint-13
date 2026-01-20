@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Target, Skull, AlertTriangle, CheckCircle, X, Play } from 'lucide-react';
+import { Target, Skull, AlertTriangle, CheckCircle, X, Play, Gem } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMissionStore } from '@/stores/missionStore';
 import { ShopBranding } from '@/hooks/use3DShops';
 import { ShopItem } from '@/hooks/useShopItems';
 import { selectMissionTargetShop } from '@/lib/missionShopSelection';
+import { generateDiamondMissionQuestions, generateDiamondClues } from '@/lib/diamondMission';
+import { usePlayerStore } from '@/stores/playerStore';
 
 interface MissionPanelProps {
   shops: ShopBranding[];
@@ -20,14 +22,21 @@ export default function MissionPanel({
   isCompact = false,
 }: MissionPanelProps) {
   const {
-    isActive,
     phase,
     targetShop,
     deceptiveMessageShown,
     activateMission,
+    activateDiamondMission,
     resetMission,
     recentlyUsedShopIds,
+    missionNumber,
+    questionsAnswered,
+    questionsCorrect,
+    questions,
+    lastAnswerCorrect,
+    revealedClues,
   } = useMissionStore();
+  const playerPosition = usePlayerStore((state) => state.position);
   
   const [canActivate, setCanActivate] = useState(false);
   
@@ -44,6 +53,16 @@ export default function MissionPanel({
       onActivate();
     }
   };
+
+  const handleActivateDiamond = () => {
+    const selected = selectMissionTargetShop(shops, shopItemsMap, recentlyUsedShopIds);
+    if (selected) {
+      const questions = generateDiamondMissionQuestions();
+      const clues = generateDiamondClues(selected.shop, playerPosition);
+      activateDiamondMission(selected.shop, questions, clues);
+      onActivate();
+    }
+  };
   
   const handleRetry = () => {
     resetMission();
@@ -52,40 +71,73 @@ export default function MissionPanel({
   // Render based on phase
   if (phase === 'inactive') {
     return (
-      <div className={`bg-card/90 backdrop-blur-md border border-border/50 rounded-xl ${isCompact ? 'p-3' : 'p-4 md:p-6'} shadow-xl`}>
-        <div className={`flex items-center gap-3 ${isCompact ? 'mb-2' : 'mb-4'} pb-3 border-b border-border/30`}>
-          <div className={`flex items-center justify-center rounded-lg bg-primary/10 border border-primary/30 ${isCompact ? 'h-8 w-8' : 'h-10 w-10'}`}>
-            <Target className={`text-primary ${isCompact ? 'h-4 w-4' : 'h-5 w-5'}`} />
+      <div className="space-y-3">
+        <div className={`bg-card/90 backdrop-blur-md border border-border/50 rounded-xl ${isCompact ? 'p-3' : 'p-4 md:p-6'} shadow-xl`}>
+          <div className={`flex items-center gap-3 ${isCompact ? 'mb-2' : 'mb-4'} pb-3 border-b border-border/30`}>
+            <div className={`flex items-center justify-center rounded-lg bg-primary/10 border border-primary/30 ${isCompact ? 'h-8 w-8' : 'h-10 w-10'}`}>
+              <Target className={`text-primary ${isCompact ? 'h-4 w-4' : 'h-5 w-5'}`} />
+            </div>
+            <div>
+              <h3 className={`font-display font-bold uppercase tracking-wider text-foreground ${isCompact ? 'text-xs' : 'text-sm md:text-base'}`}>
+                Mission 1
+              </h3>
+              <p className={`text-muted-foreground ${isCompact ? 'text-[10px]' : 'text-xs'}`}>Night Escape</p>
+            </div>
           </div>
-          <div>
-            <h3 className={`font-display font-bold uppercase tracking-wider text-foreground ${isCompact ? 'text-xs' : 'text-sm md:text-base'}`}>
-              Mission 1
-            </h3>
-            <p className={`text-muted-foreground ${isCompact ? 'text-[10px]' : 'text-xs'}`}>Night Escape</p>
-          </div>
+        
+          <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
+            Escape the zombies, find the target shop, and remember everything you see. Trust your memory — you may only get one chance.
+          </p>
+        
+          <Button
+            variant="cyber"
+            className="w-full touch-manipulation select-none active:scale-[0.98]"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              if (canActivate) handleActivate();
+            }}
+            disabled={!canActivate}
+          >
+            <Play className="h-4 w-4 mr-2" />
+            {canActivate ? 'Activate Mission' : 'No Shops Available'}
+          </Button>
         </div>
-        
-        <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
-          Escape the zombies, find the target shop, and remember everything you see. Trust your memory — you may only get one chance.
-        </p>
-        
-        <Button
-          variant="cyber"
-          className="w-full touch-manipulation select-none active:scale-[0.98]"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            if (canActivate) handleActivate();
-          }}
-          disabled={!canActivate}
-        >
-          <Play className="h-4 w-4 mr-2" />
-          {canActivate ? 'Activate Mission' : 'No Shops Available'}
-        </Button>
+
+        <div className={`bg-card/90 backdrop-blur-md border border-border/50 rounded-xl ${isCompact ? 'p-3' : 'p-4 md:p-6'} shadow-xl`}>
+          <div className={`flex items-center gap-3 ${isCompact ? 'mb-2' : 'mb-4'} pb-3 border-b border-border/30`}>
+            <div className={`flex items-center justify-center rounded-lg bg-amber-500/10 border border-amber-500/30 ${isCompact ? 'h-8 w-8' : 'h-10 w-10'}`}>
+              <Gem className={`text-amber-400 ${isCompact ? 'h-4 w-4' : 'h-5 w-5'}`} />
+            </div>
+            <div>
+              <h3 className={`font-display font-bold uppercase tracking-wider text-foreground ${isCompact ? 'text-xs' : 'text-sm md:text-base'}`}>
+                Mission 2
+              </h3>
+              <p className={`text-muted-foreground ${isCompact ? 'text-[10px]' : 'text-xs'}`}>Diamond Hunt</p>
+            </div>
+          </div>
+
+          <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
+            Answer trivia to unlock clues. Follow the directions to locate the hidden diamond shop.
+          </p>
+
+          <Button
+            variant="cyber"
+            className="w-full touch-manipulation select-none active:scale-[0.98]"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              if (canActivate) handleActivateDiamond();
+            }}
+            disabled={!canActivate}
+          >
+            <Play className="h-4 w-4 mr-2" />
+            {canActivate ? 'Start Diamond Hunt' : 'No Shops Available'}
+          </Button>
+        </div>
       </div>
     );
   }
   
-  if (phase === 'escape') {
+  if (phase === 'escape' && missionNumber === 1) {
     return (
       <div className={`bg-red-950/90 backdrop-blur-md border border-red-500/50 rounded-xl ${isCompact ? 'p-3' : 'p-4'} shadow-xl`}>
         <div className="flex items-center gap-2 mb-2">
@@ -105,7 +157,7 @@ export default function MissionPanel({
     );
   }
   
-  if (phase === 'observation') {
+  if (phase === 'observation' && missionNumber === 1) {
     return (
       <div className={`bg-blue-950/90 backdrop-blur-md border border-blue-500/50 rounded-xl ${isCompact ? 'p-3' : 'p-4'} shadow-xl`}>
         <div className="flex items-center gap-2 mb-2">
@@ -158,11 +210,13 @@ export default function MissionPanel({
         <div className="flex items-center gap-2 mb-2">
           <CheckCircle className="h-5 w-5 text-green-400" />
           <span className={`font-display font-bold uppercase tracking-wider text-green-400 ${isCompact ? 'text-xs' : 'text-sm'}`}>
-            MISSION COMPLETE
+            {missionNumber === 2 ? 'DIAMOND FOUND' : 'MISSION COMPLETE'}
           </span>
         </div>
         <p className={`text-green-200 ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
-          Your memory served you well. The zombies have vanished.
+          {missionNumber === 2
+            ? `You found the diamond at ${targetShop?.shopName || 'the shop'}!`
+            : 'Your memory served you well. The zombies have vanished.'}
         </p>
         <button
           type="button"
@@ -180,7 +234,7 @@ export default function MissionPanel({
   }
   
   // Deceptive message after wrong answer
-  if (deceptiveMessageShown && phase === 'question') {
+  if (deceptiveMessageShown && phase === 'question' && missionNumber === 1) {
     return (
       <div className={`bg-yellow-950/90 backdrop-blur-md border border-yellow-500/50 rounded-xl ${isCompact ? 'p-3' : 'p-4'} shadow-xl`}>
         <div className="flex items-center gap-2 mb-2">
@@ -200,7 +254,7 @@ export default function MissionPanel({
   }
   
   // Default question phase display
-  if (phase === 'question') {
+  if (phase === 'question' && missionNumber === 1) {
     return (
       <div className={`bg-purple-950/90 backdrop-blur-md border border-purple-500/50 rounded-xl ${isCompact ? 'p-3' : 'p-4'} shadow-xl`}>
         <div className="flex items-center gap-2 mb-2">
@@ -212,6 +266,43 @@ export default function MissionPanel({
         <p className={`text-purple-200 ${isCompact ? 'text-xs' : 'text-sm'}`}>
           Answer the question correctly to survive.
         </p>
+      </div>
+    );
+  }
+
+  if (missionNumber === 2 && (phase === 'question' || phase === 'hunt')) {
+    return (
+      <div className={`bg-amber-950/90 backdrop-blur-md border border-amber-500/50 rounded-xl ${isCompact ? 'p-3' : 'p-4'} shadow-xl`}>
+        <div className="flex items-center gap-2 mb-2">
+          <Gem className="h-5 w-5 text-amber-300" />
+          <span className={`font-display font-bold uppercase tracking-wider text-amber-300 ${isCompact ? 'text-xs' : 'text-sm'}`}>
+            DIAMOND HUNT
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-[10px] text-amber-200 mb-2 uppercase tracking-wider">
+          <span>Trivia Progress</span>
+          <span>{questionsAnswered}/{questions.length}</span>
+        </div>
+        <div className="flex items-center justify-between text-[10px] text-amber-200 mb-2 uppercase tracking-wider">
+          <span>Correct Answers</span>
+          <span>{questionsCorrect}</span>
+        </div>
+        <p className={`text-amber-100 ${isCompact ? 'text-xs mb-2' : 'text-sm mb-3'}`}>
+          Answer questions to unlock clues. Enter the shop where the diamond is hidden.
+        </p>
+        {lastAnswerCorrect === false && (
+          <p className="text-[10px] text-amber-200/80 mb-2">Wrong answer. No clue awarded.</p>
+        )}
+        {questionsCorrect > 0 && (
+          <div className="space-y-1 text-[10px] text-amber-100/90">
+            <p className="uppercase tracking-wider text-amber-300/80">Clues</p>
+            <ul className="list-disc list-inside space-y-1">
+              {revealedClues.map((clue, index) => (
+                <li key={`${clue}-${index}`}>{clue}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     );
   }

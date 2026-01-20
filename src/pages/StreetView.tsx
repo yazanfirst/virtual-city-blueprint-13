@@ -253,15 +253,19 @@ const StreetView = () => {
     }
 
     // After wrong answer: allow ONE return to the *target* shop (it will trigger the trap)
-    if (mission.isActive && mission.phase === 'question' && mission.deceptiveMessageShown) {
+    if (mission.isActive && mission.missionNumber === 1 && mission.phase === 'question' && mission.deceptiveMessageShown) {
       if (shop.shopId === mission.targetShop?.shopId) {
         handleEnterShop(shop);
       }
       return;
     }
     
-    // During observation/question phase, don't allow any shop clicks
-    if (mission.isActive && (mission.phase === 'observation' || mission.phase === 'question')) {
+    if (mission.isActive && mission.missionNumber === 2 && shop.shopId === mission.targetShop?.shopId) {
+      mission.completeMission();
+    }
+
+    // During observation/question phase, don't allow any shop clicks (Mission 1 only)
+    if (mission.isActive && mission.missionNumber === 1 && (mission.phase === 'observation' || mission.phase === 'question')) {
       return;
     }
     
@@ -308,6 +312,12 @@ const StreetView = () => {
       }
     }
   };
+
+  useEffect(() => {
+    if (mission.isActive && mission.missionNumber === 2 && mission.phase === 'question') {
+      setShowQuestionModal(true);
+    }
+  }, [mission.isActive, mission.missionNumber, mission.phase, mission.currentQuestionIndex]);
   
   const handleMissionActivate = () => {
     // Mission is now active, night mode will be forced
@@ -391,15 +401,23 @@ const StreetView = () => {
     
     // Freeze ALL zombies for 3 seconds after any question closes
     // This gives player a fair chance to escape even if zombies were close
-    mission.freezeAllZombies(3000);
+    if (mission.missionNumber === 1) {
+      mission.freezeAllZombies(3000);
+    }
     
-    if (!correct) {
-      // Wrong answer - close modal, show deceptive message, play notification
-      playSounds.notification();
-      setShowQuestionModal(false);
-    } else if (mission.phase === 'completed') {
-      // All correct - mission complete
-      setShowQuestionModal(false);
+    if (mission.missionNumber === 1) {
+      if (!correct) {
+        // Wrong answer - close modal, show deceptive message, play notification
+        playSounds.notification();
+        setShowQuestionModal(false);
+      } else if (mission.phase === 'completed') {
+        // All correct - mission complete
+        setShowQuestionModal(false);
+      }
+    } else if (mission.missionNumber === 2) {
+      if (mission.phase === 'hunt' || mission.phase === 'completed') {
+        setShowQuestionModal(false);
+      }
     }
     // Otherwise, next question will show automatically
   };
@@ -532,7 +550,7 @@ const StreetView = () => {
       <ShopInteriorRoom 
         shop={interiorShop} 
         onExit={handleExitShop} 
-        isMissionMode={mission.isActive && mission.phase === 'observation'}
+        isMissionMode={mission.isActive && mission.missionNumber === 1 && mission.phase === 'observation'}
       />
     ) : null;
 
@@ -546,13 +564,13 @@ const StreetView = () => {
             cameraView={cameraView}
             shopBrandings={shopBrandings}
             onShopClick={handleShopClick}
-            forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
+            forcedTimeOfDay={mission.isActive && mission.missionNumber === 1 && mission.phase !== 'completed' ? "night" : null}
             onZombieTouchPlayer={handleZombieTouchPlayer}
             onTrapHitPlayer={handleTrapHitPlayer}
           />
           
           {/* Health Display (Lives) */}
-          {mission.isActive && (
+          {mission.isActive && mission.missionNumber === 1 && (
             <div className="absolute top-14 left-2 md:left-4 pointer-events-none" style={{ zIndex: 150 }}>
               <HealthDisplay />
             </div>
@@ -867,17 +885,22 @@ const StreetView = () => {
         <QuestionModal
           isOpen={showQuestionModal}
           question={mission.questions[mission.currentQuestionIndex] || null}
+          title={mission.missionNumber === 2 ? 'Diamond Quiz' : 'Memory Test'}
           onAnswer={handleQuestionAnswer}
           onClose={() => setShowQuestionModal(false)}
-          onRecheck={() => {
-            // Player tried to re-check - trigger jump scare (same as wrong answer trap)
-            setShowQuestionModal(false);
-            setShowJumpScare(true);
-          }}
+          onRecheck={
+            mission.missionNumber === 1
+              ? () => {
+                  // Player tried to re-check - trigger jump scare (same as wrong answer trap)
+                  setShowQuestionModal(false);
+                  setShowJumpScare(true);
+                }
+              : undefined
+          }
         />
         
         {/* Trap Hit Feedback ("Ouch!") */}
-        {mission.isActive && <TrapHitFeedback />}
+        {mission.isActive && mission.missionNumber === 1 && <TrapHitFeedback />}
         
         {/* Jump Scare Modal */}
         <JumpScareModal
@@ -909,7 +932,7 @@ const StreetView = () => {
     <ShopInteriorRoom 
       shop={interiorShop} 
       onExit={handleExitShop}
-      isMissionMode={mission.isActive && mission.phase === 'observation'}
+      isMissionMode={mission.isActive && mission.missionNumber === 1 && mission.phase === 'observation'}
     />
   ) : null;
 
@@ -1060,16 +1083,16 @@ const StreetView = () => {
                     </span>
                   </div>
                   
-                  <CityScene 
-                    streetId={street.id} 
-                    timeOfDay={timeOfDay} 
-                    cameraView={cameraView} 
-                    shopBrandings={shopBrandings}
-                    onShopClick={handleShopClick}
-                    forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
-                    onZombieTouchPlayer={handleZombieTouchPlayer}
-                    onTrapHitPlayer={handleTrapHitPlayer}
-                  />
+            <CityScene
+              streetId={street.id}
+              timeOfDay={timeOfDay}
+              cameraView={cameraView}
+              shopBrandings={shopBrandings}
+              onShopClick={handleShopClick}
+              forcedTimeOfDay={mission.isActive && mission.missionNumber === 1 && mission.phase !== 'completed' ? "night" : null}
+              onZombieTouchPlayer={handleZombieTouchPlayer}
+              onTrapHitPlayer={handleTrapHitPlayer}
+            />
                   
                   {/* Shop Proximity Indicator */}
                   <ShopProximityIndicator
@@ -1172,7 +1195,7 @@ const StreetView = () => {
       {interiorOverlay}
       
       {/* Trap Hit Feedback ("Ouch!") */}
-      {mission.isActive && <TrapHitFeedback />}
+      {mission.isActive && mission.missionNumber === 1 && <TrapHitFeedback />}
       
       {/* Jump Scare Modal */}
       <JumpScareModal
