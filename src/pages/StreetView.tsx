@@ -577,9 +577,9 @@ const StreetView = () => {
           />
           
           {/* Health Display (Lives) - for both missions */}
-          {(mission.isActive || (ghostHunt.isActive && ghostHunt.phase === 'hunting')) && (
+          {mission.isActive && (
             <div className="absolute top-14 left-2 md:left-4 pointer-events-none" style={{ zIndex: 150 }}>
-              <HealthDisplay lives={ghostHunt.isActive ? ghostHunt.playerLives : undefined} />
+              <HealthDisplay />
             </div>
           )}
           
@@ -840,6 +840,7 @@ const StreetView = () => {
                         setShowJumpScare(false);
                         setShowMissions(false);
                       }}
+                      isUnlocked={mission.phase === 'completed'}
                       isCompact
                     />
                   )}
