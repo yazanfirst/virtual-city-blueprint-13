@@ -97,6 +97,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
           const deltaY = clientY - lastCameraPosRef.current.y;
           const distanceMoved = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
+          // Lower threshold for better tap detection on mobile (6px instead of 12)
           if (!cameraDragActiveRef.current && distanceMoved > 6) {
             cameraDragActiveRef.current = true;
             lastCameraPosRef.current = { x: clientX, y: clientY };

@@ -12,14 +12,18 @@ type GameState = {
   addXP: (amount: number) => void;
   visitShop: (shopId: string) => void;
   collectCoin: (coinId: string) => void;
+  resetGame: () => void;
 };
 
 const XP_PER_LEVEL = 200;
+const INITIAL_COINS = 100;
+const INITIAL_XP = 0;
+const INITIAL_LEVEL = 1;
 
 export const useGameStore = create<GameState>((set, get) => ({
-  coins: 100,
-  xp: 0,
-  level: 1,
+  coins: INITIAL_COINS,
+  xp: INITIAL_XP,
+  level: INITIAL_LEVEL,
   shopsVisited: new Set(),
   coinsCollected: new Set(),
 
@@ -50,5 +54,15 @@ export const useGameStore = create<GameState>((set, get) => ({
         coins: state.coins + 10 
       });
     }
+  },
+
+  resetGame: () => {
+    set({
+      coins: INITIAL_COINS,
+      xp: INITIAL_XP,
+      level: INITIAL_LEVEL,
+      shopsVisited: new Set(),
+      coinsCollected: new Set(),
+    });
   },
 }));

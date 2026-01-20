@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon } from "lucide-react";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Ghost } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
@@ -10,6 +10,10 @@ import ShopDetailModal from "@/components/3d/ShopDetailModal";
 import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
 import MissionPanel from "@/components/mission/MissionPanel";
+import GhostHuntPanel from "@/components/mission/GhostHuntPanel";
+import GhostHuntUI from "@/components/mission/GhostHuntUI";
+import GhostHuntFailedModal from "@/components/mission/GhostHuntFailedModal";
+import GhostHuntCompleteModal from "@/components/mission/GhostHuntCompleteModal";
 import QuestionModal from "@/components/mission/QuestionModal";
 import HealthDisplay from "@/components/mission/HealthDisplay";
 import MissionFailedModal from "@/components/mission/MissionFailedModal";
@@ -17,12 +21,17 @@ import TrapHitFeedback from "@/components/mission/TrapHitFeedback";
 import JumpScareModal from "@/components/mission/JumpScareModal";
 import GameStartScreen from "@/components/3d/GameStartScreen";
 import ShopProximityIndicator from "@/components/3d/ShopProximityIndicator";
+import TutorialTooltip from "@/components/3d/TutorialTooltip";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
+import { useGhostHuntStore } from "@/stores/ghostHuntStore";
 import { usePlayerStore } from "@/stores/playerStore";
+import { useTutorialProgress } from "@/hooks/useTutorialProgress";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
 import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
+import { useFlashlightReveal } from "@/hooks/useFlashlightReveal";
+import { useGhostTrapCapture } from "@/hooks/useGhostTrapCapture";
 
 // Shop entry distance threshold (in world units)
 const SHOP_ENTRY_DISTANCE = 8;
@@ -58,6 +67,7 @@ const StreetView = () => {
   const { data: spotsWithShops } = useSpotsWithShops(street?.id || "");
   const [isMaximized, setIsMaximized] = useState(false);
   const [hasGameStarted, setHasGameStarted] = useState(false);
+  const [isGamePaused, setIsGamePaused] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
   const [selectedShop, setSelectedShop] = useState<ShopBranding | null>(null);
@@ -69,24 +79,92 @@ const StreetView = () => {
   const [nearbyShop, setNearbyShop] = useState<ShopBranding | null>(null);
 
   // Game state
-  const { coins, level, xp } = useGameStore();
+  const { coins, level, xp, resetGame } = useGameStore();
   
   // Player state
-  const { position: playerPosition, resetToSafeSpawn, enterShop: playerEnterShop, exitShop: playerExitShop } = usePlayerStore();
+  const { position: playerPosition, resetToSafeSpawn, resetPlayer, enterShop: playerEnterShop, exitShop: playerExitShop } = usePlayerStore();
   
   // Mission state
   const mission = useMissionStore();
+  const ghostHunt = useGhostHuntStore();
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showFailedModal, setShowFailedModal] = useState(false);
   const [showJumpScare, setShowJumpScare] = useState(false);
+  const [showGhostHuntFailed, setShowGhostHuntFailed] = useState(false);
+  const [showGhostHuntComplete, setShowGhostHuntComplete] = useState(false);
+  const [missionTab, setMissionTab] = useState<'zombie' | 'ghost'>('zombie');
   const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
   
   // Game audio
   useGameAudio();
+  
+  // Flashlight reveal logic for ghost hunt
+  useFlashlightReveal();
+  
+  // Ghost trap capture logic
+  useGhostTrapCapture();
+
+  // Tutorial system
+  const tutorial = useTutorialProgress();
 
   // Transform spots data to shop brandings - MUST be before useEffect that uses it
   const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
+
+  // Track if user has exited a shop for first time (to show mission intro)
+  const [hasExitedShopOnce, setHasExitedShopOnce] = useState(false);
+
+  // Tutorial triggers - IN ORDER:
+  // 1. Movement tutorial when game starts
+  useEffect(() => {
+    if (hasGameStarted && isMaximized && !isInsideShop) {
+      tutorial.showTutorialStep('movement');
+    }
+  }, [hasGameStarted, isMaximized]);
+
+  // 2. Shop nearby tutorial
+  useEffect(() => {
+    if (nearbyShop && hasGameStarted && !isInsideShop && !mission.isActive) {
+      tutorial.showTutorialStep('shop_nearby');
+    }
+  }, [nearbyShop, hasGameStarted, isInsideShop, mission.isActive]);
+
+  // 3. Shop exit tutorial (after first exit - not during mission) - introduce missions
+  useEffect(() => {
+    if (hasExitedShopOnce && !isInsideShop && !mission.isActive) {
+      tutorial.showTutorialStep('shop_exit_missions');
+    }
+  }, [hasExitedShopOnce, isInsideShop, mission.isActive]);
+
+  // 4. Mission activated tutorial - right after clicking activate
+  useEffect(() => {
+    if (mission.isActive && mission.phase === 'escape' && !tutorial.isStepCompleted('mission_activated')) {
+      tutorial.showTutorialStep('mission_activated');
+    }
+  }, [mission.isActive, mission.phase]);
+
+  // Question phase - no tutorial needed, questions appear directly
+
+  // PAUSE GAME when ANY popup/modal is active
+  const isAnyPopupOpen = tutorial.activeTooltip || showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
   
+  useEffect(() => {
+    if (isAnyPopupOpen) {
+      // Pause zombies when any popup is showing
+      if (mission.isActive && !mission.zombiesPaused) {
+        mission.pauseZombies();
+      }
+    }
+  }, [isAnyPopupOpen, mission.isActive]);
+
+  // Resume game when tutorial tooltip is dismissed
+  const handleTutorialDismiss = useCallback(() => {
+    tutorial.dismissTooltip();
+    // Resume zombies only if no other popups are open
+    const otherPopupsOpen = showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+    if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
+      mission.resumeZombies();
+    }
+  }, [tutorial, mission, showMissions, show2DMap, showShopModal, showQuestionModal, showFailedModal, showJumpScare]);
   // Fetch all shop items for shops on this street
   useEffect(() => {
     const fetchAllShopItems = async () => {
@@ -229,6 +307,12 @@ const StreetView = () => {
     // Restore outside state (camera + position) when exiting shop
     playerExitShop();
     setIsInsideShop(false);
+    
+    // Track first shop exit (not during mission) to show mission intro tutorial
+    if (!mission.isActive && !hasExitedShopOnce) {
+      setHasExitedShopOnce(true);
+    }
+    
     // If in mission observation phase, trigger questions
     if (mission.isActive && mission.phase === 'observation') {
       const questions = generateMissionQuestions(
@@ -280,6 +364,42 @@ const StreetView = () => {
     setShowFailedModal(false);
     setShowJumpScare(false);
     resetToSafeSpawn(); // Move player to safe position
+    mission.resetMission();
+  };
+
+  const handlePauseGame = () => {
+    setIsGamePaused(true);
+    setIsMaximized(false);
+    if (mission.isActive && mission.phase === 'escape') {
+      mission.pauseZombies();
+    }
+  };
+
+  const handleResumeGame = () => {
+    setIsGamePaused(false);
+    setIsMaximized(true);
+    if (mission.isActive && mission.phase === 'escape') {
+      mission.resumeZombies();
+    }
+  };
+
+  const handleExitGame = () => {
+    setIsGamePaused(false);
+    setIsMaximized(false);
+    setHasGameStarted(false);
+    setShowMissions(false);
+    setShow2DMap(false);
+    setShowShopModal(false);
+    setShowQuestionModal(false);
+    setShowFailedModal(false);
+    setShowJumpScare(false);
+    setSelectedShop(null);
+    setInteriorShop(null);
+    setIsInsideShop(false);
+    setNearbyShop(null);
+    playerExitShop();
+    resetPlayer();
+    resetGame();
     mission.resetMission();
   };
   
@@ -426,7 +546,11 @@ const StreetView = () => {
   // Game Mode (Maximized) Layout
   if (isMaximized) {
     const interiorOverlay = isInsideShop && interiorShop ? (
-      <ShopInteriorRoom shop={interiorShop} onExit={handleExitShop} />
+      <ShopInteriorRoom 
+        shop={interiorShop} 
+        onExit={handleExitShop} 
+        isMissionMode={mission.isActive && mission.phase === 'observation'}
+      />
     ) : null;
 
     return (
@@ -439,20 +563,27 @@ const StreetView = () => {
             cameraView={cameraView}
             shopBrandings={shopBrandings}
             onShopClick={handleShopClick}
-            forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
+            forcedTimeOfDay={(mission.isActive && mission.phase !== 'completed') || (ghostHunt.isActive && ghostHunt.phase === 'hunting') ? "night" : null}
             onZombieTouchPlayer={handleZombieTouchPlayer}
             onTrapHitPlayer={handleTrapHitPlayer}
           />
           
-          {/* Health Display (Lives) */}
-          {mission.isActive && (
+          {/* Health Display (Lives) - for both missions */}
+          {(mission.isActive || (ghostHunt.isActive && ghostHunt.phase === 'hunting')) && (
             <div className="absolute top-14 left-2 md:left-4 pointer-events-none" style={{ zIndex: 150 }}>
-              <HealthDisplay />
+              <HealthDisplay lives={ghostHunt.isActive ? ghostHunt.playerLives : undefined} />
             </div>
           )}
           
           {/* Shop Proximity Indicator */}
-          <ShopProximityIndicator nearbyShop={nearbyShop} />
+          <ShopProximityIndicator 
+            nearbyShop={nearbyShop} 
+            onPress={() => {
+              if (nearbyShop) {
+                handleShopClick(nearbyShop);
+              }
+            }}
+          />
           
           {/* Shop Detail Modal */}
           {showShopModal && (
@@ -503,61 +634,87 @@ const StreetView = () => {
 
               {/* Day/Night Toggle - Compact on mobile */}
               <div className="bg-background/80 backdrop-blur-md rounded-lg p-0.5 md:p-1 flex gap-0.5 md:gap-1">
-                <Button
-                  variant={timeOfDay === "day" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setTimeOfDay("day")}
-                  className="h-6 w-6 md:h-8 md:w-8 p-0 md:px-3"
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    setTimeOfDay("day");
+                  }}
+                  className={`h-8 w-8 md:h-8 md:w-8 p-0 md:px-3 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all ${
+                    timeOfDay === "day" 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-transparent text-foreground hover:bg-accent"
+                  }`}
+                  data-control-ignore="true"
                 >
-                  <Sun className="h-3 w-3 md:h-4 md:w-4" />
-                </Button>
-                <Button
-                  variant={timeOfDay === "night" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setTimeOfDay("night")}
-                  className="h-6 w-6 md:h-8 md:w-8 p-0 md:px-3"
+                  <Sun className="h-4 w-4 md:h-4 md:w-4" />
+                </button>
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    setTimeOfDay("night");
+                  }}
+                  className={`h-8 w-8 md:h-8 md:w-8 p-0 md:px-3 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all ${
+                    timeOfDay === "night" 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-transparent text-foreground hover:bg-accent"
+                  }`}
+                  data-control-ignore="true"
                 >
-                  <Moon className="h-3 w-3 md:h-4 md:w-4" />
-                </Button>
+                  <Moon className="h-4 w-4 md:h-4 md:w-4" />
+                </button>
               </div>
               
               {/* Map Toggle - Mobile friendly */}
-              <Button
-                variant={show2DMap ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShow2DMap(!show2DMap)}
-                className="bg-background/80 backdrop-blur-md h-6 w-6 md:h-8 md:w-auto p-0 md:px-3"
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setShow2DMap(!show2DMap);
+                }}
+                className={`h-8 w-8 md:h-8 md:w-auto p-0 md:px-3 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all ${
+                  show2DMap 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-background/80 backdrop-blur-md border border-border text-foreground hover:bg-accent"
+                }`}
                 style={{ zIndex: 160 }}
+                data-control-ignore="true"
               >
-                <MapIcon className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                <MapIcon className="h-4 w-4 md:h-4 md:w-4 md:mr-2" />
                 <span className="hidden md:inline">{show2DMap ? "Hide" : "Map"}</span>
-              </Button>
+              </button>
               
               {/* Exit Game Mode */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsMaximized(false)}
-                className="bg-background/80 backdrop-blur-md h-6 md:h-8 px-2 md:px-3"
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  handlePauseGame();
+                }}
+                className="bg-background/80 backdrop-blur-md h-8 md:h-8 px-3 md:px-3 rounded-md border border-border flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all text-foreground hover:bg-accent"
+                data-control-ignore="true"
               >
-                <Minimize2 className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                <Minimize2 className="h-4 w-4 md:h-4 md:w-4 md:mr-2" />
                 <span className="hidden md:inline">Exit</span>
-              </Button>
+              </button>
             </div>
           </div>
           
           {/* Left side - Mission Tab Button */}
           <div className="absolute top-10 md:top-16 left-2 md:left-4 pointer-events-auto" style={{ zIndex: 150 }}>
             <button
-              onClick={() => {
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
                 setShowMissions(true);
-                mission.setNotification(false); // Clear notification when opened
-                // Pause zombies when mission panel opens during active mission
+                mission.setNotification(false);
                 if (mission.isActive && mission.phase === 'escape') {
                   mission.pauseZombies();
                 }
               }}
-              className="relative flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg"
+              className="relative flex items-center gap-2 px-4 py-3 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg touch-manipulation select-none active:scale-95"
+              data-control-ignore="true"
             >
               <Target className="h-4 w-4 text-primary" />
               <span className="font-display text-xs md:text-sm font-bold uppercase tracking-wider">Missions</span>
@@ -575,17 +732,23 @@ const StreetView = () => {
           {showMissions && (
             <div 
               className="absolute inset-0 flex items-center justify-center pointer-events-auto"
-              style={{ zIndex: 200 }}
+              style={{ zIndex: 200, touchAction: 'manipulation' }}
+              data-control-ignore="true"
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               onClick={() => {
                 setShowMissions(false);
-                // Resume zombies when mission panel closes during escape phase
-                if (mission.isActive && mission.phase === 'escape') {
+                // Resume zombies when mission panel closes during escape phase (if no other popups open)
+                const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+                if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
                   mission.resumeZombies();
                 }
               }}
             >
               <div 
-                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md"
+                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md max-h-[80vh] overflow-auto"
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/30">
@@ -598,48 +761,150 @@ const StreetView = () => {
                     </h3>
                   </div>
                   <button 
-                    onClick={() => {
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
                       setShowMissions(false);
-                      // Resume zombies when mission panel closes during escape phase
-                      if (mission.isActive && mission.phase === 'escape') {
+                      const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+                      if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
                         mission.resumeZombies();
                       }
                     }}
-                    className="text-muted-foreground hover:text-foreground p-1"
+                    className="text-muted-foreground hover:text-foreground p-3 -m-2 touch-manipulation select-none active:scale-95"
                   >
-                    <X className="h-5 w-5" />
+                    <X className="h-6 w-6" />
                   </button>
                 </div>
                 
-                <div className="text-center py-4 text-muted-foreground">
-                  <MissionPanel
-                    shops={shopBrandings}
-                    shopItemsMap={shopItemsMap}
-                    onActivate={handleMissionActivate}
-                    isCompact
-                  />
+                {/* Mission Tabs */}
+                <div className="flex gap-2 mb-4">
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setMissionTab('zombie');
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold uppercase tracking-wider transition-all touch-manipulation active:scale-95 flex items-center justify-center gap-2 ${
+                      missionTab === 'zombie'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <Target className="h-3 w-3" />
+                    Zombie Escape
+                  </button>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setMissionTab('ghost');
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold uppercase tracking-wider transition-all touch-manipulation active:scale-95 flex items-center justify-center gap-2 ${
+                      missionTab === 'ghost'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <Ghost className="h-3 w-3" />
+                    Ghost Hunt
+                  </button>
+                </div>
+                
+                {/* Mission Content */}
+                <div className="py-2">
+                  {missionTab === 'zombie' ? (
+                    <MissionPanel
+                      shops={shopBrandings}
+                      shopItemsMap={shopItemsMap}
+                      onActivate={() => {
+                        handleMissionActivate();
+                        setShowMissions(false);
+                      }}
+                      isCompact
+                    />
+                  ) : (
+                    <GhostHuntPanel
+                      onActivate={() => {
+                        setShowMissions(false);
+                      }}
+                      isCompact
+                    />
+                  )}
                 </div>
               </div>
             </div>
+          )}
+          
+          {/* Ghost Hunt UI Overlay */}
+          {ghostHunt.isActive && ghostHunt.phase !== 'inactive' && (
+            <GhostHuntUI 
+              onComplete={() => setShowGhostHuntComplete(true)}
+              onFailed={() => setShowGhostHuntFailed(true)}
+            />
+          )}
+          
+          {/* Ghost Hunt Failed Modal */}
+          {showGhostHuntFailed && (
+            <GhostHuntFailedModal
+              reason={ghostHunt.timeRemaining <= 0 ? 'time' : 'death'}
+              capturedCount={ghostHunt.capturedCount}
+              requiredCaptures={ghostHunt.requiredCaptures}
+              onRetry={() => {
+                setShowGhostHuntFailed(false);
+                resetToSafeSpawn();
+                ghostHunt.resetMission();
+                ghostHunt.startMission();
+              }}
+              onExit={() => {
+                setShowGhostHuntFailed(false);
+                resetToSafeSpawn();
+                ghostHunt.resetMission();
+              }}
+            />
+          )}
+          
+          {/* Ghost Hunt Complete Modal */}
+          {showGhostHuntComplete && (
+            <GhostHuntCompleteModal
+              capturedCount={ghostHunt.capturedCount}
+              totalGhosts={ghostHunt.totalGhosts}
+              nextDifficulty={ghostHunt.difficultyLevel}
+              timeBonus={Math.floor(ghostHunt.timeRemaining * 2)}
+              onContinue={() => {
+                setShowGhostHuntComplete(false);
+                ghostHunt.resetMission();
+              }}
+            />
           )}
           
           {/* 2D Map Overlay - Full screen on mobile, positioned on desktop */}
           {show2DMap && spotsWithShops && (
             <div 
               className="absolute inset-0 md:inset-auto md:top-16 md:left-4 flex items-center justify-center md:block pointer-events-auto"
-              style={{ zIndex: 200 }}
+              style={{ zIndex: 200, touchAction: 'manipulation' }}
+              data-control-ignore="true"
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
             >
-              <div className="bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-3 md:p-4 shadow-lg w-[90vw] max-w-sm md:max-w-md max-h-[80vh] overflow-auto">
+              <div 
+                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-3 md:p-4 shadow-lg w-[90vw] max-w-sm md:max-w-md max-h-[80vh] overflow-auto"
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
                     <MapIcon className="h-4 w-4 text-primary" />
                     Street Map
                   </h3>
                   <button 
-                    onClick={() => setShow2DMap(false)}
-                    className="text-muted-foreground hover:text-foreground text-xl leading-none p-1"
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setShow2DMap(false);
+                    }}
+                    className="text-muted-foreground hover:text-foreground p-3 -m-2 touch-manipulation select-none active:scale-95 text-xl leading-none"
                   >
-                    ×
+                    <X className="h-5 w-5" />
                   </button>
                 </div>
                 <div className="overflow-auto">
@@ -710,6 +975,11 @@ const StreetView = () => {
           question={mission.questions[mission.currentQuestionIndex] || null}
           onAnswer={handleQuestionAnswer}
           onClose={() => setShowQuestionModal(false)}
+          onRecheck={() => {
+            // Player tried to re-check - trigger jump scare (same as wrong answer trap)
+            setShowQuestionModal(false);
+            setShowJumpScare(true);
+          }}
         />
         
         {/* Trap Hit Feedback ("Ouch!") */}
@@ -729,12 +999,24 @@ const StreetView = () => {
           onRetry={handleRetryMission}
           onExit={handleExitMission}
         />
+        
+        {/* Tutorial Tooltip */}
+        {tutorial.activeTooltip && (
+          <TutorialTooltip
+            step={tutorial.activeTooltip}
+            onDismiss={handleTutorialDismiss}
+          />
+        )}
       </div>
     );
   }
 
   const interiorOverlay = isInsideShop && interiorShop ? (
-    <ShopInteriorRoom shop={interiorShop} onExit={handleExitShop} />
+    <ShopInteriorRoom 
+      shop={interiorShop} 
+      onExit={handleExitShop}
+      isMissionMode={mission.isActive && mission.phase === 'observation'}
+    />
   ) : null;
 
   // Normal 3-Column Layout
@@ -791,6 +1073,7 @@ const StreetView = () => {
                   category={street.category}
                   onStartGame={() => {
                     setHasGameStarted(true);
+                    setIsGamePaused(false);
                     setIsMaximized(true); // Auto fullscreen on start
                   }}
                 />
@@ -824,34 +1107,53 @@ const StreetView = () => {
 
                     {/* Day/Night Toggle */}
                     <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 flex gap-1">
-                      <Button
-                        variant={timeOfDay === "day" ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => setTimeOfDay("day")}
-                        className="h-7 px-2 text-xs"
+                      <button
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          setTimeOfDay("day");
+                        }}
+                        className={`h-10 w-10 p-0 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all md:h-7 md:w-7 ${
+                          timeOfDay === "day" 
+                            ? "bg-primary text-primary-foreground" 
+                            : "bg-transparent text-foreground hover:bg-accent"
+                        }`}
+                        aria-label="Day mode"
+                        data-control-ignore="true"
                       >
-                        <Sun className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant={timeOfDay === "night" ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => setTimeOfDay("night")}
-                        className="h-7 px-2 text-xs"
+                        <Sun className="h-4 w-4 md:h-3 md:w-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          setTimeOfDay("night");
+                        }}
+                        className={`h-10 w-10 p-0 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all md:h-7 md:w-7 ${
+                          timeOfDay === "night" 
+                            ? "bg-primary text-primary-foreground" 
+                            : "bg-transparent text-foreground hover:bg-accent"
+                        }`}
+                        aria-label="Night mode"
+                        data-control-ignore="true"
                       >
-                        <Moon className="h-3 w-3" />
-                      </Button>
+                        <Moon className="h-4 w-4 md:h-3 md:w-3" />
+                      </button>
                     </div>
-                    
+
                     {/* Maximize Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsMaximized(true)}
-                      className="h-7 px-2 text-xs bg-background/80 backdrop-blur-md"
+                    <button
+                      type="button"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        isGamePaused ? handleResumeGame() : setIsMaximized(true);
+                      }}
+                      className="h-10 px-3 text-sm rounded-md flex items-center justify-center bg-background/80 backdrop-blur-md border border-border text-foreground touch-manipulation select-none active:scale-95 transition-all hover:bg-accent md:h-7 md:px-2 md:text-xs"
+                      data-control-ignore="true"
                     >
-                      <Maximize2 className="h-3 w-3 mr-1" />
-                      Game Mode
-                    </Button>
+                      <Maximize2 className="h-4 w-4 mr-2 md:h-3 md:w-3 md:mr-1" />
+                      {isGamePaused ? "Resume" : "Game Mode"}
+                    </button>
                   </div>
                   
                   {/* Zoom/Controls Hint */}
@@ -876,7 +1178,12 @@ const StreetView = () => {
                   />
                   
                   {/* Shop Proximity Indicator */}
-                  <ShopProximityIndicator nearbyShop={nearbyShop} />
+                  <ShopProximityIndicator
+                    nearbyShop={nearbyShop}
+                    onPress={() => {
+                      if (nearbyShop) handleShopClick(nearbyShop);
+                    }}
+                  />
                   
                   {/* Shop Detail Modal */}
                   {showShopModal && (
@@ -948,6 +1255,26 @@ const StreetView = () => {
         </div>
         </div>
       </div>
+      {isGamePaused && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="cyber-card w-[90vw] max-w-md p-6 text-center space-y-5">
+            <div className="space-y-2">
+              <h2 className="font-display text-2xl font-bold text-foreground">Game Paused</h2>
+              <p className="text-sm text-muted-foreground">
+                Resume to continue where you left off, or exit to restart from the beginning.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Button variant="cyber" onClick={handleResumeGame}>
+                Resume Game
+              </Button>
+              <Button variant="outline" onClick={handleExitGame}>
+                Exit to Start
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       {interiorOverlay}
       
       {/* Trap Hit Feedback ("Ouch!") */}

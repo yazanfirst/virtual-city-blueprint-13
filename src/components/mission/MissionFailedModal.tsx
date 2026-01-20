@@ -71,40 +71,50 @@ export default function MissionFailedModal({
   
   return (
     <div 
-      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      style={{ touchAction: 'manipulation' }}
+      data-control-ignore="true"
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className={`bg-gradient-to-b ${bgColor} to-black border-2 ${borderColor} rounded-2xl p-8 shadow-2xl max-w-md w-[90vw] text-center animate-in zoom-in-95 duration-300`}>
+      <div className={`bg-gradient-to-b ${bgColor} to-black border-2 ${borderColor} rounded-2xl p-5 sm:p-8 shadow-2xl max-w-md w-full text-center animate-in zoom-in-95 duration-300`}>
         {/* Icon */}
-        <div className={`mx-auto w-20 h-20 rounded-full bg-black/50 border-2 ${borderColor} flex items-center justify-center mb-6`}>
-          <Icon className={`h-10 w-10 ${iconColor}`} />
+        <div className={`mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-black/50 border-2 ${borderColor} flex items-center justify-center mb-4 sm:mb-6`}>
+          <Icon className={`h-8 w-8 sm:h-10 sm:w-10 ${iconColor}`} />
         </div>
         
         {/* Title */}
-        <h2 className={`font-display text-3xl font-bold uppercase tracking-wider ${iconColor} mb-3`}>
+        <h2 className={`font-display text-xl sm:text-3xl font-bold uppercase tracking-wider ${iconColor} mb-2 sm:mb-3`}>
           {title}
         </h2>
         
         {/* Message */}
-        <p className="text-gray-200/80 text-lg mb-8">
+        <p className="text-gray-200/80 text-sm sm:text-lg mb-5 sm:mb-8">
           {message}
         </p>
         
         {/* Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
           <Button
-            onClick={onRetry}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 text-lg"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onRetry();
+            }}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-lg touch-manipulation select-none active:scale-[0.98]"
           >
-            <RotateCcw className="h-5 w-5 mr-2" />
+            <RotateCcw className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             Try Again
           </Button>
           <Button
             variant="outline"
-            onClick={onExit}
-            className="border-gray-500/50 text-gray-300 hover:bg-gray-900/50 px-6 py-3 text-lg"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onExit();
+            }}
+            className="border-gray-500/50 text-gray-300 hover:bg-gray-900/50 px-4 sm:px-6 py-3 sm:py-4 text-sm sm:text-lg touch-manipulation select-none active:scale-[0.98]"
           >
-            <Home className="h-5 w-5 mr-2" />
+            <Home className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
             Exit
           </Button>
         </div>

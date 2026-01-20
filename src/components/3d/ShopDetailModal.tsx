@@ -88,6 +88,10 @@ const ShopDetailModal = ({ shop, onClose, onEnterShop }: ShopDetailModalProps) =
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6"
+      style={{ touchAction: 'manipulation' }}
+      data-control-ignore="true"
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
       onClick={onClose}
     >
       {/* Backdrop */}
@@ -96,6 +100,8 @@ const ShopDetailModal = ({ shop, onClose, onEnterShop }: ShopDetailModalProps) =
       {/* Modal */}
       <div
         className="relative w-full max-w-md max-h-[90vh] bg-background border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        onPointerDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         style={{
           borderColor: shop.hasShop ? shop.primaryColor : undefined,
@@ -132,10 +138,15 @@ const ShopDetailModal = ({ shop, onClose, onEnterShop }: ShopDetailModalProps) =
           
           {/* Close button */}
           <button
-            onClick={onClose}
-            className="absolute top-3 right-3 h-8 w-8 rounded-full bg-background/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-background/40 transition-colors"
+            type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="absolute top-3 right-3 h-12 w-12 md:h-9 md:w-9 rounded-full bg-background/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-background/40 transition-colors touch-manipulation select-none active:scale-95"
+            aria-label="Close"
           >
-            <X className="h-4 w-4" />
+            <X className="h-6 w-6 md:h-5 md:w-5" />
           </button>
         </div>
         
@@ -213,36 +224,37 @@ const ShopDetailModal = ({ shop, onClose, onEnterShop }: ShopDetailModalProps) =
                 <div className="flex flex-col gap-3 sticky bottom-0 pt-4 pb-1 bg-background/95 backdrop-blur-sm border-t border-border/50">
                   {/* Visit Store Button - disabled for suspended shops */}
                   {shop.externalLink && !shop.isSuspended && (
-                    <Button
-                      className="w-full"
+                    <a
+                      href={shop.externalLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="w-full h-12 rounded-md flex items-center justify-center gap-2 text-white font-medium touch-manipulation select-none active:scale-[0.98] transition-all"
                       style={{
                         backgroundColor: shop.primaryColor,
-                        color: '#FFFFFF',
                       }}
-                      asChild
+                      data-control-ignore="true"
                     >
-                      <a
-                        href={shop.externalLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ShoppingBag className="h-4 w-4 mr-2" />
-                        Visit Store
-                        <ExternalLink className="h-4 w-4 ml-2" />
-                      </a>
-                    </Button>
+                      <ShoppingBag className="h-4 w-4" />
+                      Visit Store
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
                   )}
 
                   {/* Enter immersive shop view */}
                   {onEnterShop && (
-                    <Button
-                      variant="secondary"
-                      className="w-full"
-                      onClick={() => onEnterShop(shop)}
+                    <button
+                      type="button"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        onEnterShop(shop);
+                      }}
+                      className="w-full h-12 rounded-md flex items-center justify-center gap-2 bg-secondary text-secondary-foreground font-medium touch-manipulation select-none active:scale-[0.98] transition-all hover:bg-secondary/80"
+                      data-control-ignore="true"
                     >
-                      <ShoppingBag className="h-4 w-4 mr-2" />
+                      <ShoppingBag className="h-4 w-4" />
                       Enter Virtual Shop
-                    </Button>
+                    </button>
                   )}
                 </div>
               )}
@@ -272,24 +284,45 @@ const ShopDetailModal = ({ shop, onClose, onEnterShop }: ShopDetailModalProps) =
               {/* CTA Buttons */}
               <div className="space-y-3 sticky bottom-0 pt-2 pb-1 bg-background/95 backdrop-blur-sm border-t border-border/50">
                 {isMerchant ? (
-                  <Button className="w-full" onClick={handleRentSpot}>
-                    <Store className="h-4 w-4 mr-2" />
-                    Rent This Spot
-                  </Button>
-                ) : (
-                  <Button 
-                    className="w-full" 
-                    onClick={handleBecomeMerchant}
-                    disabled={upgrading}
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      handleRentSpot();
+                    }}
+                    className="w-full h-12 rounded-md flex items-center justify-center gap-2 bg-primary text-primary-foreground font-medium touch-manipulation select-none active:scale-[0.98] transition-all hover:bg-primary/90"
+                    data-control-ignore="true"
                   >
-                    <Store className="h-4 w-4 mr-2" />
+                    <Store className="h-4 w-4" />
+                    Rent This Spot
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      handleBecomeMerchant();
+                    }}
+                    disabled={upgrading}
+                    className="w-full h-12 rounded-md flex items-center justify-center gap-2 bg-primary text-primary-foreground font-medium touch-manipulation select-none active:scale-[0.98] transition-all hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none"
+                    data-control-ignore="true"
+                  >
+                    <Store className="h-4 w-4" />
                     {upgrading ? "Upgrading..." : "Become a Merchant"}
-                  </Button>
+                  </button>
                 )}
                 
-                <Button variant="outline" className="w-full" onClick={onClose}>
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                  }}
+                  className="w-full h-12 rounded-md flex items-center justify-center gap-2 bg-transparent border border-border text-foreground font-medium touch-manipulation select-none active:scale-[0.98] transition-all hover:bg-accent"
+                  data-control-ignore="true"
+                >
                   Continue Exploring
-                </Button>
+                </button>
               </div>
             </>
           )}

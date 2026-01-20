@@ -12,10 +12,12 @@ import ZombieCharacter from "./ZombieCharacter";
 import FirePitTrap from "./FirePitTrap";
 import SwingingAxeTrap from "./SwingingAxeTrap";
 import ThornsTrap from "./ThornsTrap";
+import GhostCharacter from "./GhostCharacter";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
+import { useGhostHuntStore } from "@/stores/ghostHuntStore";
 import { ShopBranding } from "@/hooks/use3DShops";
 
 export type CameraView = "thirdPerson" | "firstPerson";
@@ -286,6 +288,7 @@ export default function CityScene({
     <div className="relative h-full w-full">
       <Canvas
         className="h-full w-full"
+        style={{ touchAction: "none" }}
         camera={{ position: [0, 10, 50], fov: 50 }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
       >
@@ -770,6 +773,29 @@ function LaneMarking({ position, rotation = 0 }: { position: [number, number, nu
   );
 }
 
+// Ghost Hunt Ghosts Component
+function GhostHuntGhosts({ isNight }: { isNight: boolean }) {
+  const { ghosts, phase, isActive } = useGhostHuntStore();
+  
+  if (!isActive || phase === 'inactive' || phase === 'briefing') return null;
+  
+  return (
+    <>
+      {ghosts.map((ghost) => (
+        <GhostCharacter
+          key={ghost.id}
+          id={ghost.id}
+          position={ghost.position}
+          type={ghost.type}
+          isRevealed={ghost.isRevealed}
+          isCaptured={ghost.isCaptured}
+          isNight={isNight}
+        />
+      ))}
+    </>
+  );
+}
+
 function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
@@ -982,6 +1008,9 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           onPlayerHit={(id) => onTrapHitPlayer?.()}
         />
       ))}
+
+      {/* === GHOSTS (Ghost Hunt Mission) === */}
+      <GhostHuntGhosts isNight={isNight} />
 
       {/* === PLAYER CHARACTER === */}
       <PlayerController 
