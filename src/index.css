@@ -151,3 +151,53 @@
     @apply absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50;
   }
 }
+
+@keyframes cutscene-flicker {
+  0%, 100% {
+    opacity: 0.25;
+  }
+  20% {
+    opacity: 0.4;
+  }
+  40% {
+    opacity: 0.18;
+  }
+  60% {
+    opacity: 0.35;
+  }
+  80% {
+    opacity: 0.22;
+  }
+}
+
+.cutscene-screen {
+  position: relative;
+  overflow: hidden;
+  background-image: radial-gradient(circle at top, rgba(16, 185, 129, 0.15), transparent 55%),
+    linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(0, 0, 0, 0.85));
+}
+
+.cutscene-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(16, 185, 129, 0.08),
+    rgba(16, 185, 129, 0.08) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.cutscene-screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 40%, rgba(16, 185, 129, 0.15), transparent 60%);
+  animation: cutscene-flicker 1.2s infinite;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
