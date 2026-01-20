@@ -7,12 +7,13 @@ export type MissionPhase =
   | 'escape' 
   | 'observation' 
   | 'question' 
+  | 'hunt'
   | 'failed' 
   | 'completed';
 
 export interface MissionQuestion {
   id: string;
-  template: 'price' | 'count' | 'position' | 'existence' | 'shop';
+  template: 'price' | 'count' | 'position' | 'existence' | 'shop' | 'trivia';
   questionText: string;
   correctAnswer: string;
   options: string[];
@@ -64,6 +65,10 @@ interface MissionState {
   currentQuestionIndex: number;
   questionsAnswered: number;
   questionsCorrect: number;
+  lastAnswerCorrect: boolean | null;
+  clues: string[];
+  revealedClues: string[];
+  lastClue: string | null;
   
   // Zombie state
   zombies: ZombieData[];
@@ -94,6 +99,7 @@ interface MissionState {
   
   // Actions
   activateMission: (targetShop: ShopBranding, items: ShopItem[]) => void;
+  activateDiamondMission: (targetShop: ShopBranding, questions: MissionQuestion[], clues: string[]) => void;
   setPhase: (phase: MissionPhase) => void;
   enterShop: () => void;
   exitShop: (questions: MissionQuestion[]) => void;
@@ -197,6 +203,10 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   currentQuestionIndex: 0,
   questionsAnswered: 0,
   questionsCorrect: 0,
+  lastAnswerCorrect: null,
+  clues: [],
+  revealedClues: [],
+  lastClue: null,
   
   zombies: [],
   zombiesPaused: false,
@@ -231,6 +241,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     
     set({
       isActive: true,
+      missionNumber: 1,
       phase: 'escape',
       targetShop,
       targetShopItems: items,
@@ -240,6 +251,10 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       currentQuestionIndex: 0,
       questionsAnswered: 0,
       questionsCorrect: 0,
+      lastAnswerCorrect: null,
+      clues: [],
+      revealedClues: [],
+      lastClue: null,
       zombies: generateZombieSpawns(),
       zombiesPaused: false,
       traps: generateTrapPositions(),
@@ -247,6 +262,43 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       frozenZombieIds: new Set(),
       isProtected: true, // Start protected
       spawnProtectionTimer: protectionTimer,
+      trapTriggered: false,
+      deceptiveMessageShown: false,
+      lives: 3,
+      failReason: 'unknown',
+      recentlyUsedShopIds: [...state.recentlyUsedShopIds, targetShop.shopId].slice(-5),
+    });
+  },
+
+  activateDiamondMission: (targetShop, questions, clues) => {
+    const state = get();
+    if (state.spawnProtectionTimer) {
+      clearTimeout(state.spawnProtectionTimer);
+    }
+
+    set({
+      isActive: true,
+      missionNumber: 2,
+      phase: 'question',
+      targetShop,
+      targetShopItems: [],
+      shopEntryCount: 0,
+      hasEnteredShop: false,
+      questions,
+      currentQuestionIndex: 0,
+      questionsAnswered: 0,
+      questionsCorrect: 0,
+      lastAnswerCorrect: null,
+      clues,
+      revealedClues: [],
+      lastClue: null,
+      zombies: [],
+      zombiesPaused: true,
+      traps: [],
+      slowedZombieIds: new Set(),
+      frozenZombieIds: new Set(),
+      isProtected: false,
+      spawnProtectionTimer: null,
       trapTriggered: false,
       deceptiveMessageShown: false,
       lives: 3,
@@ -295,6 +347,28 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     const currentQuestion = state.questions[state.currentQuestionIndex];
     
     if (!currentQuestion) return false;
+
+    if (state.missionNumber === 2) {
+      const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+      const newQuestionsAnswered = state.questionsAnswered + 1;
+      const newQuestionsCorrect = state.questionsCorrect + (isCorrect ? 1 : 0);
+      const nextIndex = state.currentQuestionIndex + 1;
+      const hasMoreQuestions = nextIndex < state.questions.length;
+      const nextClue = isCorrect ? state.clues[state.revealedClues.length] : null;
+      const updatedClues = nextClue ? [...state.revealedClues, nextClue] : state.revealedClues;
+
+      set({
+        questionsAnswered: newQuestionsAnswered,
+        questionsCorrect: newQuestionsCorrect,
+        currentQuestionIndex: hasMoreQuestions ? nextIndex : state.currentQuestionIndex,
+        lastAnswerCorrect: isCorrect,
+        lastClue: nextClue,
+        revealedClues: updatedClues,
+        phase: hasMoreQuestions ? 'question' : 'hunt',
+      });
+
+      return isCorrect;
+    }
     
     const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
     
@@ -394,6 +468,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     set({
       isActive: false,
       phase: 'inactive',
+      missionNumber: 1,
       targetShop: null,
       targetShopItems: [],
       shopEntryCount: 0,
@@ -402,6 +477,10 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       currentQuestionIndex: 0,
       questionsAnswered: 0,
       questionsCorrect: 0,
+      lastAnswerCorrect: null,
+      clues: [],
+      revealedClues: [],
+      lastClue: null,
       zombies: [],
       zombiesPaused: false,
       traps: [],
