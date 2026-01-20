@@ -1,4 +1,4 @@
-import { X, RotateCcw, Home, Zap, Skull } from 'lucide-react';
+import { X, RotateCcw, Home, Zap, Skull, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MissionFailReason } from '@/stores/missionStore';
 
@@ -46,6 +46,15 @@ const getFailMessage = (reason: MissionFailReason) => {
         iconColor: 'text-orange-400',
         bgColor: 'from-orange-950',
         borderColor: 'border-orange-500/50',
+      };
+    case 'time':
+      return {
+        icon: Clock,
+        title: 'Time Ran Out!',
+        message: 'You ran out of time. The zombies caught up to you.',
+        iconColor: 'text-red-400',
+        bgColor: 'from-red-950',
+        borderColor: 'border-red-500/50',
       };
     default:
       return {
