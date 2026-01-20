@@ -67,6 +67,7 @@ export default function MissionPanel({
         
         <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
           Escape the zombies, find the target shop, and remember everything you see. Trust your memory — you may only get one chance.
+          Timed mode can be enabled, so finish the escape before time runs out (just like the Ghost Hunt).
         </p>
         
         <Button
