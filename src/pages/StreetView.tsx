@@ -318,6 +318,12 @@ const StreetView = () => {
       setShowQuestionModal(true);
     }
   }, [mission.isActive, mission.missionNumber, mission.phase, mission.currentQuestionIndex]);
+
+  useEffect(() => {
+    if (mission.isActive && mission.missionNumber === 2 && mission.phase !== 'question') {
+      setShowQuestionModal(false);
+    }
+  }, [mission.isActive, mission.missionNumber, mission.phase]);
   
   const handleMissionActivate = () => {
     // Mission is now active, night mode will be forced
