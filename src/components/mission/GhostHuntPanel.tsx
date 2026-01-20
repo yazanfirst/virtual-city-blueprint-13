@@ -55,7 +55,6 @@ export default function GhostHuntPanel({
         {isUnlocked ? (
           <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
             Paranormal activity detected. Use your EMF detector to locate invisible ghosts, reveal them with your flashlight, and capture them before time runs out.
-            Timed challenges can also be enabled for the zombie mission.
           </p>
         ) : (
           <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
