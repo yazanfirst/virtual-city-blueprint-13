@@ -93,7 +93,6 @@ const StreetView = () => {
   const [showJumpScare, setShowJumpScare] = useState(false);
   const [showGhostHuntFailed, setShowGhostHuntFailed] = useState(false);
   const [showGhostHuntComplete, setShowGhostHuntComplete] = useState(false);
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [missionTab, setMissionTab] = useState<'zombie' | 'ghost'>('zombie');
   const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
   
@@ -414,11 +413,6 @@ const StreetView = () => {
   };
 
   const handleExitToCityMap = () => {
-    const shouldConfirm = hasGameStarted || mission.isActive || ghostHunt.isActive || isInsideShop;
-    if (shouldConfirm) {
-      setShowExitConfirm(true);
-      return;
-    }
     handleExitGame();
     navigate("/city-map");
   };
@@ -1311,33 +1305,6 @@ const StreetView = () => {
               </Button>
               <Button variant="outline" onClick={handleExitGame}>
                 Exit to Start
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-      {showExitConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="cyber-card w-[90vw] max-w-md p-6 text-center space-y-5">
-            <div className="space-y-2">
-              <h2 className="font-display text-2xl font-bold text-foreground">Exit Street?</h2>
-              <p className="text-sm text-muted-foreground">
-                You will lose your current mission progress. Do you want to exit to the city map?
-              </p>
-            </div>
-            <div className="flex flex-col gap-3">
-              <Button
-                variant="cyber"
-                onClick={() => {
-                  setShowExitConfirm(false);
-                  handleExitGame();
-                  navigate("/city-map");
-                }}
-              >
-                Exit to City Map
-              </Button>
-              <Button variant="outline" onClick={() => setShowExitConfirm(false)}>
-                Stay Here
               </Button>
             </div>
           </div>
