@@ -328,6 +328,9 @@ const StreetView = () => {
   
   const handleMissionActivate = () => {
     // Mission is now active, night mode will be forced
+    ghostHunt.resetMission();
+    setShowGhostHuntFailed(false);
+    setShowGhostHuntComplete(false);
     setShowFailedModal(false);
   };
   
@@ -387,12 +390,15 @@ const StreetView = () => {
     setIsGamePaused(false);
     setIsMaximized(false);
     setHasGameStarted(false);
+    setHasExitedShopOnce(false);
     setShowMissions(false);
     setShow2DMap(false);
     setShowShopModal(false);
     setShowQuestionModal(false);
     setShowFailedModal(false);
     setShowJumpScare(false);
+    setShowGhostHuntFailed(false);
+    setShowGhostHuntComplete(false);
     setSelectedShop(null);
     setInteriorShop(null);
     setIsInsideShop(false);
@@ -401,6 +407,7 @@ const StreetView = () => {
     resetPlayer();
     resetGame();
     mission.resetMission();
+    ghostHunt.resetMission();
   };
   
   const handleQuestionAnswer = (answer: string) => {
@@ -825,6 +832,10 @@ const StreetView = () => {
                   ) : (
                     <GhostHuntPanel
                       onActivate={() => {
+                        mission.resetMission();
+                        setShowQuestionModal(false);
+                        setShowFailedModal(false);
+                        setShowJumpScare(false);
                         setShowMissions(false);
                       }}
                       isCompact
