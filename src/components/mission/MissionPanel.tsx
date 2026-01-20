@@ -290,7 +290,7 @@ export default function MissionPanel({
         <p className={`text-amber-100 ${isCompact ? 'text-xs mb-2' : 'text-sm mb-3'}`}>
           Answer questions to unlock clues. Enter the shop where the diamond is hidden.
         </p>
-        {lastAnswerCorrect === false && (
+        {phase === 'question' && lastAnswerCorrect === false && (
           <p className="text-[10px] text-amber-200/80 mb-2">Wrong answer. No clue awarded.</p>
         )}
         {questionsCorrect > 0 && (
