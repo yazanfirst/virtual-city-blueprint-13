@@ -83,14 +83,14 @@ export default function GhostCharacter({
   
   const config = GHOST_CONFIGS[type];
   
-  // Create ghostly material
+  // Create ghostly material - completely invisible until revealed
   const material = useMemo(() => {
     return new THREE.MeshStandardMaterial({
       color: config.color,
       emissive: config.emissive,
-      emissiveIntensity: isRevealed ? 0.8 : 0.3,
+      emissiveIntensity: isRevealed ? 0.8 : 0,
       transparent: true,
-      opacity: isRevealed ? 0.85 : 0.15, // Nearly invisible when not revealed
+      opacity: isRevealed ? 0.85 : 0,
       side: THREE.DoubleSide,
     });
   }, [config, isRevealed]);
@@ -98,8 +98,8 @@ export default function GhostCharacter({
   // Update material opacity when revealed state changes
   useEffect(() => {
     if (material) {
-      material.opacity = isRevealed ? 0.85 : 0.15;
-      material.emissiveIntensity = isRevealed ? 0.8 : 0.3;
+      material.opacity = isRevealed ? 0.85 : 0;
+      material.emissiveIntensity = isRevealed ? 0.8 : 0;
       material.needsUpdate = true;
     }
   }, [isRevealed, material]);
@@ -125,12 +125,8 @@ export default function GhostCharacter({
       updateGhostEMF(id, emfStrength);
     }
     
-    // Check for player capture (walk through revealed ghost)
-    if (isRevealed && distance < CAPTURE_DISTANCE) {
-      captureGhost(id);
-      onCaptured?.(id);
-      return;
-    }
+    // Ghost trap captures revealed ghosts (handled by useGhostTrapCapture hook)
+    // No longer capturing by walking through
     
     // Ghost attacks player if close enough and not revealed
     if (!isRevealed && distance < ATTACK_RANGE && !isProtected) {
@@ -236,9 +232,9 @@ export default function GhostCharacter({
           <meshStandardMaterial
             color={config.color}
             emissive={config.emissive}
-            emissiveIntensity={isRevealed ? 0.5 : 0.1}
+            emissiveIntensity={isRevealed ? 0.5 : 0}
             transparent
-            opacity={isRevealed ? 0.6 - i * 0.15 : 0.08}
+            opacity={isRevealed ? 0.6 - i * 0.15 : 0}
           />
         </mesh>
       ))}

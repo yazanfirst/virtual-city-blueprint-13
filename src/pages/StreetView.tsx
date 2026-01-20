@@ -31,6 +31,7 @@ import { generateMissionQuestions } from "@/lib/missionQuestions";
 import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
 import { useFlashlightReveal } from "@/hooks/useFlashlightReveal";
+import { useGhostTrapCapture } from "@/hooks/useGhostTrapCapture";
 
 // Shop entry distance threshold (in world units)
 const SHOP_ENTRY_DISTANCE = 8;
@@ -99,6 +100,9 @@ const StreetView = () => {
   
   // Flashlight reveal logic for ghost hunt
   useFlashlightReveal();
+  
+  // Ghost trap capture logic
+  useGhostTrapCapture();
 
   // Tutorial system
   const tutorial = useTutorialProgress();
