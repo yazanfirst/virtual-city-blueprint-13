@@ -869,6 +869,11 @@ const StreetView = () => {
           question={mission.questions[mission.currentQuestionIndex] || null}
           onAnswer={handleQuestionAnswer}
           onClose={() => setShowQuestionModal(false)}
+          onRecheck={() => {
+            // Player tried to re-check - trigger jump scare (same as wrong answer trap)
+            setShowQuestionModal(false);
+            setShowJumpScare(true);
+          }}
         />
         
         {/* Trap Hit Feedback ("Ouch!") */}

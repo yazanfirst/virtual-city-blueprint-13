@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HelpCircle, AlertTriangle } from 'lucide-react';
+import { HelpCircle, AlertTriangle, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -7,13 +7,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { MissionQuestion, useMissionStore } from '@/stores/missionStore';
+import { MissionQuestion } from '@/stores/missionStore';
 
 interface QuestionModalProps {
   isOpen: boolean;
   question: MissionQuestion | null;
   onAnswer: (selectedAnswer: string) => void;
   onClose: () => void;
+  onRecheck?: () => void; // New prop for re-check action
 }
 
 export default function QuestionModal({
@@ -21,6 +22,7 @@ export default function QuestionModal({
   question,
   onAnswer,
   onClose,
+  onRecheck,
 }: QuestionModalProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [hasAnswered, setHasAnswered] = useState(false);
@@ -34,6 +36,12 @@ export default function QuestionModal({
         setSelectedOption(null);
         setHasAnswered(false);
       }, 500);
+    }
+  };
+
+  const handleRecheck = () => {
+    if (onRecheck) {
+      onRecheck();
     }
   };
   
@@ -109,18 +117,35 @@ export default function QuestionModal({
           </div>
         </div>
 
-        {/* Confirm Button (fixed footer so it's always reachable, incl. landscape) */}
+        {/* Buttons (fixed footer so it's always reachable, incl. landscape) */}
         <div className="shrink-0 border-t border-slate-800/60 bg-slate-950/90 backdrop-blur px-4 sm:px-6 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
-          <Button
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white text-sm sm:text-base py-3 sm:py-4 touch-manipulation select-none active:scale-[0.98]"
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              if (selectedOption && !hasAnswered) handleConfirm();
-            }}
-            disabled={!selectedOption || hasAnswered}
-          >
-            Confirm Answer
-          </Button>
+          <div className="flex gap-2 sm:gap-3">
+            {/* Re-check Button */}
+            <Button
+              variant="outline"
+              className="flex-1 border-amber-500/50 text-amber-400 hover:bg-amber-900/30 text-xs sm:text-sm py-3 sm:py-4 touch-manipulation select-none active:scale-[0.98]"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                if (!hasAnswered) handleRecheck();
+              }}
+              disabled={hasAnswered}
+            >
+              <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              Re-check
+            </Button>
+            
+            {/* Submit Answer Button */}
+            <Button
+              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm py-3 sm:py-4 touch-manipulation select-none active:scale-[0.98]"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                if (selectedOption && !hasAnswered) handleConfirm();
+              }}
+              disabled={!selectedOption || hasAnswered}
+            >
+              Submit Answer
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
