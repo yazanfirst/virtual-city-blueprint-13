@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Radio, Flashlight, Ghost, Clock, Heart, Zap, AlertTriangle } from 'lucide-react';
+import { Radio, Flashlight, Ghost, Clock, Heart, Zap, AlertTriangle, Crosshair } from 'lucide-react';
 import { useGhostHuntStore } from '@/stores/ghostHuntStore';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +22,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
     updateTimer,
     toggleEMF,
     useFlashlight,
+    fireGhostTrap,
     drainBattery,
     completeBriefing,
   } = useGhostHuntStore();
@@ -111,6 +112,10 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
                 <li className="flex items-center gap-2">
                   <Flashlight className="h-3 w-3 text-yellow-400" />
                   <span><strong>Flashlight:</strong> Reveals hidden ghosts</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Crosshair className="h-3 w-3 text-green-400" />
+                  <span><strong>Ghost Trap:</strong> Shoot to capture revealed ghosts</span>
                 </li>
               </ul>
             </div>
@@ -261,6 +266,38 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
             />
           </div>
         </button>
+        
+        {/* Ghost Trap - Shoot to capture */}
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            fireGhostTrap();
+          }}
+          className={cn(
+            "flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
+            equipment.trapActive
+              ? "bg-green-950/90 border-green-500/50 scale-110"
+              : "bg-background/80 border-border/50 hover:bg-background/90",
+            equipment.trapCharges <= 0 && "opacity-50"
+          )}
+          disabled={equipment.trapCharges <= 0 || equipment.trapActive}
+        >
+          <Crosshair className={cn("h-5 w-5", equipment.trapActive ? "text-green-400 animate-pulse" : "text-muted-foreground")} />
+          <span className="text-[10px] uppercase font-bold text-muted-foreground">Trap</span>
+          {/* Charges indicator */}
+          <div className="flex gap-0.5">
+            {[1, 2, 3].map((charge) => (
+              <div
+                key={charge}
+                className={cn(
+                  "w-2 h-2 rounded-full transition-all",
+                  charge <= equipment.trapCharges ? "bg-green-400" : "bg-gray-700"
+                )}
+              />
+            ))}
+          </div>
+        </button>
       </div>
       
       {/* EMF Reading Display (when active) */}
@@ -306,6 +343,29 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
             background: 'radial-gradient(circle at 50% 50%, transparent 20%, rgba(255,255,200,0.15) 40%, transparent 60%)',
           }}
         />
+      )}
+      
+      {/* Ghost Trap beam effect */}
+      {equipment.trapActive && (
+        <div 
+          className="fixed inset-0 pointer-events-none flex items-center justify-center"
+          style={{ zIndex: 100 }}
+        >
+          {/* Targeting crosshair */}
+          <div className="relative">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-4 border-green-400 rounded-full animate-ping opacity-50" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-green-300 rounded-full" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 bg-green-400" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-1 bg-green-400" />
+          </div>
+          {/* Green beam overlay */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              background: 'radial-gradient(ellipse 40% 60% at 50% 50%, rgba(74, 222, 128, 0.3) 0%, transparent 70%)',
+            }}
+          />
+        </div>
       )}
     </>
   );

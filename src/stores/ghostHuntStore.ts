@@ -36,6 +36,8 @@ export interface EquipmentState {
   emfBattery: number;        // 0-100
   flashlightActive: boolean;
   flashlightBattery: number; // 0-100
+  trapActive: boolean;       // Ghost trap firing
+  trapCharges: number;       // Number of trap shots (3 max)
   flashlightCooldown: number; // ms until next use
 }
 
@@ -75,6 +77,7 @@ export interface GhostHuntState {
   // Equipment actions
   toggleEMF: () => void;
   useFlashlight: () => void;
+  fireGhostTrap: () => void;
   drainBattery: (type: 'emf' | 'flashlight', amount: number) => void;
   
   // Ghost interactions
@@ -189,6 +192,8 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
     flashlightActive: false,
     flashlightBattery: 100,
     flashlightCooldown: 0,
+    trapActive: false,
+    trapCharges: 3,
   },
   difficultyLevel: 1,
   playerLives: 3,
@@ -225,6 +230,8 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
         flashlightActive: false,
         flashlightBattery: 100,
         flashlightCooldown: 0,
+        trapActive: false,
+        trapCharges: Math.max(2, 4 - Math.floor(difficulty / 2)), // Fewer charges at higher difficulty
       },
       playerLives: Math.max(2, 4 - Math.floor(difficulty / 2)), // Fewer lives at higher difficulty
       isProtected: true,
@@ -305,6 +312,30 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
         },
       }));
     }, 500);
+  },
+  
+  fireGhostTrap: () => {
+    const state = get();
+    if (state.equipment.trapCharges <= 0) return;
+    if (state.equipment.trapActive) return; // Already firing
+    
+    set({
+      equipment: {
+        ...state.equipment,
+        trapActive: true,
+        trapCharges: state.equipment.trapCharges - 1,
+      },
+    });
+    
+    // Trap beam lasts for 0.8 seconds
+    setTimeout(() => {
+      set(s => ({
+        equipment: {
+          ...s.equipment,
+          trapActive: false,
+        },
+      }));
+    }, 800);
   },
   
   drainBattery: (type, amount) => {
@@ -424,6 +455,8 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
         flashlightActive: false,
         flashlightBattery: 100,
         flashlightCooldown: 0,
+        trapActive: false,
+        trapCharges: 3,
       },
       playerLives: 3,
       isProtected: true,
