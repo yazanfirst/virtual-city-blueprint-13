@@ -621,10 +621,12 @@ const StreetView = () => {
                 variant="ghost"
                 size="icon"
                 className="bg-background/80 backdrop-blur-md h-8 w-8 md:h-10 md:w-10"
-                onPointerDown={(event) => {
+                onClick={(event) => {
                   event.stopPropagation();
                   handleExitToCityMap();
                 }}
+                type="button"
+                aria-label="Back to city map"
               >
                 <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
               </Button>
@@ -1061,10 +1063,12 @@ const StreetView = () => {
           <Button
             variant="ghost"
             size="icon"
-            onPointerDown={(event) => {
+            onClick={(event) => {
               event.stopPropagation();
               handleExitToCityMap();
             }}
+            type="button"
+            aria-label="Back to city map"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
