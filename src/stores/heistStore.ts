@@ -456,7 +456,9 @@ export const useHeistStore = create<HeistState>((set, get) => ({
   moveDrone: (droneId, position, rotation) => {
     set((state) => ({
       drones: state.drones.map((drone) =>
-        drone.id === droneId ? { ...drone, position, rotation } : drone
+        drone.id === droneId 
+          ? { ...drone, position: [...position] as [number, number, number], rotation } 
+          : drone
       ),
     }));
   },

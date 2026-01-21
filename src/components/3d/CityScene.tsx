@@ -17,6 +17,8 @@ import SecurityDrone from "./SecurityDrone";
 import LaserGrid from "./LaserGrid";
 import HackableTerminal from "./HackableTerminal";
 import StealthIndicator from "./StealthIndicator";
+import HeistExitZone from "./HeistExitZone";
+import HeistTargetMarker from "./HeistTargetMarker";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
@@ -1055,6 +1057,13 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
             />
           ))}
           <StealthIndicator detectionLevel={heist.detectionLevel} />
+          <HeistExitZone />
+          {heist.targetShopName && (
+            <HeistTargetMarker 
+              shopPosition={[0, 0, 28]} 
+              shopName={heist.targetShopName} 
+            />
+          )}
         </>
       )}
 
