@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Ghost } from "lucide-react";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Ghost, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
@@ -14,6 +14,11 @@ import GhostHuntPanel from "@/components/mission/GhostHuntPanel";
 import GhostHuntUI from "@/components/mission/GhostHuntUI";
 import GhostHuntFailedModal from "@/components/mission/GhostHuntFailedModal";
 import GhostHuntCompleteModal from "@/components/mission/GhostHuntCompleteModal";
+import MirrorWorldPanel from "@/components/mission/MirrorWorldPanel";
+import MirrorWorldBriefing from "@/components/mission/MirrorWorldBriefing";
+import MirrorWorldUI from "@/components/mission/MirrorWorldUI";
+import MirrorWorldComplete from "@/components/mission/MirrorWorldComplete";
+import MirrorWorldFailed from "@/components/mission/MirrorWorldFailed";
 import QuestionModal from "@/components/mission/QuestionModal";
 import HealthDisplay from "@/components/mission/HealthDisplay";
 import MissionFailedModal from "@/components/mission/MissionFailedModal";
@@ -26,6 +31,7 @@ import TutorialTooltip from "@/components/3d/TutorialTooltip";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { useGhostHuntStore } from "@/stores/ghostHuntStore";
+import { useMirrorWorldStore } from "@/stores/mirrorWorldStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useTutorialProgress } from "@/hooks/useTutorialProgress";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
@@ -33,6 +39,7 @@ import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
 import { useFlashlightReveal } from "@/hooks/useFlashlightReveal";
 import { useGhostTrapCapture } from "@/hooks/useGhostTrapCapture";
+import { useDeviceType } from "@/hooks/useDeviceType";
 
 // Shop entry distance threshold (in world units)
 const SHOP_ENTRY_DISTANCE = 8;
@@ -89,12 +96,15 @@ const StreetView = () => {
   // Mission state
   const mission = useMissionStore();
   const ghostHunt = useGhostHuntStore();
+  const mirrorWorld = useMirrorWorldStore();
+  const deviceType = useDeviceType();
+  const isMobile = deviceType === "mobile";
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showFailedModal, setShowFailedModal] = useState(false);
   const [showJumpScare, setShowJumpScare] = useState(false);
   const [showGhostHuntFailed, setShowGhostHuntFailed] = useState(false);
   const [showGhostHuntComplete, setShowGhostHuntComplete] = useState(false);
-  const [missionTab, setMissionTab] = useState<'zombie' | 'ghost'>('zombie');
+  const [missionTab, setMissionTab] = useState<'zombie' | 'ghost' | 'mirror'>('zombie');
   const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
   
   // Game audio
@@ -147,7 +157,23 @@ const StreetView = () => {
   // Question phase - no tutorial needed, questions appear directly
 
   // PAUSE GAME when ANY popup/modal is active
-  const isAnyPopupOpen = tutorial.activeTooltip || showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+  const isAnyPopupOpen = tutorial.activeTooltip || showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare || mirrorWorld.phase === 'briefing';
+  const hideMobileControls = Boolean(
+    tutorial.activeTooltip ||
+    showMissions ||
+    show2DMap ||
+    showShopModal ||
+    showQuestionModal ||
+    showFailedModal ||
+    showJumpScare ||
+    showGhostHuntFailed ||
+    showGhostHuntComplete ||
+    ghostHunt.phase === 'briefing' ||
+    mirrorWorld.phase === 'briefing' ||
+    mirrorWorld.phase === 'completed' ||
+    mirrorWorld.phase === 'failed'
+  );
+  const hideSidePanels = isMobile && ((ghostHunt.isActive && ghostHunt.phase !== 'inactive') || (mirrorWorld.isActive && mirrorWorld.phase !== 'inactive'));
   
   useEffect(() => {
     if (isAnyPopupOpen) {
@@ -578,9 +604,10 @@ const StreetView = () => {
             cameraView={cameraView}
             shopBrandings={shopBrandings}
             onShopClick={handleShopClick}
-            forcedTimeOfDay={(mission.isActive && mission.phase !== 'completed') || (ghostHunt.isActive && ghostHunt.phase === 'hunting') ? "night" : null}
+            forcedTimeOfDay={(mission.isActive && mission.phase !== 'completed') || (ghostHunt.isActive && ghostHunt.phase === 'hunting') || (mirrorWorld.isActive && mirrorWorld.phase === 'hunting') ? "night" : null}
             onZombieTouchPlayer={handleZombieTouchPlayer}
             onTrapHitPlayer={handleTrapHitPlayer}
+            hideMobileControls={hideMobileControls}
           />
           
           {/* Health Display (Lives) - for both missions */}
@@ -838,11 +865,26 @@ const StreetView = () => {
                     <Ghost className="h-3 w-3" />
                     Ghost Hunt
                   </button>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setMissionTab('mirror');
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold uppercase tracking-wider transition-all touch-manipulation active:scale-95 flex items-center justify-center gap-2 ${
+                      missionTab === 'mirror'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    Mirror World
+                  </button>
                 </div>
                 
                 {/* Mission Content */}
                 <div className="py-2">
-                  {missionTab === 'zombie' ? (
+                  {missionTab === 'zombie' && (
                     <MissionPanel
                       shops={shopBrandings}
                       shopItemsMap={shopItemsMap}
@@ -852,10 +894,12 @@ const StreetView = () => {
                       }}
                       isCompact
                     />
-                  ) : (
+                  )}
+                  {missionTab === 'ghost' && (
                     <GhostHuntPanel
                       onActivate={() => {
                         mission.resetMission();
+                        mirrorWorld.resetMission();
                         tutorial.dismissTooltip();
                         setShowQuestionModal(false);
                         setShowFailedModal(false);
@@ -863,6 +907,20 @@ const StreetView = () => {
                         setShowMissions(false);
                       }}
                       isUnlocked={mission.phase === 'completed'}
+                      isCompact
+                    />
+                  )}
+                  {missionTab === 'mirror' && (
+                    <MirrorWorldPanel
+                      onActivate={() => {
+                        mission.resetMission();
+                        ghostHunt.resetMission();
+                        tutorial.dismissTooltip();
+                        setShowQuestionModal(false);
+                        setShowFailedModal(false);
+                        setShowJumpScare(false);
+                        setShowMissions(false);
+                      }}
                       isCompact
                     />
                   )}
@@ -878,6 +936,30 @@ const StreetView = () => {
               onFailed={() => setShowGhostHuntFailed(true)}
             />
           )}
+
+          {/* Mirror World Briefing */}
+          {mirrorWorld.isActive && mirrorWorld.phase === 'briefing' && (
+            <MirrorWorldBriefing />
+          )}
+
+          {/* Mirror World UI Overlay */}
+          {mirrorWorld.isActive && mirrorWorld.phase === 'hunting' && (
+            <MirrorWorldUI />
+          )}
+
+          <MirrorWorldComplete
+            isOpen={mirrorWorld.phase === 'completed'}
+            onContinue={() => mirrorWorld.resetMission()}
+          />
+
+          <MirrorWorldFailed
+            isOpen={mirrorWorld.phase === 'failed'}
+            onRetry={() => {
+              mirrorWorld.resetMission();
+              mirrorWorld.startMission();
+            }}
+            onExit={() => mirrorWorld.resetMission()}
+          />
           
           {/* Ghost Hunt Failed Modal */}
           {showGhostHuntFailed && (
@@ -957,51 +1039,53 @@ const StreetView = () => {
             </div>
           )}
           
-          {/* Right side - Player & Shop panels - ALWAYS VISIBLE */}
-          <div className="absolute top-10 md:top-auto md:bottom-4 right-2 md:right-4 pointer-events-auto flex flex-col gap-1 md:gap-2" style={{ zIndex: 150 }}>
-            <OverlayPanel title="Player" icon={User} className="w-28 md:w-40">
-              <div className="space-y-0.5 md:space-y-1 text-[10px] md:text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="flex items-center gap-1"><Trophy className="h-2.5 w-2.5" /> Level</span>
-                  <span className="text-foreground font-bold">{level}</span>
+          {/* Right side - Player & Shop panels */}
+          {!hideSidePanels && (
+            <div className="absolute top-10 md:top-auto md:bottom-4 right-2 md:right-4 pointer-events-auto flex flex-col gap-1 md:gap-2" style={{ zIndex: 150 }}>
+              <OverlayPanel title="Player" icon={User} className="w-28 md:w-40">
+                <div className="space-y-0.5 md:space-y-1 text-[10px] md:text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-1"><Trophy className="h-2.5 w-2.5" /> Level</span>
+                    <span className="text-foreground font-bold">{level}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-1"><Coins className="h-2.5 w-2.5" /> Coins</span>
+                    <span className="text-primary font-bold">{coins}</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-1.5 mt-1">
+                    <div 
+                      className="bg-primary h-1.5 rounded-full transition-all" 
+                      style={{ width: `${(xp % 200) / 2}%` }}
+                    />
+                  </div>
+                  <div className="text-[8px] text-muted-foreground text-center">
+                    {xp % 200}/200 XP
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="flex items-center gap-1"><Coins className="h-2.5 w-2.5" /> Coins</span>
-                  <span className="text-primary font-bold">{coins}</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-1.5 mt-1">
-                  <div 
-                    className="bg-primary h-1.5 rounded-full transition-all" 
-                    style={{ width: `${(xp % 200) / 2}%` }}
-                  />
-                </div>
-                <div className="text-[8px] text-muted-foreground text-center">
-                  {xp % 200}/200 XP
-                </div>
-              </div>
-            </OverlayPanel>
-            
-            <OverlayPanel title="Shop" icon={Store} className="w-28 md:w-48">
-              {selectedShop?.hasShop ? (
-                <div className="space-y-1 text-[10px] md:text-xs">
-                  <p className="text-foreground font-medium truncate">{selectedShop.shopName}</p>
-                  {selectedShop.category && <p className="truncate">{selectedShop.category}</p>}
-                  {selectedShop.externalLink && (
-                    <a 
-                      href={selectedShop.externalLink} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-primary hover:underline"
-                    >
-                      Visit <ExternalLink className="h-2 w-2 md:h-3 md:w-3" />
-                    </a>
-                  )}
-                </div>
-              ) : (
-                <p className="text-[10px] md:text-xs">Click shop for details</p>
-              )}
-            </OverlayPanel>
-          </div>
+              </OverlayPanel>
+              
+              <OverlayPanel title="Shop" icon={Store} className="w-28 md:w-48">
+                {selectedShop?.hasShop ? (
+                  <div className="space-y-1 text-[10px] md:text-xs">
+                    <p className="text-foreground font-medium truncate">{selectedShop.shopName}</p>
+                    {selectedShop.category && <p className="truncate">{selectedShop.category}</p>}
+                    {selectedShop.externalLink && (
+                      <a 
+                        href={selectedShop.externalLink} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-primary hover:underline"
+                      >
+                        Visit <ExternalLink className="h-2 w-2 md:h-3 md:w-3" />
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[10px] md:text-xs">Click shop for details</p>
+                )}
+              </OverlayPanel>
+            </div>
+          )}
         </div>
         {interiorOverlay}
         
@@ -1215,9 +1299,10 @@ const StreetView = () => {
                     cameraView={cameraView} 
                     shopBrandings={shopBrandings}
                     onShopClick={handleShopClick}
-                    forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
+                    forcedTimeOfDay={(mission.isActive && mission.phase !== 'completed') || (ghostHunt.isActive && ghostHunt.phase === 'hunting') || (mirrorWorld.isActive && mirrorWorld.phase === 'hunting') ? "night" : null}
                     onZombieTouchPlayer={handleZombieTouchPlayer}
                     onTrapHitPlayer={handleTrapHitPlayer}
+                    hideMobileControls={hideMobileControls}
                   />
                   
                   {/* Shop Proximity Indicator */}
