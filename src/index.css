@@ -161,7 +161,7 @@
 
   .ghost-hunt-ui__stats {
     top: auto;
-    bottom: 0.75rem;
+    bottom: 4.5rem;
     left: 0.75rem;
     flex-direction: row;
     align-items: center;
@@ -173,7 +173,7 @@
 
   .ghost-hunt-ui__equipment {
     top: auto;
-    bottom: 0.75rem;
+    bottom: 5rem;
     right: 0.75rem;
     flex-direction: row;
     align-items: center;
@@ -189,5 +189,28 @@
 
   .ghost-hunt-ui__emf {
     bottom: 3.5rem;
+  }
+
+  .mobile-controls__jump {
+    bottom: 0.75rem;
+    right: 0.75rem;
+  }
+
+  .mobile-controls__jump-button {
+    width: 56px;
+    height: 56px;
+    font-size: 0.75rem;
+  }
+
+  .mobile-controls__joystick {
+    bottom: 0.75rem;
+    left: 0.75rem;
+  }
+}
+
+@media (max-width: 768px) and (orientation: portrait) {
+  .mobile-controls__jump-button {
+    width: 72px;
+    height: 72px;
   }
 }
