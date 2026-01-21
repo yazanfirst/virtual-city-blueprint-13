@@ -33,6 +33,7 @@ import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
 import { useFlashlightReveal } from "@/hooks/useFlashlightReveal";
 import { useGhostTrapCapture } from "@/hooks/useGhostTrapCapture";
+import { useDeviceType } from "@/hooks/useDeviceType";
 
 // Shop entry distance threshold (in world units)
 const SHOP_ENTRY_DISTANCE = 8;
@@ -89,6 +90,8 @@ const StreetView = () => {
   // Mission state
   const mission = useMissionStore();
   const ghostHunt = useGhostHuntStore();
+  const deviceType = useDeviceType();
+  const isMobile = deviceType === "mobile";
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showFailedModal, setShowFailedModal] = useState(false);
   const [showJumpScare, setShowJumpScare] = useState(false);
@@ -160,6 +163,7 @@ const StreetView = () => {
     showGhostHuntComplete ||
     ghostHunt.phase === 'briefing'
   );
+  const hideSidePanels = isMobile && ghostHunt.isActive && ghostHunt.phase !== 'inactive';
   
   useEffect(() => {
     if (isAnyPopupOpen) {
@@ -970,51 +974,53 @@ const StreetView = () => {
             </div>
           )}
           
-          {/* Right side - Player & Shop panels - ALWAYS VISIBLE */}
-          <div className="absolute top-10 md:top-auto md:bottom-4 right-2 md:right-4 pointer-events-auto flex flex-col gap-1 md:gap-2" style={{ zIndex: 150 }}>
-            <OverlayPanel title="Player" icon={User} className="w-28 md:w-40">
-              <div className="space-y-0.5 md:space-y-1 text-[10px] md:text-xs">
-                <div className="flex justify-between items-center">
-                  <span className="flex items-center gap-1"><Trophy className="h-2.5 w-2.5" /> Level</span>
-                  <span className="text-foreground font-bold">{level}</span>
+          {/* Right side - Player & Shop panels */}
+          {!hideSidePanels && (
+            <div className="absolute top-10 md:top-auto md:bottom-4 right-2 md:right-4 pointer-events-auto flex flex-col gap-1 md:gap-2" style={{ zIndex: 150 }}>
+              <OverlayPanel title="Player" icon={User} className="w-28 md:w-40">
+                <div className="space-y-0.5 md:space-y-1 text-[10px] md:text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-1"><Trophy className="h-2.5 w-2.5" /> Level</span>
+                    <span className="text-foreground font-bold">{level}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-1"><Coins className="h-2.5 w-2.5" /> Coins</span>
+                    <span className="text-primary font-bold">{coins}</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-1.5 mt-1">
+                    <div 
+                      className="bg-primary h-1.5 rounded-full transition-all" 
+                      style={{ width: `${(xp % 200) / 2}%` }}
+                    />
+                  </div>
+                  <div className="text-[8px] text-muted-foreground text-center">
+                    {xp % 200}/200 XP
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="flex items-center gap-1"><Coins className="h-2.5 w-2.5" /> Coins</span>
-                  <span className="text-primary font-bold">{coins}</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-1.5 mt-1">
-                  <div 
-                    className="bg-primary h-1.5 rounded-full transition-all" 
-                    style={{ width: `${(xp % 200) / 2}%` }}
-                  />
-                </div>
-                <div className="text-[8px] text-muted-foreground text-center">
-                  {xp % 200}/200 XP
-                </div>
-              </div>
-            </OverlayPanel>
-            
-            <OverlayPanel title="Shop" icon={Store} className="w-28 md:w-48">
-              {selectedShop?.hasShop ? (
-                <div className="space-y-1 text-[10px] md:text-xs">
-                  <p className="text-foreground font-medium truncate">{selectedShop.shopName}</p>
-                  {selectedShop.category && <p className="truncate">{selectedShop.category}</p>}
-                  {selectedShop.externalLink && (
-                    <a 
-                      href={selectedShop.externalLink} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-primary hover:underline"
-                    >
-                      Visit <ExternalLink className="h-2 w-2 md:h-3 md:w-3" />
-                    </a>
-                  )}
-                </div>
-              ) : (
-                <p className="text-[10px] md:text-xs">Click shop for details</p>
-              )}
-            </OverlayPanel>
-          </div>
+              </OverlayPanel>
+              
+              <OverlayPanel title="Shop" icon={Store} className="w-28 md:w-48">
+                {selectedShop?.hasShop ? (
+                  <div className="space-y-1 text-[10px] md:text-xs">
+                    <p className="text-foreground font-medium truncate">{selectedShop.shopName}</p>
+                    {selectedShop.category && <p className="truncate">{selectedShop.category}</p>}
+                    {selectedShop.externalLink && (
+                      <a 
+                        href={selectedShop.externalLink} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-primary hover:underline"
+                      >
+                        Visit <ExternalLink className="h-2 w-2 md:h-3 md:w-3" />
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[10px] md:text-xs">Click shop for details</p>
+                )}
+              </OverlayPanel>
+            </div>
+          )}
         </div>
         {interiorOverlay}
         
