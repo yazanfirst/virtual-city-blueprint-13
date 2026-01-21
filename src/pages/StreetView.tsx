@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Ghost } from "lucide-react";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Ghost, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
@@ -14,6 +14,11 @@ import GhostHuntPanel from "@/components/mission/GhostHuntPanel";
 import GhostHuntUI from "@/components/mission/GhostHuntUI";
 import GhostHuntFailedModal from "@/components/mission/GhostHuntFailedModal";
 import GhostHuntCompleteModal from "@/components/mission/GhostHuntCompleteModal";
+import HeistPanel from "@/components/mission/HeistPanel";
+import HeistUI from "@/components/mission/HeistUI";
+import HackingMiniGame from "@/components/mission/HackingMiniGame";
+import HeistFailedModal from "@/components/mission/HeistFailedModal";
+import HeistCompleteModal from "@/components/mission/HeistCompleteModal";
 import QuestionModal from "@/components/mission/QuestionModal";
 import HealthDisplay from "@/components/mission/HealthDisplay";
 import MissionFailedModal from "@/components/mission/MissionFailedModal";
@@ -26,6 +31,7 @@ import TutorialTooltip from "@/components/3d/TutorialTooltip";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { useGhostHuntStore } from "@/stores/ghostHuntStore";
+import { useHeistStore } from "@/stores/heistStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useTutorialProgress } from "@/hooks/useTutorialProgress";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
@@ -33,6 +39,7 @@ import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
 import { useFlashlightReveal } from "@/hooks/useFlashlightReveal";
 import { useGhostTrapCapture } from "@/hooks/useGhostTrapCapture";
+import { useStealthDetection } from "@/hooks/useStealthDetection";
 
 // Shop entry distance threshold (in world units)
 const SHOP_ENTRY_DISTANCE = 8;
@@ -89,12 +96,15 @@ const StreetView = () => {
   // Mission state
   const mission = useMissionStore();
   const ghostHunt = useGhostHuntStore();
+  const heist = useHeistStore();
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showFailedModal, setShowFailedModal] = useState(false);
   const [showJumpScare, setShowJumpScare] = useState(false);
   const [showGhostHuntFailed, setShowGhostHuntFailed] = useState(false);
   const [showGhostHuntComplete, setShowGhostHuntComplete] = useState(false);
-  const [missionTab, setMissionTab] = useState<'zombie' | 'ghost'>('zombie');
+  const [showHeistFailed, setShowHeistFailed] = useState(false);
+  const [showHeistComplete, setShowHeistComplete] = useState(false);
+  const [missionTab, setMissionTab] = useState<'zombie' | 'ghost' | 'heist'>('zombie');
   const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
   
   // Game audio
@@ -105,6 +115,16 @@ const StreetView = () => {
   
   // Ghost trap capture logic
   useGhostTrapCapture();
+  useStealthDetection();
+
+  useEffect(() => {
+    if (heist.phase === 'failed') {
+      setShowHeistFailed(true);
+    }
+    if (heist.phase === 'completed') {
+      setShowHeistComplete(true);
+    }
+  }, [heist.phase]);
 
   // Tutorial system
   const tutorial = useTutorialProgress();
@@ -807,7 +827,7 @@ const StreetView = () => {
                 </div>
                 
                 {/* Mission Tabs */}
-                <div className="flex gap-2 mb-3 sm:mb-4">
+                <div className="grid grid-cols-3 gap-2 mb-3 sm:mb-4">
                   <button
                     type="button"
                     onPointerDown={(e) => {
@@ -838,6 +858,21 @@ const StreetView = () => {
                     <Ghost className="h-3 w-3" />
                     Ghost Hunt
                   </button>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setMissionTab('heist');
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold uppercase tracking-wider transition-all touch-manipulation active:scale-95 flex items-center justify-center gap-2 ${
+                      missionTab === 'heist'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <Briefcase className="h-3 w-3" />
+                    The Heist
+                  </button>
                 </div>
                 
                 {/* Mission Content */}
@@ -852,7 +887,7 @@ const StreetView = () => {
                       }}
                       isCompact
                     />
-                  ) : (
+                  ) : missionTab === 'ghost' ? (
                     <GhostHuntPanel
                       onActivate={() => {
                         mission.resetMission();
@@ -863,6 +898,15 @@ const StreetView = () => {
                         setShowMissions(false);
                       }}
                       isUnlocked={mission.phase === 'completed'}
+                      isCompact
+                    />
+                  ) : (
+                    <HeistPanel
+                      onActivate={() => {
+                        mission.resetMission();
+                        ghostHunt.resetMission();
+                        setShowMissions(false);
+                      }}
                       isCompact
                     />
                   )}
@@ -878,6 +922,13 @@ const StreetView = () => {
               onFailed={() => setShowGhostHuntFailed(true)}
             />
           )}
+
+          {/* Heist UI Overlay */}
+          {heist.isActive && heist.phase !== 'inactive' && (
+            <HeistUI />
+          )}
+
+          <HackingMiniGame />
           
           {/* Ghost Hunt Failed Modal */}
           {showGhostHuntFailed && (
@@ -909,6 +960,37 @@ const StreetView = () => {
               onContinue={() => {
                 setShowGhostHuntComplete(false);
                 ghostHunt.resetMission();
+              }}
+            />
+          )}
+
+          {showHeistFailed && (
+            <HeistFailedModal
+              isOpen={showHeistFailed}
+              reason={heist.failReason}
+              onRetry={() => {
+                setShowHeistFailed(false);
+                resetToSafeSpawn();
+                heist.resetMission();
+              }}
+              onExit={() => {
+                setShowHeistFailed(false);
+                resetToSafeSpawn();
+                heist.resetMission();
+              }}
+            />
+          )}
+
+          {showHeistComplete && (
+            <HeistCompleteModal
+              isOpen={showHeistComplete}
+              onReplay={() => {
+                setShowHeistComplete(false);
+                heist.resetMission();
+              }}
+              onExit={() => {
+                setShowHeistComplete(false);
+                heist.resetMission();
               }}
             />
           )}

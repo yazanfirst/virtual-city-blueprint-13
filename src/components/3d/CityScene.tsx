@@ -13,11 +13,16 @@ import FirePitTrap from "./FirePitTrap";
 import SwingingAxeTrap from "./SwingingAxeTrap";
 import ThornsTrap from "./ThornsTrap";
 import GhostCharacter from "./GhostCharacter";
+import SecurityDrone from "./SecurityDrone";
+import LaserGrid from "./LaserGrid";
+import HackableTerminal from "./HackableTerminal";
+import StealthIndicator from "./StealthIndicator";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { useGhostHuntStore } from "@/stores/ghostHuntStore";
+import { useHeistStore } from "@/stores/heistStore";
 import { ShopBranding } from "@/hooks/use3DShops";
 
 export type CameraView = "thirdPerson" | "firstPerson";
@@ -801,6 +806,11 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
   const { zombies, zombiesPaused, traps, isActive: missionActive, slowedZombieIds, frozenZombieIds, freezeZombie, targetShop, phase: missionPhase } = useMissionStore();
+  const ghostHunt = useGhostHuntStore();
+  const heist = useHeistStore();
+  const renderMission1 = missionActive && !ghostHunt.isActive && !heist.isActive;
+  const renderMission2 = ghostHunt.isActive && ghostHunt.phase !== 'inactive' && !heist.isActive;
+  const renderMission3 = heist.isActive && heist.phase !== 'inactive' && heist.phase !== 'briefing';
 
   useEffect(() => {
     scene.background = null;
@@ -961,7 +971,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
 
       {/* === ZOMBIES (Mission) === */}
-      {missionActive && zombies.map((zombie) => (
+      {renderMission1 && zombies.map((zombie) => (
         <ZombieCharacter
           key={zombie.id}
           id={zombie.id}
@@ -976,7 +986,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
 
       {/* === FIRE PIT TRAPS (Mission) === */}
-      {missionActive && traps.filter(t => t.type === 'firepit').map((trap) => (
+      {renderMission1 && traps.filter(t => t.type === 'firepit').map((trap) => (
         <FirePitTrap
           key={trap.id}
           id={trap.id}
@@ -987,7 +997,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
       
       {/* === SWINGING AXE TRAPS (Mission) === */}
-      {missionActive && traps.filter(t => t.type === 'axe').map((trap) => (
+      {renderMission1 && traps.filter(t => t.type === 'axe').map((trap) => (
         <SwingingAxeTrap
           key={trap.id}
           id={trap.id}
@@ -999,7 +1009,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
       
       {/* === THORNS TRAPS (Mission) === */}
-      {missionActive && traps.filter(t => t.type === 'thorns').map((trap) => (
+      {renderMission1 && traps.filter(t => t.type === 'thorns').map((trap) => (
         <ThornsTrap
           key={trap.id}
           id={trap.id}
@@ -1010,7 +1020,43 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
 
       {/* === GHOSTS (Ghost Hunt Mission) === */}
-      <GhostHuntGhosts isNight={isNight} />
+      {renderMission2 && <GhostHuntGhosts isNight={isNight} />}
+
+      {/* === HEIST (Mission 3) === */}
+      {renderMission3 && (
+        <>
+          {heist.drones.map((drone) => (
+            <SecurityDrone
+              key={drone.id}
+              id={drone.id}
+              position={drone.position}
+              patrolPath={drone.patrolPath}
+              type={drone.type}
+              detectionRange={drone.detectionRange}
+              detectionConeAngle={drone.detectionConeAngle}
+              isAlerted={drone.isAlerted}
+              alertLevel={drone.alertLevel}
+              isNight={isNight}
+              onPlayerDetected={heist.alertDrone}
+              onAlertLevelChange={heist.updateDroneAlert}
+            />
+          ))}
+          {heist.laserGrids.filter((laser) => laser.isActive).map((laser) => (
+            <LaserGrid key={laser.id} {...laser} onPlayerHit={heist.hitByLaser} />
+          ))}
+          {heist.terminals.filter((terminal) => !terminal.isHacked).map((terminal) => (
+            <HackableTerminal
+              key={terminal.id}
+              id={terminal.id}
+              position={terminal.position}
+              rotation={terminal.rotation}
+              isHacked={terminal.isHacked}
+              onInteract={() => heist.startHacking(terminal.id)}
+            />
+          ))}
+          <StealthIndicator detectionLevel={heist.detectionLevel} />
+        </>
+      )}
 
       {/* === PLAYER CHARACTER === */}
       <PlayerController 
