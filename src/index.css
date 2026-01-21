@@ -153,8 +153,9 @@
 }
 
 .mirror-world-canvas {
-  transform: scaleY(-1) rotateX(180deg);
+  transform: scaleY(-1);
   transform-origin: center;
+  will-change: transform;
 }
 
 .mirror-world-void {
