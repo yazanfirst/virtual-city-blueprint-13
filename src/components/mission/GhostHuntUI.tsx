@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Radio, Flashlight, Ghost, Clock, Heart, Zap, AlertTriangle, Crosshair } from 'lucide-react';
 import { useGhostHuntStore } from '@/stores/ghostHuntStore';
 import { cn } from '@/lib/utils';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 interface GhostHuntUIProps {
   onComplete?: () => void;
@@ -26,6 +27,27 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
     drainBattery,
     completeBriefing,
   } = useGhostHuntStore();
+
+  const deviceType = useDeviceType();
+  const isMobile = deviceType === 'mobile';
+  const [isLandscape, setIsLandscape] = useState(false);
+  const [isMobileHudOpen, setIsMobileHudOpen] = useState(false);
+
+  useEffect(() => {
+    const updateOrientation = () => {
+      setIsLandscape(window.innerWidth > window.innerHeight);
+    };
+
+    updateOrientation();
+    window.addEventListener('resize', updateOrientation);
+    return () => window.removeEventListener('resize', updateOrientation);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile || !isLandscape) {
+      setIsMobileHudOpen(false);
+    }
+  }, [isMobile, isLandscape]);
   
   // Timer logic
   useEffect(() => {
@@ -153,19 +175,25 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
     <>
       {/* Top HUD */}
       <div 
-        className="absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none"
+        className={cn(
+          "absolute left-1/2 -translate-x-1/2 pointer-events-none",
+          isMobile ? "top-10" : "top-14",
+          isMobile && isLandscape && "top-8"
+        )}
         style={{ zIndex: 150 }}
       >
         {/* Timer */}
         <div className={cn(
-          "flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md border",
+          "flex items-center gap-2 rounded-lg backdrop-blur-md border",
+          isMobile ? "px-3 py-1.5" : "px-4 py-2",
           timeRemaining <= 15 
             ? "bg-red-950/90 border-red-500/50 animate-pulse" 
             : "bg-background/80 border-border/50"
         )}>
-          <Clock className={cn("h-4 w-4", timeRemaining <= 15 ? "text-red-400" : "text-muted-foreground")} />
+          <Clock className={cn(isMobile ? "h-3.5 w-3.5" : "h-4 w-4", timeRemaining <= 15 ? "text-red-400" : "text-muted-foreground")} />
           <span className={cn(
-            "font-mono text-lg font-bold",
+            "font-mono font-bold",
+            isMobile ? "text-base" : "text-lg",
             timeRemaining <= 15 ? "text-red-400" : "text-foreground"
           )}>
             {formatTime(timeRemaining)}
@@ -173,144 +201,393 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
         </div>
       </div>
       
-      {/* Left side - Lives & Progress */}
-      <div 
-        className="absolute top-28 left-2 md:left-4 flex flex-col gap-2 pointer-events-none"
-        style={{ zIndex: 150 }}
-      >
-        {/* Lives */}
-        <div className="flex items-center gap-1 bg-background/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Heart
-              key={i}
+      {!isMobile && (
+        <>
+          {/* Left side - Lives & Progress */}
+          <div 
+            className="absolute top-28 left-2 md:left-4 flex flex-col gap-2 pointer-events-none"
+            style={{ zIndex: 150 }}
+          >
+            {/* Lives */}
+            <div className="flex items-center gap-1 bg-background/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Heart
+                  key={i}
+                  className={cn(
+                    "h-4 w-4",
+                    i < playerLives ? "text-red-500 fill-red-500" : "text-muted-foreground"
+                  )}
+                />
+              ))}
+            </div>
+            
+            {/* Capture progress */}
+            <div className="bg-background/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50">
+              <div className="flex items-center gap-2 text-xs">
+                <Ghost className="h-4 w-4 text-purple-400" />
+                <span className="text-muted-foreground">Captured:</span>
+                <span className="font-bold text-foreground">
+                  {capturedCount}/{requiredCaptures}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Right side - Equipment */}
+          <div 
+            className="absolute top-28 right-2 md:right-4 flex flex-col gap-2 pointer-events-auto"
+            style={{ zIndex: 150 }}
+          >
+            {/* EMF Detector */}
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                toggleEMF();
+              }}
               className={cn(
-                "h-4 w-4",
-                i < playerLives ? "text-red-500 fill-red-500" : "text-muted-foreground"
+                "flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
+                equipment.emfActive
+                  ? "bg-blue-950/90 border-blue-500/50"
+                  : "bg-background/80 border-border/50 hover:bg-background/90"
               )}
-            />
-          ))}
-        </div>
-        
-        {/* Capture progress */}
-        <div className="bg-background/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50">
-          <div className="flex items-center gap-2 text-xs">
-            <Ghost className="h-4 w-4 text-purple-400" />
-            <span className="text-muted-foreground">Captured:</span>
-            <span className="font-bold text-foreground">
-              {capturedCount}/{requiredCaptures}
-            </span>
+              disabled={equipment.emfBattery <= 0}
+            >
+              <Radio className={cn("h-5 w-5", equipment.emfActive ? "text-blue-400" : "text-muted-foreground")} />
+              <span className="text-[10px] uppercase font-bold text-muted-foreground">EMF</span>
+              {/* Battery */}
+              <div className="w-8 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                <div 
+                  className={cn(
+                    "h-full transition-all",
+                    equipment.emfBattery > 30 ? "bg-blue-400" : "bg-red-400"
+                  )}
+                  style={{ width: `${equipment.emfBattery}%` }}
+                />
+              </div>
+            </button>
+            
+            {/* Flashlight */}
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                useFlashlight();
+              }}
+              className={cn(
+                "flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
+                equipment.flashlightActive
+                  ? "bg-yellow-950/90 border-yellow-500/50"
+                  : "bg-background/80 border-border/50 hover:bg-background/90",
+                equipment.flashlightCooldown > 0 && "opacity-50"
+              )}
+              disabled={equipment.flashlightBattery <= 0 || equipment.flashlightCooldown > 0}
+            >
+              <Flashlight className={cn("h-5 w-5", equipment.flashlightActive ? "text-yellow-400" : "text-muted-foreground")} />
+              <span className="text-[10px] uppercase font-bold text-muted-foreground">Flash</span>
+              {/* Battery */}
+              <div className="w-8 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                <div 
+                  className={cn(
+                    "h-full transition-all",
+                    equipment.flashlightBattery > 30 ? "bg-yellow-400" : "bg-red-400"
+                  )}
+                  style={{ width: `${equipment.flashlightBattery}%` }}
+                />
+              </div>
+            </button>
+            
+            {/* Ghost Trap - Shoot to capture */}
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                fireGhostTrap();
+              }}
+              className={cn(
+                "flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
+                equipment.trapActive
+                  ? "bg-green-950/90 border-green-500/50 scale-110"
+                  : "bg-background/80 border-border/50 hover:bg-background/90",
+                equipment.trapCharges <= 0 && "opacity-50"
+              )}
+              disabled={equipment.trapCharges <= 0 || equipment.trapActive}
+            >
+              <Crosshair className={cn("h-5 w-5", equipment.trapActive ? "text-green-400 animate-pulse" : "text-muted-foreground")} />
+              <span className="text-[10px] uppercase font-bold text-muted-foreground">Trap</span>
+              {/* Charges indicator */}
+              <div className="flex gap-0.5">
+                {[1, 2, 3].map((charge) => (
+                  <div
+                    key={charge}
+                    className={cn(
+                      "w-2 h-2 rounded-full transition-all",
+                      charge <= equipment.trapCharges ? "bg-green-400" : "bg-gray-700"
+                    )}
+                  />
+                ))}
+              </div>
+            </button>
+          </div>
+        </>
+      )}
+
+      {isMobile && !isLandscape && (
+        <div
+          className={cn(
+            "absolute left-3 right-3 flex items-end justify-between pointer-events-none",
+            isLandscape ? "bottom-3" : "bottom-4"
+          )}
+          style={{ zIndex: 150 }}
+        >
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1 bg-background/80 backdrop-blur-md rounded-lg px-2.5 py-1.5 border border-border/50">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Heart
+                  key={i}
+                  className={cn(
+                    "h-3.5 w-3.5",
+                    i < playerLives ? "text-red-500 fill-red-500" : "text-muted-foreground"
+                  )}
+                />
+              ))}
+            </div>
+            <div className="bg-background/80 backdrop-blur-md rounded-lg px-2.5 py-1.5 border border-border/50">
+              <div className="flex items-center gap-2 text-[11px]">
+                <Ghost className="h-3.5 w-3.5 text-purple-400" />
+                <span className="text-muted-foreground">Captured:</span>
+                <span className="font-bold text-foreground">
+                  {capturedCount}/{requiredCaptures}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-end gap-2 pointer-events-auto">
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                toggleEMF();
+              }}
+              className={cn(
+                "flex flex-col items-center gap-1 rounded-lg border transition-all touch-manipulation active:scale-95 px-2 py-1.5",
+                equipment.emfActive
+                  ? "bg-blue-950/90 border-blue-500/50"
+                  : "bg-background/80 border-border/50 hover:bg-background/90"
+              )}
+              disabled={equipment.emfBattery <= 0}
+            >
+              <Radio className={cn("h-4 w-4", equipment.emfActive ? "text-blue-400" : "text-muted-foreground")} />
+              <span className="text-[9px] uppercase font-bold text-muted-foreground">EMF</span>
+              <div className="w-7 h-1 bg-gray-700 rounded-full overflow-hidden">
+                <div 
+                  className={cn(
+                    "h-full transition-all",
+                    equipment.emfBattery > 30 ? "bg-blue-400" : "bg-red-400"
+                  )}
+                  style={{ width: `${equipment.emfBattery}%` }}
+                />
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                useFlashlight();
+              }}
+              className={cn(
+                "flex flex-col items-center gap-1 rounded-lg border transition-all touch-manipulation active:scale-95 px-2 py-1.5",
+                equipment.flashlightActive
+                  ? "bg-yellow-950/90 border-yellow-500/50"
+                  : "bg-background/80 border-border/50 hover:bg-background/90",
+                equipment.flashlightCooldown > 0 && "opacity-50"
+              )}
+              disabled={equipment.flashlightBattery <= 0 || equipment.flashlightCooldown > 0}
+            >
+              <Flashlight className={cn("h-4 w-4", equipment.flashlightActive ? "text-yellow-400" : "text-muted-foreground")} />
+              <span className="text-[9px] uppercase font-bold text-muted-foreground">Flash</span>
+              <div className="w-7 h-1 bg-gray-700 rounded-full overflow-hidden">
+                <div 
+                  className={cn(
+                    "h-full transition-all",
+                    equipment.flashlightBattery > 30 ? "bg-yellow-400" : "bg-red-400"
+                  )}
+                  style={{ width: `${equipment.flashlightBattery}%` }}
+                />
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                fireGhostTrap();
+              }}
+              className={cn(
+                "flex flex-col items-center gap-1 rounded-lg border transition-all touch-manipulation active:scale-95 px-2 py-1.5",
+                equipment.trapActive
+                  ? "bg-green-950/90 border-green-500/50 scale-110"
+                  : "bg-background/80 border-border/50 hover:bg-background/90",
+                equipment.trapCharges <= 0 && "opacity-50"
+              )}
+              disabled={equipment.trapCharges <= 0 || equipment.trapActive}
+            >
+              <Crosshair className={cn("h-4 w-4", equipment.trapActive ? "text-green-400 animate-pulse" : "text-muted-foreground")} />
+              <span className="text-[9px] uppercase font-bold text-muted-foreground">Trap</span>
+              <div className="flex gap-0.5">
+                {[1, 2, 3].map((charge) => (
+                  <div
+                    key={charge}
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full transition-all",
+                      charge <= equipment.trapCharges ? "bg-green-400" : "bg-gray-700"
+                    )}
+                  />
+                ))}
+              </div>
+            </button>
           </div>
         </div>
-      </div>
-      
-      {/* Right side - Equipment */}
-      <div 
-        className="absolute top-28 right-2 md:right-4 flex flex-col gap-2 pointer-events-auto"
-        style={{ zIndex: 150 }}
-      >
-        {/* EMF Detector */}
-        <button
-          type="button"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            toggleEMF();
-          }}
-          className={cn(
-            "flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
-            equipment.emfActive
-              ? "bg-blue-950/90 border-blue-500/50"
-              : "bg-background/80 border-border/50 hover:bg-background/90"
-          )}
-          disabled={equipment.emfBattery <= 0}
-        >
-          <Radio className={cn("h-5 w-5", equipment.emfActive ? "text-blue-400" : "text-muted-foreground")} />
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">EMF</span>
-          {/* Battery */}
-          <div className="w-8 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-            <div 
-              className={cn(
-                "h-full transition-all",
-                equipment.emfBattery > 30 ? "bg-blue-400" : "bg-red-400"
-              )}
-              style={{ width: `${equipment.emfBattery}%` }}
-            />
-          </div>
-        </button>
-        
-        {/* Flashlight */}
-        <button
-          type="button"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            useFlashlight();
-          }}
-          className={cn(
-            "flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
-            equipment.flashlightActive
-              ? "bg-yellow-950/90 border-yellow-500/50"
-              : "bg-background/80 border-border/50 hover:bg-background/90",
-            equipment.flashlightCooldown > 0 && "opacity-50"
-          )}
-          disabled={equipment.flashlightBattery <= 0 || equipment.flashlightCooldown > 0}
-        >
-          <Flashlight className={cn("h-5 w-5", equipment.flashlightActive ? "text-yellow-400" : "text-muted-foreground")} />
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">Flash</span>
-          {/* Battery */}
-          <div className="w-8 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-            <div 
-              className={cn(
-                "h-full transition-all",
-                equipment.flashlightBattery > 30 ? "bg-yellow-400" : "bg-red-400"
-              )}
-              style={{ width: `${equipment.flashlightBattery}%` }}
-            />
-          </div>
-        </button>
-        
-        {/* Ghost Trap - Shoot to capture */}
-        <button
-          type="button"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            fireGhostTrap();
-          }}
-          className={cn(
-            "flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
-            equipment.trapActive
-              ? "bg-green-950/90 border-green-500/50 scale-110"
-              : "bg-background/80 border-border/50 hover:bg-background/90",
-            equipment.trapCharges <= 0 && "opacity-50"
-          )}
-          disabled={equipment.trapCharges <= 0 || equipment.trapActive}
-        >
-          <Crosshair className={cn("h-5 w-5", equipment.trapActive ? "text-green-400 animate-pulse" : "text-muted-foreground")} />
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">Trap</span>
-          {/* Charges indicator */}
-          <div className="flex gap-0.5">
-            {[1, 2, 3].map((charge) => (
-              <div
-                key={charge}
+      )}
+
+      {isMobile && isLandscape && (
+        <>
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              setIsMobileHudOpen((open) => !open);
+            }}
+            className={cn(
+              "absolute right-3 bottom-24 px-3 py-2 rounded-full bg-background/90 border border-border/60 text-foreground text-[11px] uppercase font-bold tracking-wider shadow-lg touch-manipulation active:scale-95 pointer-events-auto",
+              isMobileHudOpen && "bg-purple-600 text-white border-purple-500"
+            )}
+            style={{ zIndex: 160 }}
+          >
+            {isMobileHudOpen ? "Tools" : "Tools"}
+          </button>
+
+          {isMobileHudOpen && (
+            <div
+              className="absolute right-3 bottom-36 flex flex-col gap-2 bg-background/90 backdrop-blur-md border border-border/60 rounded-2xl px-2 py-2 shadow-xl pointer-events-auto"
+              style={{ zIndex: 155 }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  toggleEMF();
+                }}
                 className={cn(
-                  "w-2 h-2 rounded-full transition-all",
-                  charge <= equipment.trapCharges ? "bg-green-400" : "bg-gray-700"
+                  "flex items-center gap-2 rounded-xl border transition-all touch-manipulation active:scale-95 px-3 py-2 min-w-[120px]",
+                  equipment.emfActive
+                    ? "bg-blue-950/90 border-blue-500/50"
+                    : "bg-background/80 border-border/50 hover:bg-background/90"
                 )}
-              />
-            ))}
-          </div>
-        </button>
-      </div>
+                disabled={equipment.emfBattery <= 0}
+              >
+                <Radio className={cn("h-5 w-5", equipment.emfActive ? "text-blue-400" : "text-muted-foreground")} />
+                <div className="flex flex-col items-start">
+                  <span className="text-[11px] uppercase font-bold text-muted-foreground">EMF</span>
+                  <div className="w-16 h-1 bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className={cn(
+                        "h-full transition-all",
+                        equipment.emfBattery > 30 ? "bg-blue-400" : "bg-red-400"
+                      )}
+                      style={{ width: `${equipment.emfBattery}%` }}
+                    />
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  useFlashlight();
+                }}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl border transition-all touch-manipulation active:scale-95 px-3 py-2 min-w-[120px]",
+                  equipment.flashlightActive
+                    ? "bg-yellow-950/90 border-yellow-500/50"
+                    : "bg-background/80 border-border/50 hover:bg-background/90",
+                  equipment.flashlightCooldown > 0 && "opacity-50"
+                )}
+                disabled={equipment.flashlightBattery <= 0 || equipment.flashlightCooldown > 0}
+              >
+                <Flashlight className={cn("h-5 w-5", equipment.flashlightActive ? "text-yellow-400" : "text-muted-foreground")} />
+                <div className="flex flex-col items-start">
+                  <span className="text-[11px] uppercase font-bold text-muted-foreground">Flash</span>
+                  <div className="w-16 h-1 bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className={cn(
+                        "h-full transition-all",
+                        equipment.flashlightBattery > 30 ? "bg-yellow-400" : "bg-red-400"
+                      )}
+                      style={{ width: `${equipment.flashlightBattery}%` }}
+                    />
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  fireGhostTrap();
+                }}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl border transition-all touch-manipulation active:scale-95 px-3 py-2 min-w-[120px]",
+                  equipment.trapActive
+                    ? "bg-green-950/90 border-green-500/50 scale-105"
+                    : "bg-background/80 border-border/50 hover:bg-background/90",
+                  equipment.trapCharges <= 0 && "opacity-50"
+                )}
+                disabled={equipment.trapCharges <= 0 || equipment.trapActive}
+              >
+                <Crosshair className={cn("h-5 w-5", equipment.trapActive ? "text-green-400 animate-pulse" : "text-muted-foreground")} />
+                <div className="flex flex-col items-start">
+                  <span className="text-[11px] uppercase font-bold text-muted-foreground">Trap</span>
+                  <div className="flex gap-0.5">
+                    {[1, 2, 3].map((charge) => (
+                      <div
+                        key={charge}
+                        className={cn(
+                          "w-2 h-2 rounded-full transition-all",
+                          charge <= equipment.trapCharges ? "bg-green-400" : "bg-gray-700"
+                        )}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </button>
+            </div>
+          )}
+        </>
+      )}
       
       {/* EMF Reading Display (when active) */}
       {equipment.emfActive && (
         <div 
-          className="absolute bottom-32 left-1/2 -translate-x-1/2 pointer-events-none"
+          className={cn(
+            "absolute left-1/2 -translate-x-1/2 pointer-events-none",
+            isMobile ? "bottom-24" : "bottom-32",
+            isMobile && isLandscape && "bottom-20"
+          )}
           style={{ zIndex: 150 }}
         >
-          <div className="bg-blue-950/90 backdrop-blur-md rounded-lg px-4 py-3 border border-blue-500/50">
+          <div className={cn(
+            "bg-blue-950/90 backdrop-blur-md rounded-lg border border-blue-500/50",
+            isMobile ? "px-3 py-2" : "px-4 py-3"
+          )}>
             <div className="flex items-center gap-3">
-              <Radio className="h-5 w-5 text-blue-400 animate-pulse" />
+              <Radio className={cn(isMobile ? "h-4 w-4" : "h-5 w-5", "text-blue-400 animate-pulse")} />
               <div className="flex flex-col">
-                <span className="text-[10px] uppercase text-blue-300">EMF Reading</span>
+                <span className={cn(isMobile ? "text-[9px]" : "text-[10px]", "uppercase text-blue-300")}>EMF Reading</span>
                 <span className={cn("font-mono font-bold", emfReading.color)}>
                   {emfReading.label}
                 </span>

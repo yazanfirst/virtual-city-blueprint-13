@@ -46,7 +46,7 @@ const GameStartScreen = ({ streetName, category, onStartGame }: GameStartScreenP
         {/* Start Button */}
         <button
           type="button"
-          onPointerDown={(e) => {
+          onClick={(e) => {
             e.stopPropagation();
             onStartGame();
           }}

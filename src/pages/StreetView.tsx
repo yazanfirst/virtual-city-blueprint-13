@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Ghost } from "lucide-react";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Ghost, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
@@ -14,6 +14,11 @@ import GhostHuntPanel from "@/components/mission/GhostHuntPanel";
 import GhostHuntUI from "@/components/mission/GhostHuntUI";
 import GhostHuntFailedModal from "@/components/mission/GhostHuntFailedModal";
 import GhostHuntCompleteModal from "@/components/mission/GhostHuntCompleteModal";
+import HeistPanel from "@/components/mission/HeistPanel";
+import HeistUI from "@/components/mission/HeistUI";
+import HackingMiniGame from "@/components/mission/HackingMiniGame";
+import HeistFailedModal from "@/components/mission/HeistFailedModal";
+import HeistCompleteModal from "@/components/mission/HeistCompleteModal";
 import QuestionModal from "@/components/mission/QuestionModal";
 import HealthDisplay from "@/components/mission/HealthDisplay";
 import MissionFailedModal from "@/components/mission/MissionFailedModal";
@@ -26,6 +31,7 @@ import TutorialTooltip from "@/components/3d/TutorialTooltip";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { useGhostHuntStore } from "@/stores/ghostHuntStore";
+import { useHeistStore } from "@/stores/heistStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useTutorialProgress } from "@/hooks/useTutorialProgress";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
@@ -33,6 +39,7 @@ import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
 import { useFlashlightReveal } from "@/hooks/useFlashlightReveal";
 import { useGhostTrapCapture } from "@/hooks/useGhostTrapCapture";
+import { useStealthDetection } from "@/hooks/useStealthDetection";
 
 // Shop entry distance threshold (in world units)
 const SHOP_ENTRY_DISTANCE = 8;
@@ -89,12 +96,15 @@ const StreetView = () => {
   // Mission state
   const mission = useMissionStore();
   const ghostHunt = useGhostHuntStore();
+  const heist = useHeistStore();
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showFailedModal, setShowFailedModal] = useState(false);
   const [showJumpScare, setShowJumpScare] = useState(false);
   const [showGhostHuntFailed, setShowGhostHuntFailed] = useState(false);
   const [showGhostHuntComplete, setShowGhostHuntComplete] = useState(false);
-  const [missionTab, setMissionTab] = useState<'zombie' | 'ghost'>('zombie');
+  const [showHeistFailed, setShowHeistFailed] = useState(false);
+  const [showHeistComplete, setShowHeistComplete] = useState(false);
+  const [missionTab, setMissionTab] = useState<'zombie' | 'ghost' | 'heist'>('zombie');
   const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
   
   // Game audio
@@ -105,6 +115,16 @@ const StreetView = () => {
   
   // Ghost trap capture logic
   useGhostTrapCapture();
+  useStealthDetection();
+
+  useEffect(() => {
+    if (heist.phase === 'failed') {
+      setShowHeistFailed(true);
+    }
+    if (heist.phase === 'completed') {
+      setShowHeistComplete(true);
+    }
+  }, [heist.phase]);
 
   // Tutorial system
   const tutorial = useTutorialProgress();
@@ -373,7 +393,57 @@ const StreetView = () => {
     mission.resetMission();
   };
 
+  // Fullscreen + orientation MUST be triggered by a direct user gesture on mobile.
+  // (Calling requestFullscreen inside useEffect often fails and causes “need to tap twice”.)
+  const requestFullscreenLandscape = useCallback(async () => {
+    try {
+      const docEl = document.documentElement as HTMLElement & {
+        webkitRequestFullscreen?: () => Promise<void>;
+      };
+
+      if (!document.fullscreenElement) {
+        if (docEl.requestFullscreen) {
+          await docEl.requestFullscreen();
+        } else if (docEl.webkitRequestFullscreen) {
+          await docEl.webkitRequestFullscreen();
+        }
+      }
+
+      if ('screen' in window && 'orientation' in screen) {
+        const orientation = screen.orientation as ScreenOrientation & {
+          lock?: (orientation: string) => Promise<void>;
+        };
+        await orientation.lock?.('landscape');
+      }
+    } catch {
+      // Ignore (unsupported or blocked)
+    }
+  }, []);
+
+  const exitFullscreenLandscape = useCallback(async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        const docWithWebkit = document as Document & {
+          webkitExitFullscreen?: () => Promise<void>;
+        };
+        await docWithWebkit.webkitExitFullscreen?.();
+      }
+
+      if ('screen' in window && 'orientation' in screen) {
+        const orientation = screen.orientation as ScreenOrientation & {
+          unlock?: () => void;
+        };
+        orientation.unlock?.();
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
   const handlePauseGame = () => {
+    void exitFullscreenLandscape();
     setIsGamePaused(true);
     setIsMaximized(false);
     if (mission.isActive && mission.phase === 'escape') {
@@ -382,6 +452,7 @@ const StreetView = () => {
   };
 
   const handleResumeGame = () => {
+    void requestFullscreenLandscape();
     setIsGamePaused(false);
     setIsMaximized(true);
     if (mission.isActive && mission.phase === 'escape') {
@@ -390,6 +461,7 @@ const StreetView = () => {
   };
 
   const handleExitGame = () => {
+    void exitFullscreenLandscape();
     setIsGamePaused(false);
     setIsMaximized(false);
     setHasGameStarted(false);
@@ -438,66 +510,15 @@ const StreetView = () => {
 
   // shopBrandings already declared above
 
-  // Request fullscreen + landscape orientation when maximized on mobile
+  // Ensure we exit fullscreen + unlock orientation when leaving game mode.
   useEffect(() => {
-    const requestFullscreenLandscape = async () => {
-      if (!isMaximized) return;
-
-      try {
-        // First request fullscreen (required for orientation lock on most browsers)
-        const docEl = document.documentElement as HTMLElement & {
-          webkitRequestFullscreen?: () => Promise<void>;
-        };
-        if (docEl.requestFullscreen) {
-          await docEl.requestFullscreen();
-        } else if (docEl.webkitRequestFullscreen) {
-          await docEl.webkitRequestFullscreen();
-        }
-
-        // Then try to lock to landscape
-        if ('screen' in window && 'orientation' in screen) {
-          const orientation = screen.orientation as ScreenOrientation & {
-            lock?: (orientation: string) => Promise<void>;
-          };
-          await orientation.lock?.('landscape');
-        }
-      } catch {
-        // Silently fail if not supported
-      }
-    };
-
-    const exitFullscreen = async () => {
-      try {
-        if (document.fullscreenElement) {
-          await document.exitFullscreen();
-        } else {
-          const docWithWebkit = document as Document & {
-            webkitExitFullscreen?: () => Promise<void>;
-          };
-          await docWithWebkit.webkitExitFullscreen?.();
-        }
-
-        if ('screen' in window && 'orientation' in screen) {
-          const orientation = screen.orientation as ScreenOrientation & {
-            unlock?: () => void;
-          };
-          orientation.unlock?.();
-        }
-      } catch {
-        // Silently fail
-      }
-    };
-
-    if (isMaximized) {
-      requestFullscreenLandscape();
-    } else {
-      exitFullscreen();
+    if (!isMaximized) {
+      void exitFullscreenLandscape();
     }
-
     return () => {
-      exitFullscreen();
+      void exitFullscreenLandscape();
     };
-  }, [isMaximized]);
+  }, [isMaximized, exitFullscreenLandscape]);
 
   if (isLoading) {
     return (
@@ -578,7 +599,7 @@ const StreetView = () => {
             cameraView={cameraView}
             shopBrandings={shopBrandings}
             onShopClick={handleShopClick}
-            forcedTimeOfDay={(mission.isActive && mission.phase !== 'completed') || (ghostHunt.isActive && ghostHunt.phase === 'hunting') ? "night" : null}
+            forcedTimeOfDay={(mission.isActive && mission.phase !== 'completed') || (ghostHunt.isActive && ghostHunt.phase === 'hunting') || (heist.isActive && heist.phase !== 'inactive' && heist.phase !== 'completed') ? "night" : null}
             onZombieTouchPlayer={handleZombieTouchPlayer}
             onTrapHitPlayer={handleTrapHitPlayer}
           />
@@ -761,7 +782,7 @@ const StreetView = () => {
           {/* Mission Popup */}
           {showMissions && (
             <div 
-              className="absolute inset-0 flex items-center justify-center pointer-events-auto"
+              className="absolute inset-0 flex items-start md:items-center justify-center pointer-events-auto px-3 py-4 md:px-0 md:py-0"
               style={{ zIndex: 200, touchAction: 'manipulation' }}
               data-control-ignore="true"
               onPointerDown={(e) => e.stopPropagation()}
@@ -776,17 +797,17 @@ const StreetView = () => {
               }}
             >
               <div 
-                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md max-h-[80vh] overflow-auto"
+                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-3 sm:p-4 md:p-6 shadow-xl w-[92vw] sm:w-[90vw] max-w-md max-h-[85vh] landscape:max-h-[75vh] overflow-y-auto"
                 onPointerDown={(e) => e.stopPropagation()}
                 onTouchStart={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/30">
+                <div className="flex items-center justify-between mb-3 sm:mb-4 pb-3 border-b border-border/30">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/30">
-                      <Target className="h-5 w-5 text-primary" />
+                    <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/30">
+                      <Target className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     </div>
-                    <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
+                    <h3 className="font-display text-base sm:text-lg font-bold uppercase tracking-wider text-foreground">
                       Missions
                     </h3>
                   </div>
@@ -800,14 +821,14 @@ const StreetView = () => {
                         mission.resumeZombies();
                       }
                     }}
-                    className="text-muted-foreground hover:text-foreground p-3 -m-2 touch-manipulation select-none active:scale-95"
+                    className="text-muted-foreground hover:text-foreground p-2 sm:p-3 -m-1 sm:-m-2 touch-manipulation select-none active:scale-95"
                   >
-                    <X className="h-6 w-6" />
+                    <X className="h-5 w-5 sm:h-6 sm:w-6" />
                   </button>
                 </div>
                 
                 {/* Mission Tabs */}
-                <div className="flex gap-2 mb-4">
+                <div className="grid grid-cols-3 gap-2 mb-3 sm:mb-4">
                   <button
                     type="button"
                     onPointerDown={(e) => {
@@ -838,6 +859,21 @@ const StreetView = () => {
                     <Ghost className="h-3 w-3" />
                     Ghost Hunt
                   </button>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setMissionTab('heist');
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold uppercase tracking-wider transition-all touch-manipulation active:scale-95 flex items-center justify-center gap-2 ${
+                      missionTab === 'heist'
+                        ? 'bg-amber-600 text-white'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <Briefcase className="h-3 w-3" />
+                    The Heist
+                  </button>
                 </div>
                 
                 {/* Mission Content */}
@@ -852,7 +888,7 @@ const StreetView = () => {
                       }}
                       isCompact
                     />
-                  ) : (
+                  ) : missionTab === 'ghost' ? (
                     <GhostHuntPanel
                       onActivate={() => {
                         mission.resetMission();
@@ -863,6 +899,15 @@ const StreetView = () => {
                         setShowMissions(false);
                       }}
                       isUnlocked={mission.phase === 'completed'}
+                      isCompact
+                    />
+                  ) : (
+                    <HeistPanel
+                      onActivate={() => {
+                        mission.resetMission();
+                        ghostHunt.resetMission();
+                        setShowMissions(false);
+                      }}
                       isCompact
                     />
                   )}
@@ -878,6 +923,13 @@ const StreetView = () => {
               onFailed={() => setShowGhostHuntFailed(true)}
             />
           )}
+
+          {/* Heist UI Overlay */}
+          {heist.isActive && heist.phase !== 'inactive' && (
+            <HeistUI />
+          )}
+
+          <HackingMiniGame />
           
           {/* Ghost Hunt Failed Modal */}
           {showGhostHuntFailed && (
@@ -909,6 +961,37 @@ const StreetView = () => {
               onContinue={() => {
                 setShowGhostHuntComplete(false);
                 ghostHunt.resetMission();
+              }}
+            />
+          )}
+
+          {showHeistFailed && (
+            <HeistFailedModal
+              isOpen={showHeistFailed}
+              reason={heist.failReason}
+              onRetry={() => {
+                setShowHeistFailed(false);
+                resetToSafeSpawn();
+                heist.resetMission();
+              }}
+              onExit={() => {
+                setShowHeistFailed(false);
+                resetToSafeSpawn();
+                heist.resetMission();
+              }}
+            />
+          )}
+
+          {showHeistComplete && (
+            <HeistCompleteModal
+              isOpen={showHeistComplete}
+              onReplay={() => {
+                setShowHeistComplete(false);
+                heist.resetMission();
+              }}
+              onExit={() => {
+                setShowHeistComplete(false);
+                heist.resetMission();
               }}
             />
           )}

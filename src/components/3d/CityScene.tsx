@@ -13,11 +13,18 @@ import FirePitTrap from "./FirePitTrap";
 import SwingingAxeTrap from "./SwingingAxeTrap";
 import ThornsTrap from "./ThornsTrap";
 import GhostCharacter from "./GhostCharacter";
+import SecurityDrone from "./SecurityDrone";
+import LaserGrid from "./LaserGrid";
+import HackableTerminal from "./HackableTerminal";
+import StealthIndicator from "./StealthIndicator";
+import HeistExitZone from "./HeistExitZone";
+import HeistTargetMarker from "./HeistTargetMarker";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { useGhostHuntStore } from "@/stores/ghostHuntStore";
+import { useHeistStore } from "@/stores/heistStore";
 import { ShopBranding } from "@/hooks/use3DShops";
 
 export type CameraView = "thirdPerson" | "firstPerson";
@@ -284,8 +291,31 @@ export default function CityScene({
     };
   }, [isMobile, handleCameraMove]);
 
+  // Auto-focus the container for keyboard events on mount and when clicked
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    // Focus container on mount so keyboard works immediately
+    containerRef.current?.focus();
+  }, []);
+
+  const handleContainerClick = useCallback(() => {
+    containerRef.current?.focus();
+  }, []);
+
   return (
-    <div className="relative h-full w-full">
+    <div 
+      ref={containerRef}
+      className="relative h-full w-full outline-none"
+      tabIndex={0}
+      onClick={handleContainerClick}
+      onKeyDown={(e) => {
+        // Prevent default for game keys to avoid scrolling
+        if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+          e.preventDefault();
+        }
+      }}
+    >
       <Canvas
         className="h-full w-full"
         style={{ touchAction: "none" }}
@@ -319,7 +349,11 @@ export default function CityScene({
         >
           <button
             type="button"
-            onClick={handleJump}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleJump();
+              containerRef.current?.focus();
+            }}
             className="pointer-events-auto rounded-full bg-black/60 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black/70"
           >
             Jump <span className="text-xs text-white/70">(Space)</span>
@@ -801,6 +835,11 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
   const { zombies, zombiesPaused, traps, isActive: missionActive, slowedZombieIds, frozenZombieIds, freezeZombie, targetShop, phase: missionPhase } = useMissionStore();
+  const ghostHunt = useGhostHuntStore();
+  const heist = useHeistStore();
+  const renderMission1 = missionActive && !ghostHunt.isActive && !heist.isActive;
+  const renderMission2 = ghostHunt.isActive && ghostHunt.phase !== 'inactive' && !heist.isActive;
+  const renderMission3 = heist.isActive && heist.phase !== 'inactive' && heist.phase !== 'briefing';
 
   useEffect(() => {
     scene.background = null;
@@ -961,7 +1000,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
 
       {/* === ZOMBIES (Mission) === */}
-      {missionActive && zombies.map((zombie) => (
+      {renderMission1 && zombies.map((zombie) => (
         <ZombieCharacter
           key={zombie.id}
           id={zombie.id}
@@ -976,7 +1015,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
 
       {/* === FIRE PIT TRAPS (Mission) === */}
-      {missionActive && traps.filter(t => t.type === 'firepit').map((trap) => (
+      {renderMission1 && traps.filter(t => t.type === 'firepit').map((trap) => (
         <FirePitTrap
           key={trap.id}
           id={trap.id}
@@ -987,7 +1026,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
       
       {/* === SWINGING AXE TRAPS (Mission) === */}
-      {missionActive && traps.filter(t => t.type === 'axe').map((trap) => (
+      {renderMission1 && traps.filter(t => t.type === 'axe').map((trap) => (
         <SwingingAxeTrap
           key={trap.id}
           id={trap.id}
@@ -999,7 +1038,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
       
       {/* === THORNS TRAPS (Mission) === */}
-      {missionActive && traps.filter(t => t.type === 'thorns').map((trap) => (
+      {renderMission1 && traps.filter(t => t.type === 'thorns').map((trap) => (
         <ThornsTrap
           key={trap.id}
           id={trap.id}
@@ -1010,7 +1049,50 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
 
       {/* === GHOSTS (Ghost Hunt Mission) === */}
-      <GhostHuntGhosts isNight={isNight} />
+      {renderMission2 && <GhostHuntGhosts isNight={isNight} />}
+
+      {/* === HEIST (Mission 3) === */}
+      {renderMission3 && (
+        <>
+          {heist.drones.map((drone) => (
+            <SecurityDrone
+              key={drone.id}
+              id={drone.id}
+              position={drone.position}
+              patrolPath={drone.patrolPath}
+              type={drone.type}
+              detectionRange={drone.detectionRange}
+              detectionConeAngle={drone.detectionConeAngle}
+              isAlerted={drone.isAlerted}
+              alertLevel={drone.alertLevel}
+              isNight={isNight}
+              onPlayerDetected={heist.alertDrone}
+              onAlertLevelChange={heist.updateDroneAlert}
+            />
+          ))}
+          {heist.laserGrids.filter((laser) => laser.isActive).map((laser) => (
+            <LaserGrid key={laser.id} {...laser} onPlayerHit={heist.hitByLaser} />
+          ))}
+          {heist.terminals.filter((terminal) => !terminal.isHacked).map((terminal) => (
+            <HackableTerminal
+              key={terminal.id}
+              id={terminal.id}
+              position={terminal.position}
+              rotation={terminal.rotation}
+              isHacked={terminal.isHacked}
+              onInteract={() => heist.startHacking(terminal.id)}
+            />
+          ))}
+          <StealthIndicator detectionLevel={heist.detectionLevel} />
+          <HeistExitZone />
+          {heist.targetShopName && (
+            <HeistTargetMarker 
+              shopPosition={[0, 0, 28]} 
+              shopName={heist.targetShopName} 
+            />
+          )}
+        </>
+      )}
 
       {/* === PLAYER CHARACTER === */}
       <PlayerController 
