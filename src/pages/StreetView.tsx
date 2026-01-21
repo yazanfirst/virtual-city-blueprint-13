@@ -148,6 +148,18 @@ const StreetView = () => {
 
   // PAUSE GAME when ANY popup/modal is active
   const isAnyPopupOpen = tutorial.activeTooltip || showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+  const hideMobileControls = Boolean(
+    tutorial.activeTooltip ||
+    showMissions ||
+    show2DMap ||
+    showShopModal ||
+    showQuestionModal ||
+    showFailedModal ||
+    showJumpScare ||
+    showGhostHuntFailed ||
+    showGhostHuntComplete ||
+    ghostHunt.phase === 'briefing'
+  );
   
   useEffect(() => {
     if (isAnyPopupOpen) {
@@ -581,6 +593,7 @@ const StreetView = () => {
             forcedTimeOfDay={(mission.isActive && mission.phase !== 'completed') || (ghostHunt.isActive && ghostHunt.phase === 'hunting') ? "night" : null}
             onZombieTouchPlayer={handleZombieTouchPlayer}
             onTrapHitPlayer={handleTrapHitPlayer}
+            hideMobileControls={hideMobileControls}
           />
           
           {/* Health Display (Lives) - for both missions */}
@@ -1218,6 +1231,7 @@ const StreetView = () => {
                     forcedTimeOfDay={mission.isActive && mission.phase !== 'completed' ? "night" : null}
                     onZombieTouchPlayer={handleZombieTouchPlayer}
                     onTrapHitPlayer={handleTrapHitPlayer}
+                    hideMobileControls={hideMobileControls}
                   />
                   
                   {/* Shop Proximity Indicator */}

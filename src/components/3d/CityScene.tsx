@@ -31,6 +31,7 @@ type CitySceneProps = {
   forcedTimeOfDay?: "day" | "night" | null; // For mission control
   onZombieTouchPlayer?: () => void;
   onTrapHitPlayer?: () => void;
+  hideMobileControls?: boolean;
 };
 
 type InnerProps = {
@@ -208,6 +209,7 @@ export default function CityScene({
   forcedTimeOfDay = null,
   onZombieTouchPlayer,
   onTrapHitPlayer,
+  hideMobileControls = false,
 }: CitySceneProps) {
   // Use forced time of day if provided (for mission night mode)
   const effectiveTimeOfDay = forcedTimeOfDay ?? timeOfDay;
@@ -305,7 +307,7 @@ export default function CityScene({
           />
         </Suspense>
       </Canvas>
-      {isMobile && (
+      {isMobile && !hideMobileControls && (
         <MobileControls
           onJoystickMove={handleJoystickMove}
           onCameraMove={handleCameraMove}
