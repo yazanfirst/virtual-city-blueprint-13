@@ -9,8 +9,9 @@ import { useGhostHuntStore } from '@/stores/ghostHuntStore';
  * within range and in front of the player.
  */
 
-const TRAP_RANGE = 15; // Distance the trap beam can reach
-const TRAP_CONE_ANGLE = Math.PI / 3; // 60 degree cone
+const TRAP_RANGE = 18; // Distance the trap beam can reach
+const TRAP_CONE_ANGLE = Math.PI / 2; // 90 degree cone
+const TRAP_CLOSE_RANGE = 4; // Always capture when very close
 
 export function useGhostTrapCapture() {
   const lastTrapStateRef = useRef(false);
@@ -38,10 +39,8 @@ export function useGhostTrapCapture() {
     
     const [px, , pz] = playerPosition;
     
-    // Calculate player's forward direction from camera azimuth rotation
-    // Azimuth is the horizontal rotation angle
-    const playerForwardX = Math.sin(cameraRotation.azimuth);
-    const playerForwardZ = Math.cos(cameraRotation.azimuth);
+    // Calculate player's facing angle from camera azimuth rotation
+    const playerFacingAngle = cameraRotation.azimuth;
     
     // Find revealed ghosts in trap cone
     ghosts.forEach((ghost) => {
@@ -57,17 +56,21 @@ export function useGhostTrapCapture() {
       // Check range
       if (distance > TRAP_RANGE) return;
       
-      // Normalize direction to ghost
-      const dirX = dx / distance;
-      const dirZ = dz / distance;
-      
-      // Calculate angle between player forward and ghost direction
-      const dot = playerForwardX * dirX + playerForwardZ * dirZ;
-      const angle = Math.acos(Math.min(1, Math.max(-1, dot)));
-      
-      // Check if ghost is within cone
-      if (angle <= TRAP_CONE_ANGLE / 2) {
-        // Capture this ghost!
+      if (distance <= TRAP_CLOSE_RANGE) {
+        captureGhost(ghost.id);
+        return;
+      }
+
+      // Angle check - is ghost within trap cone?
+      const angleToGhost = Math.atan2(dx, dz);
+      let angleDiff = Math.abs(angleToGhost - playerFacingAngle);
+
+      // Normalize to [0, PI]
+      if (angleDiff > Math.PI) {
+        angleDiff = 2 * Math.PI - angleDiff;
+      }
+
+      if (angleDiff <= TRAP_CONE_ANGLE / 2) {
         captureGhost(ghost.id);
       }
     });
