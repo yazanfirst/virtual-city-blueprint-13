@@ -761,7 +761,7 @@ const StreetView = () => {
           {/* Mission Popup */}
           {showMissions && (
             <div 
-              className="absolute inset-0 flex items-center justify-center pointer-events-auto"
+              className="absolute inset-0 flex items-start md:items-center justify-center pointer-events-auto px-3 py-4 md:px-0 md:py-0"
               style={{ zIndex: 200, touchAction: 'manipulation' }}
               data-control-ignore="true"
               onPointerDown={(e) => e.stopPropagation()}
@@ -776,17 +776,17 @@ const StreetView = () => {
               }}
             >
               <div 
-                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md max-h-[80vh] overflow-auto"
+                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-3 sm:p-4 md:p-6 shadow-xl w-[92vw] sm:w-[90vw] max-w-md max-h-[85vh] landscape:max-h-[75vh] overflow-y-auto"
                 onPointerDown={(e) => e.stopPropagation()}
                 onTouchStart={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/30">
+                <div className="flex items-center justify-between mb-3 sm:mb-4 pb-3 border-b border-border/30">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/30">
-                      <Target className="h-5 w-5 text-primary" />
+                    <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/30">
+                      <Target className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     </div>
-                    <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
+                    <h3 className="font-display text-base sm:text-lg font-bold uppercase tracking-wider text-foreground">
                       Missions
                     </h3>
                   </div>
@@ -800,14 +800,14 @@ const StreetView = () => {
                         mission.resumeZombies();
                       }
                     }}
-                    className="text-muted-foreground hover:text-foreground p-3 -m-2 touch-manipulation select-none active:scale-95"
+                    className="text-muted-foreground hover:text-foreground p-2 sm:p-3 -m-1 sm:-m-2 touch-manipulation select-none active:scale-95"
                   >
-                    <X className="h-6 w-6" />
+                    <X className="h-5 w-5 sm:h-6 sm:w-6" />
                   </button>
                 </div>
                 
                 {/* Mission Tabs */}
-                <div className="flex gap-2 mb-4">
+                <div className="flex gap-2 mb-3 sm:mb-4">
                   <button
                     type="button"
                     onPointerDown={(e) => {
