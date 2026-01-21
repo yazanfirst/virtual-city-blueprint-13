@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Radio, Flashlight, Ghost, Clock, Heart, Zap, AlertTriangle, Crosshair } from 'lucide-react';
 import { useGhostHuntStore } from '@/stores/ghostHuntStore';
 import { cn } from '@/lib/utils';
+import { useDeviceType } from '@/hooks/useDeviceType';
 
 interface GhostHuntUIProps {
   onComplete?: () => void;
@@ -26,6 +27,20 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
     drainBattery,
     completeBriefing,
   } = useGhostHuntStore();
+
+  const deviceType = useDeviceType();
+  const isMobile = deviceType === 'mobile';
+  const [isLandscape, setIsLandscape] = useState(false);
+
+  useEffect(() => {
+    const updateOrientation = () => {
+      setIsLandscape(window.innerWidth > window.innerHeight);
+    };
+
+    updateOrientation();
+    window.addEventListener('resize', updateOrientation);
+    return () => window.removeEventListener('resize', updateOrientation);
+  }, []);
   
   // Timer logic
   useEffect(() => {
@@ -153,19 +168,25 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
     <>
       {/* Top HUD */}
       <div 
-        className="absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none"
+        className={cn(
+          "absolute left-1/2 -translate-x-1/2 pointer-events-none",
+          isMobile ? "top-10" : "top-14",
+          isMobile && isLandscape && "top-8"
+        )}
         style={{ zIndex: 150 }}
       >
         {/* Timer */}
         <div className={cn(
-          "flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md border",
+          "flex items-center gap-2 rounded-lg backdrop-blur-md border",
+          isMobile ? "px-3 py-1.5" : "px-4 py-2",
           timeRemaining <= 15 
             ? "bg-red-950/90 border-red-500/50 animate-pulse" 
             : "bg-background/80 border-border/50"
         )}>
-          <Clock className={cn("h-4 w-4", timeRemaining <= 15 ? "text-red-400" : "text-muted-foreground")} />
+          <Clock className={cn(isMobile ? "h-3.5 w-3.5" : "h-4 w-4", timeRemaining <= 15 ? "text-red-400" : "text-muted-foreground")} />
           <span className={cn(
-            "font-mono text-lg font-bold",
+            "font-mono font-bold",
+            isMobile ? "text-base" : "text-lg",
             timeRemaining <= 15 ? "text-red-400" : "text-foreground"
           )}>
             {formatTime(timeRemaining)}
@@ -175,16 +196,23 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
       
       {/* Left side - Lives & Progress */}
       <div 
-        className="absolute top-28 left-2 md:left-4 flex flex-col gap-2 pointer-events-none"
+        className={cn(
+          "absolute left-2 md:left-4 flex flex-col pointer-events-none",
+          isMobile ? "top-20 gap-1.5" : "top-28 gap-2",
+          isMobile && isLandscape && "top-16"
+        )}
         style={{ zIndex: 150 }}
       >
         {/* Lives */}
-        <div className="flex items-center gap-1 bg-background/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50">
+        <div className={cn(
+          "flex items-center gap-1 bg-background/80 backdrop-blur-md rounded-lg border border-border/50",
+          isMobile ? "px-2.5 py-1.5" : "px-3 py-2"
+        )}>
           {Array.from({ length: 3 }).map((_, i) => (
             <Heart
               key={i}
               className={cn(
-                "h-4 w-4",
+                isMobile ? "h-3.5 w-3.5" : "h-4 w-4",
                 i < playerLives ? "text-red-500 fill-red-500" : "text-muted-foreground"
               )}
             />
@@ -192,9 +220,15 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
         </div>
         
         {/* Capture progress */}
-        <div className="bg-background/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50">
-          <div className="flex items-center gap-2 text-xs">
-            <Ghost className="h-4 w-4 text-purple-400" />
+        <div className={cn(
+          "bg-background/80 backdrop-blur-md rounded-lg border border-border/50",
+          isMobile ? "px-2.5 py-1.5" : "px-3 py-2"
+        )}>
+          <div className={cn(
+            "flex items-center gap-2",
+            isMobile ? "text-[11px]" : "text-xs"
+          )}>
+            <Ghost className={cn(isMobile ? "h-3.5 w-3.5" : "h-4 w-4", "text-purple-400")} />
             <span className="text-muted-foreground">Captured:</span>
             <span className="font-bold text-foreground">
               {capturedCount}/{requiredCaptures}
@@ -205,7 +239,11 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
       
       {/* Right side - Equipment */}
       <div 
-        className="absolute top-28 right-2 md:right-4 flex flex-col gap-2 pointer-events-auto"
+        className={cn(
+          "absolute right-2 md:right-4 flex flex-col pointer-events-auto",
+          isMobile ? "top-20 gap-1.5" : "top-28 gap-2",
+          isMobile && isLandscape && "top-16"
+        )}
         style={{ zIndex: 150 }}
       >
         {/* EMF Detector */}
@@ -216,17 +254,21 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
             toggleEMF();
           }}
           className={cn(
-            "flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
+            "flex flex-col items-center gap-1 rounded-lg border transition-all touch-manipulation active:scale-95",
+            isMobile ? "px-2 py-1.5" : "px-3 py-2",
             equipment.emfActive
               ? "bg-blue-950/90 border-blue-500/50"
               : "bg-background/80 border-border/50 hover:bg-background/90"
           )}
           disabled={equipment.emfBattery <= 0}
         >
-          <Radio className={cn("h-5 w-5", equipment.emfActive ? "text-blue-400" : "text-muted-foreground")} />
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">EMF</span>
+          <Radio className={cn(isMobile ? "h-4 w-4" : "h-5 w-5", equipment.emfActive ? "text-blue-400" : "text-muted-foreground")} />
+          <span className={cn(isMobile ? "text-[9px]" : "text-[10px]", "uppercase font-bold text-muted-foreground")}>EMF</span>
           {/* Battery */}
-          <div className="w-8 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+          <div className={cn(
+            "bg-gray-700 rounded-full overflow-hidden",
+            isMobile ? "w-7 h-1" : "w-8 h-1.5"
+          )}>
             <div 
               className={cn(
                 "h-full transition-all",
@@ -245,7 +287,8 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
             useFlashlight();
           }}
           className={cn(
-            "flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
+            "flex flex-col items-center gap-1 rounded-lg border transition-all touch-manipulation active:scale-95",
+            isMobile ? "px-2 py-1.5" : "px-3 py-2",
             equipment.flashlightActive
               ? "bg-yellow-950/90 border-yellow-500/50"
               : "bg-background/80 border-border/50 hover:bg-background/90",
@@ -253,10 +296,13 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
           )}
           disabled={equipment.flashlightBattery <= 0 || equipment.flashlightCooldown > 0}
         >
-          <Flashlight className={cn("h-5 w-5", equipment.flashlightActive ? "text-yellow-400" : "text-muted-foreground")} />
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">Flash</span>
+          <Flashlight className={cn(isMobile ? "h-4 w-4" : "h-5 w-5", equipment.flashlightActive ? "text-yellow-400" : "text-muted-foreground")} />
+          <span className={cn(isMobile ? "text-[9px]" : "text-[10px]", "uppercase font-bold text-muted-foreground")}>Flash</span>
           {/* Battery */}
-          <div className="w-8 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+          <div className={cn(
+            "bg-gray-700 rounded-full overflow-hidden",
+            isMobile ? "w-7 h-1" : "w-8 h-1.5"
+          )}>
             <div 
               className={cn(
                 "h-full transition-all",
@@ -275,7 +321,8 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
             fireGhostTrap();
           }}
           className={cn(
-            "flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
+            "flex flex-col items-center gap-1 rounded-lg border transition-all touch-manipulation active:scale-95",
+            isMobile ? "px-2 py-1.5" : "px-3 py-2",
             equipment.trapActive
               ? "bg-green-950/90 border-green-500/50 scale-110"
               : "bg-background/80 border-border/50 hover:bg-background/90",
@@ -283,15 +330,16 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
           )}
           disabled={equipment.trapCharges <= 0 || equipment.trapActive}
         >
-          <Crosshair className={cn("h-5 w-5", equipment.trapActive ? "text-green-400 animate-pulse" : "text-muted-foreground")} />
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">Trap</span>
+          <Crosshair className={cn(isMobile ? "h-4 w-4" : "h-5 w-5", equipment.trapActive ? "text-green-400 animate-pulse" : "text-muted-foreground")} />
+          <span className={cn(isMobile ? "text-[9px]" : "text-[10px]", "uppercase font-bold text-muted-foreground")}>Trap</span>
           {/* Charges indicator */}
-          <div className="flex gap-0.5">
+          <div className={cn("flex gap-0.5", isMobile && "gap-0.5")}>
             {[1, 2, 3].map((charge) => (
               <div
                 key={charge}
                 className={cn(
-                  "w-2 h-2 rounded-full transition-all",
+                  isMobile ? "w-1.5 h-1.5" : "w-2 h-2",
+                  "rounded-full transition-all",
                   charge <= equipment.trapCharges ? "bg-green-400" : "bg-gray-700"
                 )}
               />
@@ -303,14 +351,21 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
       {/* EMF Reading Display (when active) */}
       {equipment.emfActive && (
         <div 
-          className="absolute bottom-32 left-1/2 -translate-x-1/2 pointer-events-none"
+          className={cn(
+            "absolute left-1/2 -translate-x-1/2 pointer-events-none",
+            isMobile ? "bottom-28" : "bottom-32",
+            isMobile && isLandscape && "bottom-24"
+          )}
           style={{ zIndex: 150 }}
         >
-          <div className="bg-blue-950/90 backdrop-blur-md rounded-lg px-4 py-3 border border-blue-500/50">
+          <div className={cn(
+            "bg-blue-950/90 backdrop-blur-md rounded-lg border border-blue-500/50",
+            isMobile ? "px-3 py-2" : "px-4 py-3"
+          )}>
             <div className="flex items-center gap-3">
-              <Radio className="h-5 w-5 text-blue-400 animate-pulse" />
+              <Radio className={cn(isMobile ? "h-4 w-4" : "h-5 w-5", "text-blue-400 animate-pulse")} />
               <div className="flex flex-col">
-                <span className="text-[10px] uppercase text-blue-300">EMF Reading</span>
+                <span className={cn(isMobile ? "text-[9px]" : "text-[10px]", "uppercase text-blue-300")}>EMF Reading</span>
                 <span className={cn("font-mono font-bold", emfReading.color)}>
                   {emfReading.label}
                 </span>
