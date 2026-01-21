@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Clock, Heart, Sparkles, AlertTriangle, Navigation } from 'lucide-react';
 import { useMirrorWorldStore } from '@/stores/mirrorWorldStore';
 import { usePlayerStore } from '@/stores/playerStore';
@@ -20,6 +20,7 @@ export default function MirrorWorldUI() {
   const playerPosition = usePlayerStore((state) => state.position);
   const MAP_BOUNDS = 60;
   const MAP_SIZE = 144;
+  const [showHint, setShowHint] = useState(false);
 
   useEffect(() => {
     if (phase !== 'hunting') return;
@@ -28,6 +29,16 @@ export default function MirrorWorldUI() {
     }, 1000);
     return () => clearInterval(interval);
   }, [phase, updateTimer]);
+
+  useEffect(() => {
+    if (phase !== 'hunting') {
+      setShowHint(false);
+      return;
+    }
+    setShowHint(true);
+    const timeout = setTimeout(() => setShowHint(false), 7000);
+    return () => clearTimeout(timeout);
+  }, [phase]);
 
   const distanceToShadow = useMemo(() => {
     const dx = shadowPosition[0] - playerPosition[0];
@@ -73,7 +84,7 @@ export default function MirrorWorldUI() {
 
   return (
     <>
-      <div className="absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none" style={{ zIndex: 150 }}>
+      <div className="absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-2" style={{ zIndex: 150 }}>
         <div className={cn(
           'flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md border',
           timeRemaining <= 10 ? 'bg-red-950/90 border-red-500/50 animate-pulse' : 'bg-background/80 border-border/50'
@@ -83,6 +94,11 @@ export default function MirrorWorldUI() {
             {formatTime(timeRemaining)}
           </span>
         </div>
+        {showHint && (
+          <div className="max-w-xs text-center bg-purple-950/80 border border-purple-500/40 text-purple-100 text-xs px-3 py-2 rounded-lg backdrop-blur-md">
+            Follow the purple dots on the map to rooftop anchors. Use jump + stairs to climb.
+          </div>
+        )}
       </div>
 
       <div className="absolute top-28 left-2 md:left-4 flex flex-col gap-2 pointer-events-none" style={{ zIndex: 150 }}>
