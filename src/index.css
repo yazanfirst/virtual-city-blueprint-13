@@ -151,3 +151,43 @@
     @apply absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50;
   }
 }
+
+@media (max-width: 768px) and (orientation: landscape) {
+  .ghost-hunt-ui__timer {
+    top: 0.5rem;
+    left: 0.75rem;
+    transform: none;
+  }
+
+  .ghost-hunt-ui__stats {
+    top: auto;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .ghost-hunt-ui__stats > div {
+    padding: 0.35rem 0.5rem;
+  }
+
+  .ghost-hunt-ui__equipment {
+    top: auto;
+    bottom: 0.75rem;
+    right: 0.75rem;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .ghost-hunt-ui__equipment > button {
+    padding: 0.35rem 0.5rem;
+  }
+
+  .ghost-hunt-ui__equipment > button span {
+    font-size: 0.55rem;
+  }
+
+  .ghost-hunt-ui__emf {
+    bottom: 3.5rem;
+  }
+}

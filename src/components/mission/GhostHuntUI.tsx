@@ -150,10 +150,10 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
   if (phase !== 'hunting') return null;
   
   return (
-    <>
+    <div className="ghost-hunt-ui">
       {/* Top HUD */}
       <div 
-        className="absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none"
+        className="ghost-hunt-ui__timer absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none"
         style={{ zIndex: 150 }}
       >
         {/* Timer */}
@@ -175,7 +175,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
       
       {/* Left side - Lives & Progress */}
       <div 
-        className="absolute top-28 left-2 md:left-4 flex flex-col gap-2 pointer-events-none"
+        className="ghost-hunt-ui__stats absolute top-28 left-2 md:left-4 flex flex-col gap-2 pointer-events-none"
         style={{ zIndex: 150 }}
       >
         {/* Lives */}
@@ -205,7 +205,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
       
       {/* Right side - Equipment */}
       <div 
-        className="absolute top-28 right-2 md:right-4 flex flex-col gap-2 pointer-events-auto"
+        className="ghost-hunt-ui__equipment absolute top-28 right-2 md:right-4 flex flex-col gap-2 pointer-events-auto"
         style={{ zIndex: 150 }}
       >
         {/* EMF Detector */}
@@ -303,7 +303,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
       {/* EMF Reading Display (when active) */}
       {equipment.emfActive && (
         <div 
-          className="absolute bottom-32 left-1/2 -translate-x-1/2 pointer-events-none"
+          className="ghost-hunt-ui__emf absolute bottom-32 left-1/2 -translate-x-1/2 pointer-events-none"
           style={{ zIndex: 150 }}
         >
           <div className="bg-blue-950/90 backdrop-blur-md rounded-lg px-4 py-3 border border-blue-500/50">
@@ -367,6 +367,6 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
           />
         </div>
       )}
-    </>
+    </div>
   );
 }
