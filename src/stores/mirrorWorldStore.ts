@@ -23,10 +23,6 @@ interface MirrorWorldState {
   timeRemaining: number;
   shadowPosition: [number, number, number];
   shadowSpeed: number;
-  shadowBurstActive: boolean;
-  burstTimeRemaining: number;
-  timeSinceBurst: number;
-  timeSinceSpeedIncrease: number;
   anchors: RealityAnchor[];
   collectedCount: number;
   requiredAnchors: number;
@@ -40,7 +36,6 @@ interface MirrorWorldState {
   startMission: () => void;
   completeBriefing: () => void;
   updateTimer: (delta: number) => void;
-  updateShadowBehavior: (delta: number) => void;
   collectAnchor: (anchorId: string) => void;
   updateShadowPosition: (pos: [number, number, number]) => void;
   updateAnchorPosition: (anchorId: string, position: [number, number, number]) => void;
@@ -61,7 +56,7 @@ const ANCHOR_POSITIONS: [number, number, number][] = [
   [0, 8, -48],
 ];
 
-const BASE_SHADOW_SPEED = 0.4;
+const BASE_SHADOW_SPEED = 0.5;
 const START_LIVES = 2;
 const START_TIME = 75;
 const PROTECTION_DURATION = 3000;
@@ -98,10 +93,6 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
   timeRemaining: START_TIME,
   shadowPosition: [0, 8, 30],
   shadowSpeed: BASE_SHADOW_SPEED,
-  shadowBurstActive: false,
-  burstTimeRemaining: 0,
-  timeSinceBurst: 0,
-  timeSinceSpeedIncrease: 0,
   anchors: createAnchors(),
   collectedCount: 0,
   requiredAnchors: 5,
@@ -127,10 +118,6 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       timeRemaining: START_TIME,
       shadowPosition: [playerPosition[0] - 6, playerPosition[1] + 1, playerPosition[2] - 6],
       shadowSpeed: BASE_SHADOW_SPEED,
-      shadowBurstActive: false,
-      burstTimeRemaining: 0,
-      timeSinceBurst: 0,
-      timeSinceSpeedIncrease: 0,
       anchors: createAnchors(),
       collectedCount: 0,
       playerLives: START_LIVES,
@@ -153,41 +140,6 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       return;
     }
     set({ timeRemaining: nextTime });
-  },
-
-  updateShadowBehavior: (delta) => {
-    const { phase, timeSinceBurst, timeSinceSpeedIncrease, shadowSpeed, shadowBurstActive, burstTimeRemaining } = get();
-    if (phase !== 'hunting') return;
-
-    let nextTimeSinceBurst = timeSinceBurst + delta;
-    let nextTimeSinceSpeedIncrease = timeSinceSpeedIncrease + delta;
-    let nextShadowSpeed = shadowSpeed;
-    let nextBurstActive = shadowBurstActive;
-    let nextBurstRemaining = burstTimeRemaining;
-
-    if (nextTimeSinceSpeedIncrease >= 10) {
-      nextShadowSpeed = shadowSpeed * 1.15;
-      nextTimeSinceSpeedIncrease = 0;
-    }
-
-    if (nextBurstActive) {
-      nextBurstRemaining = Math.max(0, burstTimeRemaining - delta);
-      if (nextBurstRemaining === 0) {
-        nextBurstActive = false;
-      }
-    } else if (nextTimeSinceBurst >= 15) {
-      nextBurstActive = true;
-      nextBurstRemaining = 3;
-      nextTimeSinceBurst = 0;
-    }
-
-    set({
-      shadowSpeed: nextShadowSpeed,
-      shadowBurstActive: nextBurstActive,
-      burstTimeRemaining: nextBurstRemaining,
-      timeSinceBurst: nextTimeSinceBurst,
-      timeSinceSpeedIncrease: nextTimeSinceSpeedIncrease,
-    });
   },
 
   collectAnchor: (anchorId) => {
@@ -278,10 +230,6 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       timeRemaining: START_TIME,
       shadowPosition: [0, 8, 30],
       shadowSpeed: BASE_SHADOW_SPEED,
-      shadowBurstActive: false,
-      burstTimeRemaining: 0,
-      timeSinceBurst: 0,
-      timeSinceSpeedIncrease: 0,
       anchors: createAnchors(),
       collectedCount: 0,
       playerLives: START_LIVES,

@@ -23,7 +23,7 @@ export default function MirrorWorldBriefing() {
             <ul className="space-y-1 text-xs">
               <li>• Collect {requiredAnchors} Reality Anchors on the rooftops</li>
               <li>• Escape before time collapses (75 seconds)</li>
-              <li>• The Shadow hunts you and speeds up over time</li>
+              <li>• Shadow mirrors your movement in the opposite direction</li>
             </ul>
           </div>
           <div className="bg-red-950/40 rounded-lg p-3 border border-red-500/30">

@@ -12,8 +12,6 @@ export default function MirrorWorldUI() {
     collectedCount,
     requiredAnchors,
     shadowPosition,
-    shadowBurstActive,
-    timeSinceBurst,
     promptMessage,
     promptKey,
     updateTimer,
@@ -84,18 +82,6 @@ export default function MirrorWorldUI() {
           <div className="bg-red-950/90 rounded-lg px-3 py-2 border border-red-500/60 text-xs text-red-200 flex items-center gap-2 animate-pulse">
             <AlertTriangle className="h-3 w-3" />
             Shadow closing in!
-          </div>
-        )}
-        {shadowBurstActive && (
-          <div className="bg-fuchsia-950/90 rounded-lg px-3 py-2 border border-fuchsia-500/60 text-xs text-fuchsia-200 flex items-center gap-2 animate-pulse">
-            <AlertTriangle className="h-3 w-3" />
-            Shadow burst active!
-          </div>
-        )}
-        {!shadowBurstActive && timeSinceBurst > 12 && (
-          <div className="bg-fuchsia-950/80 rounded-lg px-3 py-2 border border-fuchsia-500/40 text-xs text-fuchsia-200 flex items-center gap-2">
-            <AlertTriangle className="h-3 w-3" />
-            Shadow surge incoming
           </div>
         )}
       </div>

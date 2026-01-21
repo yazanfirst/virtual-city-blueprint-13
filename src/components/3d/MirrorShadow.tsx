@@ -7,9 +7,6 @@ import LowPolyCharacter from './LowPolyCharacter';
 
 const BOUNDS = 70;
 const COLLISION_DISTANCE = 2;
-const TELEPORT_DISTANCE = 30;
-const TELEPORT_OFFSET = 10;
-
 export default function MirrorShadow() {
   const meshRef = useRef<THREE.Group>(null);
   const lastPlayerPos = useRef<[number, number, number] | null>(null);
@@ -19,18 +16,14 @@ export default function MirrorShadow() {
   const {
     shadowPosition,
     shadowSpeed,
-    shadowBurstActive,
     isProtected,
     phase,
-    updateShadowBehavior,
     updateShadowPosition,
     hitByShadow,
   } = useMirrorWorldStore();
 
   useFrame((_, delta) => {
     if (phase !== 'hunting') return;
-    updateShadowBehavior(delta);
-
     if (!lastPlayerPos.current) {
       lastPlayerPos.current = [...playerPosition];
       return;
@@ -48,34 +41,16 @@ export default function MirrorShadow() {
     }
     lastPlayerPos.current = [...playerPosition];
 
-    const dirX = playerPosition[0] - shadowPosition[0];
-    const dirZ = playerPosition[2] - shadowPosition[2];
-    const distance = Math.sqrt(dirX * dirX + dirZ * dirZ) || 1;
-
-    if (distance > TELEPORT_DISTANCE) {
-      const angle = Math.random() * Math.PI * 2;
-      const nextX = THREE.MathUtils.clamp(playerPosition[0] + Math.cos(angle) * TELEPORT_OFFSET, -BOUNDS, BOUNDS);
-      const nextZ = THREE.MathUtils.clamp(playerPosition[2] + Math.sin(angle) * TELEPORT_OFFSET, -BOUNDS, BOUNDS);
-      updateShadowPosition([nextX, shadowPosition[1], nextZ]);
-      if (meshRef.current) {
-        meshRef.current.position.set(nextX, shadowPosition[1], nextZ);
-      }
-      return;
-    }
-
-    const normalizedX = dirX / distance;
-    const normalizedZ = dirZ / distance;
-    const predictedX = normalizedX + playerVelocity.current.x * 0.003;
-    const predictedZ = normalizedZ + playerVelocity.current.z * 0.003;
-    const currentSpeed = shadowBurstActive ? shadowSpeed * 2 : shadowSpeed;
+    const mirroredX = -dx;
+    const mirroredZ = -dz;
 
     const nextX = THREE.MathUtils.clamp(
-      shadowPosition[0] + predictedX * currentSpeed * 60 * delta,
+      shadowPosition[0] + mirroredX * shadowSpeed * 60 * delta,
       -BOUNDS,
       BOUNDS
     );
     const nextZ = THREE.MathUtils.clamp(
-      shadowPosition[2] + predictedZ * currentSpeed * 60 * delta,
+      shadowPosition[2] + mirroredZ * shadowSpeed * 60 * delta,
       -BOUNDS,
       BOUNDS
     );
@@ -86,7 +61,11 @@ export default function MirrorShadow() {
       meshRef.current.position.set(nextX, shadowPosition[1], nextZ);
     }
 
-    if (distance < COLLISION_DISTANCE && !isProtected) {
+    const distX = playerPosition[0] - nextX;
+    const distZ = playerPosition[2] - nextZ;
+    const distanceToPlayer = Math.sqrt(distX * distX + distZ * distZ);
+
+    if (distanceToPlayer < COLLISION_DISTANCE && !isProtected) {
       hitByShadow();
     }
   });
