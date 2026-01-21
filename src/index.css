@@ -153,6 +153,17 @@
 }
 
 @media (max-width: 768px) and (orientation: landscape) {
+  .ghost-hunt-briefing {
+    max-width: min(520px, 92vw);
+    max-height: 84vh;
+    padding: 1rem;
+    overflow-y: auto;
+  }
+
+  .ghost-hunt-briefing__content {
+    font-size: 0.75rem;
+  }
+
   .ghost-hunt-ui__timer {
     top: 0.5rem;
     left: 0.75rem;

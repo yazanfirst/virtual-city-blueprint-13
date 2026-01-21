@@ -89,15 +89,14 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
         className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm"
         style={{ touchAction: 'manipulation' }}
       >
-        <div className="bg-background/95 border border-purple-500/50 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+        <div className="ghost-hunt-briefing bg-background/95 border border-purple-500/50 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
           <div className="flex items-center gap-3 mb-4">
             <Ghost className="h-8 w-8 text-purple-400" />
             <h2 className="font-display text-xl font-bold text-purple-400 uppercase tracking-wider">
               Ghost Hunt
             </h2>
           </div>
-          
-          <div className="text-sm text-muted-foreground space-y-3 mb-6">
+          <div className="ghost-hunt-briefing__content text-sm text-muted-foreground space-y-3 mb-6">
             <p className="text-foreground font-medium">
               Paranormal activity detected! Capture {requiredCaptures} ghosts before time runs out.
             </p>
