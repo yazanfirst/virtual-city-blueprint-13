@@ -461,57 +461,38 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
               setIsMobileHudOpen((open) => !open);
             }}
             className={cn(
-              "absolute left-1/2 -translate-x-1/2 bottom-3 px-4 py-2 rounded-full bg-background/90 border border-border/60 text-foreground text-[11px] uppercase font-bold tracking-wider shadow-lg touch-manipulation active:scale-95 pointer-events-auto",
+              "absolute right-3 bottom-24 px-3 py-2 rounded-full bg-background/90 border border-border/60 text-foreground text-[11px] uppercase font-bold tracking-wider shadow-lg touch-manipulation active:scale-95 pointer-events-auto",
               isMobileHudOpen && "bg-purple-600 text-white border-purple-500"
             )}
             style={{ zIndex: 160 }}
           >
-            {isMobileHudOpen ? "Hide Ghost HUD" : "Show Ghost HUD"}
+            {isMobileHudOpen ? "Tools" : "Tools"}
           </button>
 
           {isMobileHudOpen && (
             <div
-              className="absolute left-1/2 -translate-x-1/2 bottom-14 w-[90vw] max-w-sm bg-background/90 backdrop-blur-md border border-border/60 rounded-2xl px-3 py-2 shadow-xl pointer-events-auto"
+              className="absolute right-3 bottom-36 flex flex-col gap-2 bg-background/90 backdrop-blur-md border border-border/60 rounded-2xl px-2 py-2 shadow-xl pointer-events-auto"
               style={{ zIndex: 155 }}
               onPointerDown={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Heart
-                      key={i}
-                      className={cn(
-                        "h-4 w-4",
-                        i < playerLives ? "text-red-500 fill-red-500" : "text-muted-foreground"
-                      )}
-                    />
-                  ))}
-                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <Ghost className="h-3.5 w-3.5 text-purple-400" />
-                    <span className="font-semibold text-foreground">{capturedCount}/{requiredCaptures}</span>
-                  </div>
-                </div>
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Ghost Hunt</span>
-              </div>
-
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    toggleEMF();
-                  }}
-                  className={cn(
-                    "flex-1 flex flex-col items-center gap-1 rounded-lg border transition-all touch-manipulation active:scale-95 px-2 py-1.5",
-                    equipment.emfActive
-                      ? "bg-blue-950/90 border-blue-500/50"
-                      : "bg-background/80 border-border/50 hover:bg-background/90"
-                  )}
-                  disabled={equipment.emfBattery <= 0}
-                >
-                  <Radio className={cn("h-4 w-4", equipment.emfActive ? "text-blue-400" : "text-muted-foreground")} />
-                  <span className="text-[9px] uppercase font-bold text-muted-foreground">EMF</span>
-                  <div className="w-10 h-1 bg-gray-700 rounded-full overflow-hidden">
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  toggleEMF();
+                }}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl border transition-all touch-manipulation active:scale-95 px-3 py-2 min-w-[120px]",
+                  equipment.emfActive
+                    ? "bg-blue-950/90 border-blue-500/50"
+                    : "bg-background/80 border-border/50 hover:bg-background/90"
+                )}
+                disabled={equipment.emfBattery <= 0}
+              >
+                <Radio className={cn("h-5 w-5", equipment.emfActive ? "text-blue-400" : "text-muted-foreground")} />
+                <div className="flex flex-col items-start">
+                  <span className="text-[11px] uppercase font-bold text-muted-foreground">EMF</span>
+                  <div className="w-16 h-1 bg-gray-700 rounded-full overflow-hidden">
                     <div 
                       className={cn(
                         "h-full transition-all",
@@ -520,26 +501,28 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
                       style={{ width: `${equipment.emfBattery}%` }}
                     />
                   </div>
-                </button>
+                </div>
+              </button>
 
-                <button
-                  type="button"
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    useFlashlight();
-                  }}
-                  className={cn(
-                    "flex-1 flex flex-col items-center gap-1 rounded-lg border transition-all touch-manipulation active:scale-95 px-2 py-1.5",
-                    equipment.flashlightActive
-                      ? "bg-yellow-950/90 border-yellow-500/50"
-                      : "bg-background/80 border-border/50 hover:bg-background/90",
-                    equipment.flashlightCooldown > 0 && "opacity-50"
-                  )}
-                  disabled={equipment.flashlightBattery <= 0 || equipment.flashlightCooldown > 0}
-                >
-                  <Flashlight className={cn("h-4 w-4", equipment.flashlightActive ? "text-yellow-400" : "text-muted-foreground")} />
-                  <span className="text-[9px] uppercase font-bold text-muted-foreground">Flash</span>
-                  <div className="w-10 h-1 bg-gray-700 rounded-full overflow-hidden">
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  useFlashlight();
+                }}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl border transition-all touch-manipulation active:scale-95 px-3 py-2 min-w-[120px]",
+                  equipment.flashlightActive
+                    ? "bg-yellow-950/90 border-yellow-500/50"
+                    : "bg-background/80 border-border/50 hover:bg-background/90",
+                  equipment.flashlightCooldown > 0 && "opacity-50"
+                )}
+                disabled={equipment.flashlightBattery <= 0 || equipment.flashlightCooldown > 0}
+              >
+                <Flashlight className={cn("h-5 w-5", equipment.flashlightActive ? "text-yellow-400" : "text-muted-foreground")} />
+                <div className="flex flex-col items-start">
+                  <span className="text-[11px] uppercase font-bold text-muted-foreground">Flash</span>
+                  <div className="w-16 h-1 bg-gray-700 rounded-full overflow-hidden">
                     <div 
                       className={cn(
                         "h-full transition-all",
@@ -548,38 +531,40 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
                       style={{ width: `${equipment.flashlightBattery}%` }}
                     />
                   </div>
-                </button>
+                </div>
+              </button>
 
-                <button
-                  type="button"
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    fireGhostTrap();
-                  }}
-                  className={cn(
-                    "flex-1 flex flex-col items-center gap-1 rounded-lg border transition-all touch-manipulation active:scale-95 px-2 py-1.5",
-                    equipment.trapActive
-                      ? "bg-green-950/90 border-green-500/50 scale-110"
-                      : "bg-background/80 border-border/50 hover:bg-background/90",
-                    equipment.trapCharges <= 0 && "opacity-50"
-                  )}
-                  disabled={equipment.trapCharges <= 0 || equipment.trapActive}
-                >
-                  <Crosshair className={cn("h-4 w-4", equipment.trapActive ? "text-green-400 animate-pulse" : "text-muted-foreground")} />
-                  <span className="text-[9px] uppercase font-bold text-muted-foreground">Trap</span>
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  fireGhostTrap();
+                }}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl border transition-all touch-manipulation active:scale-95 px-3 py-2 min-w-[120px]",
+                  equipment.trapActive
+                    ? "bg-green-950/90 border-green-500/50 scale-105"
+                    : "bg-background/80 border-border/50 hover:bg-background/90",
+                  equipment.trapCharges <= 0 && "opacity-50"
+                )}
+                disabled={equipment.trapCharges <= 0 || equipment.trapActive}
+              >
+                <Crosshair className={cn("h-5 w-5", equipment.trapActive ? "text-green-400 animate-pulse" : "text-muted-foreground")} />
+                <div className="flex flex-col items-start">
+                  <span className="text-[11px] uppercase font-bold text-muted-foreground">Trap</span>
                   <div className="flex gap-0.5">
                     {[1, 2, 3].map((charge) => (
                       <div
                         key={charge}
                         className={cn(
-                          "w-1.5 h-1.5 rounded-full transition-all",
+                          "w-2 h-2 rounded-full transition-all",
                           charge <= equipment.trapCharges ? "bg-green-400" : "bg-gray-700"
                         )}
                       />
                     ))}
                   </div>
-                </button>
-              </div>
+                </div>
+              </button>
             </div>
           )}
         </>
