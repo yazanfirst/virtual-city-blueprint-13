@@ -291,8 +291,31 @@ export default function CityScene({
     };
   }, [isMobile, handleCameraMove]);
 
+  // Auto-focus the container for keyboard events on mount and when clicked
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    // Focus container on mount so keyboard works immediately
+    containerRef.current?.focus();
+  }, []);
+
+  const handleContainerClick = useCallback(() => {
+    containerRef.current?.focus();
+  }, []);
+
   return (
-    <div className="relative h-full w-full">
+    <div 
+      ref={containerRef}
+      className="relative h-full w-full outline-none"
+      tabIndex={0}
+      onClick={handleContainerClick}
+      onKeyDown={(e) => {
+        // Prevent default for game keys to avoid scrolling
+        if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+          e.preventDefault();
+        }
+      }}
+    >
       <Canvas
         className="h-full w-full"
         style={{ touchAction: "none" }}
@@ -326,7 +349,11 @@ export default function CityScene({
         >
           <button
             type="button"
-            onClick={handleJump}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleJump();
+              containerRef.current?.focus();
+            }}
             className="pointer-events-auto rounded-full bg-black/60 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black/70"
           >
             Jump <span className="text-xs text-white/70">(Space)</span>
