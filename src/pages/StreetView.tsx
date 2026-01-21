@@ -393,7 +393,57 @@ const StreetView = () => {
     mission.resetMission();
   };
 
+  // Fullscreen + orientation MUST be triggered by a direct user gesture on mobile.
+  // (Calling requestFullscreen inside useEffect often fails and causes “need to tap twice”.)
+  const requestFullscreenLandscape = useCallback(async () => {
+    try {
+      const docEl = document.documentElement as HTMLElement & {
+        webkitRequestFullscreen?: () => Promise<void>;
+      };
+
+      if (!document.fullscreenElement) {
+        if (docEl.requestFullscreen) {
+          await docEl.requestFullscreen();
+        } else if (docEl.webkitRequestFullscreen) {
+          await docEl.webkitRequestFullscreen();
+        }
+      }
+
+      if ('screen' in window && 'orientation' in screen) {
+        const orientation = screen.orientation as ScreenOrientation & {
+          lock?: (orientation: string) => Promise<void>;
+        };
+        await orientation.lock?.('landscape');
+      }
+    } catch {
+      // Ignore (unsupported or blocked)
+    }
+  }, []);
+
+  const exitFullscreenLandscape = useCallback(async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        const docWithWebkit = document as Document & {
+          webkitExitFullscreen?: () => Promise<void>;
+        };
+        await docWithWebkit.webkitExitFullscreen?.();
+      }
+
+      if ('screen' in window && 'orientation' in screen) {
+        const orientation = screen.orientation as ScreenOrientation & {
+          unlock?: () => void;
+        };
+        orientation.unlock?.();
+      }
+    } catch {
+      // Ignore
+    }
+  }, []);
+
   const handlePauseGame = () => {
+    void exitFullscreenLandscape();
     setIsGamePaused(true);
     setIsMaximized(false);
     if (mission.isActive && mission.phase === 'escape') {
@@ -402,6 +452,7 @@ const StreetView = () => {
   };
 
   const handleResumeGame = () => {
+    void requestFullscreenLandscape();
     setIsGamePaused(false);
     setIsMaximized(true);
     if (mission.isActive && mission.phase === 'escape') {
@@ -410,6 +461,7 @@ const StreetView = () => {
   };
 
   const handleExitGame = () => {
+    void exitFullscreenLandscape();
     setIsGamePaused(false);
     setIsMaximized(false);
     setHasGameStarted(false);
@@ -458,66 +510,15 @@ const StreetView = () => {
 
   // shopBrandings already declared above
 
-  // Request fullscreen + landscape orientation when maximized on mobile
+  // Ensure we exit fullscreen + unlock orientation when leaving game mode.
   useEffect(() => {
-    const requestFullscreenLandscape = async () => {
-      if (!isMaximized) return;
-
-      try {
-        // First request fullscreen (required for orientation lock on most browsers)
-        const docEl = document.documentElement as HTMLElement & {
-          webkitRequestFullscreen?: () => Promise<void>;
-        };
-        if (docEl.requestFullscreen) {
-          await docEl.requestFullscreen();
-        } else if (docEl.webkitRequestFullscreen) {
-          await docEl.webkitRequestFullscreen();
-        }
-
-        // Then try to lock to landscape
-        if ('screen' in window && 'orientation' in screen) {
-          const orientation = screen.orientation as ScreenOrientation & {
-            lock?: (orientation: string) => Promise<void>;
-          };
-          await orientation.lock?.('landscape');
-        }
-      } catch {
-        // Silently fail if not supported
-      }
-    };
-
-    const exitFullscreen = async () => {
-      try {
-        if (document.fullscreenElement) {
-          await document.exitFullscreen();
-        } else {
-          const docWithWebkit = document as Document & {
-            webkitExitFullscreen?: () => Promise<void>;
-          };
-          await docWithWebkit.webkitExitFullscreen?.();
-        }
-
-        if ('screen' in window && 'orientation' in screen) {
-          const orientation = screen.orientation as ScreenOrientation & {
-            unlock?: () => void;
-          };
-          orientation.unlock?.();
-        }
-      } catch {
-        // Silently fail
-      }
-    };
-
-    if (isMaximized) {
-      requestFullscreenLandscape();
-    } else {
-      exitFullscreen();
+    if (!isMaximized) {
+      void exitFullscreenLandscape();
     }
-
     return () => {
-      exitFullscreen();
+      void exitFullscreenLandscape();
     };
-  }, [isMaximized]);
+  }, [isMaximized, exitFullscreenLandscape]);
 
   if (isLoading) {
     return (
