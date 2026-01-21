@@ -12,11 +12,14 @@ export default function MirrorWorldUI() {
     collectedCount,
     requiredAnchors,
     shadowPosition,
+    anchors,
     promptMessage,
     promptKey,
     updateTimer,
   } = useMirrorWorldStore();
   const playerPosition = usePlayerStore((state) => state.position);
+  const MAP_BOUNDS = 60;
+  const MAP_SIZE = 144;
 
   useEffect(() => {
     if (phase !== 'hunting') return;
@@ -43,6 +46,28 @@ export default function MirrorWorldUI() {
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  const mapPlayer = useMemo(() => {
+    const [x, , z] = playerPosition;
+    const clampedX = Math.max(-MAP_BOUNDS, Math.min(MAP_BOUNDS, x));
+    const clampedZ = Math.max(-MAP_BOUNDS, Math.min(MAP_BOUNDS, z));
+    const left = ((clampedX + MAP_BOUNDS) / (MAP_BOUNDS * 2)) * 100;
+    const top = (1 - (clampedZ + MAP_BOUNDS) / (MAP_BOUNDS * 2)) * 100;
+    return { left, top };
+  }, [playerPosition]);
+
+  const mapAnchors = useMemo(
+    () =>
+      anchors.map((anchor) => {
+        const [x, , z] = anchor.position;
+        const clampedX = Math.max(-MAP_BOUNDS, Math.min(MAP_BOUNDS, x));
+        const clampedZ = Math.max(-MAP_BOUNDS, Math.min(MAP_BOUNDS, z));
+        const left = ((clampedX + MAP_BOUNDS) / (MAP_BOUNDS * 2)) * 100;
+        const top = (1 - (clampedZ + MAP_BOUNDS) / (MAP_BOUNDS * 2)) * 100;
+        return { id: anchor.id, left, top, isCollected: anchor.isCollected, type: anchor.type };
+      }),
+    [anchors]
+  );
 
   if (phase !== 'hunting') return null;
 
@@ -86,7 +111,7 @@ export default function MirrorWorldUI() {
         )}
       </div>
 
-      <div className="absolute top-28 right-2 md:right-4 pointer-events-none" style={{ zIndex: 150 }}>
+      <div className="absolute top-28 right-2 md:right-4 pointer-events-none flex flex-col gap-3" style={{ zIndex: 150 }}>
         <div className="bg-background/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50 flex items-center gap-2 text-xs">
           <Navigation className="h-4 w-4 text-purple-300" style={{ transform: `rotate(${shadowAngle}deg)` }} />
           <span className="text-muted-foreground">Shadow</span>
@@ -99,6 +124,44 @@ export default function MirrorWorldUI() {
             )}
           </div>
         )}
+        <div className="bg-background/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50 text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-[0.7rem] uppercase tracking-wide text-purple-300">
+            <span>Map</span>
+            <span>{requiredAnchors - collectedCount} left</span>
+          </div>
+          <div
+            className="relative mt-2 rounded-md border border-purple-500/40 bg-gradient-to-br from-purple-950/70 to-black/60"
+            style={{ width: MAP_SIZE, height: MAP_SIZE }}
+          >
+            <div className="absolute inset-0 opacity-60" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
+            {mapAnchors.map((anchor) => (
+              <div
+                key={anchor.id}
+                className={cn(
+                  'absolute h-2 w-2 rounded-full border',
+                  anchor.isCollected
+                    ? 'bg-muted-foreground/50 border-muted-foreground/60'
+                    : 'bg-purple-200 border-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.7)]'
+                )}
+                style={{ left: `${anchor.left}%`, top: `${anchor.top}%`, transform: 'translate(-50%, -50%)' }}
+              />
+            ))}
+            <div
+              className="absolute h-2.5 w-2.5 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.9)]"
+              style={{ left: `${mapPlayer.left}%`, top: `${mapPlayer.top}%`, transform: 'translate(-50%, -50%)' }}
+            />
+          </div>
+          <div className="mt-2 flex items-center gap-3 text-[0.7rem] text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-full bg-emerald-300" />
+              You
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-full bg-purple-200" />
+              Anchor
+            </span>
+          </div>
+        </div>
       </div>
     </>
   );
