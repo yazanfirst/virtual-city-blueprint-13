@@ -296,13 +296,15 @@ export default function CityScene({
 
   const showMirrorWorld = mirrorWorld.isActive && mirrorWorld.phase !== 'inactive' && !mission.isActive && !ghostHunt.isActive;
   const mirrorWorldActive = mirrorWorld.isActive && mirrorWorld.phase === 'hunting' && !mission.isActive && !ghostHunt.isActive;
+  const cameraUp: [number, number, number] = mirrorWorldActive ? [0, -1, 0] : [0, 1, 0];
 
   return (
     <div className="relative h-full w-full">
       <Canvas
+        key={mirrorWorldActive ? 'mirror-world' : 'default-world'}
         className={`h-full w-full ${mirrorWorldActive ? 'mirror-world-canvas' : ''}`}
         style={{ touchAction: "none" }}
-        camera={{ position: [0, 10, 50], fov: 50 }}
+        camera={{ position: [0, 10, 50], fov: 50, up: cameraUp }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
       >
         <Suspense fallback={null}>

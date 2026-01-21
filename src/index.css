@@ -153,9 +153,7 @@
 }
 
 .mirror-world-canvas {
-  transform: scaleY(-1);
-  transform-origin: center;
-  will-change: transform;
+  filter: hue-rotate(180deg) saturate(0.85);
 }
 
 .mirror-world-void {
