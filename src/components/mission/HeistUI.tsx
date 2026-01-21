@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Clock, Eye, Shield, Smoke, Zap } from 'lucide-react';
+import { Clock, CloudFog, Eye, Shield, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useHeistStore } from '@/stores/heistStore';
 
@@ -81,7 +81,7 @@ export default function HeistUI() {
           className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all touch-manipulation active:scale-95 bg-background/80 border-border/50 hover:bg-background/90"
           disabled={equipment.smokeGrenades <= 0}
         >
-          <Smoke className="h-5 w-5 text-purple-400" />
+          <CloudFog className="h-5 w-5 text-purple-400" />
           <span className="text-[10px] uppercase font-bold text-muted-foreground">Smoke</span>
           <span className="text-xs text-foreground">{equipment.smokeGrenades}</span>
         </button>
