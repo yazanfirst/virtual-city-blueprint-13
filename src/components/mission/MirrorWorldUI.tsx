@@ -136,8 +136,13 @@ export default function MirrorWorldUI() {
           </span>
         </div>
         {toastMessage && (
-          <div className="max-w-sm text-center bg-emerald-500/90 border border-emerald-200/80 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-lg shadow-emerald-500/30">
+          <div className="max-w-md text-center bg-emerald-500/95 border border-emerald-200/80 text-white text-base font-bold px-5 py-3 rounded-lg shadow-lg shadow-emerald-500/40">
             {toastMessage}
+          </div>
+        )}
+        {!toastMessage && promptMessage && (
+          <div className="max-w-md text-center bg-purple-900/90 border border-purple-300/70 text-white text-base font-bold px-5 py-3 rounded-lg shadow-lg shadow-purple-500/40">
+            {promptMessage}
           </div>
         )}
         {showHint && (

@@ -421,6 +421,13 @@ const PlayerController = ({
     // Apply jump/gravity
     const groundInfo = getSurfaceHeight(positionRef.current.x, positionRef.current.z);
     const groundHeight = groundInfo.height;
+    const onMirrorRoof = mirrorWorldActive && groundHeight >= 7.5;
+    if (onMirrorRoof && positionRef.current.y < groundHeight) {
+      positionRef.current.y = groundHeight;
+      verticalVelocityRef.current = 0;
+      setIsJumping(false);
+      positionChanged = true;
+    }
 
     // Walking footsteps (soft)
     const now = performance.now();
