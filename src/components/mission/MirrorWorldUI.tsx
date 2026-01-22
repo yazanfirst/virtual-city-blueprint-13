@@ -20,6 +20,13 @@ export default function MirrorWorldUI() {
   const playerPosition = usePlayerStore((state) => state.position);
   const MAP_BOUNDS = 60;
   const MAP_SIZE = 144;
+  const STAIR_POSITIONS: [number, number, number][] = [
+    [12, 0, 24],
+    [-12, 0, 20],
+    [32, 0, 6],
+    [-32, 0, -6],
+    [0, 0, -36],
+  ];
   const [showHint, setShowHint] = useState(false);
 
   useEffect(() => {
@@ -80,6 +87,19 @@ export default function MirrorWorldUI() {
     [anchors]
   );
 
+  const mapStairs = useMemo(
+    () =>
+      STAIR_POSITIONS.map((position, index) => {
+        const [x, , z] = position;
+        const clampedX = Math.max(-MAP_BOUNDS, Math.min(MAP_BOUNDS, x));
+        const clampedZ = Math.max(-MAP_BOUNDS, Math.min(MAP_BOUNDS, z));
+        const left = ((clampedX + MAP_BOUNDS) / (MAP_BOUNDS * 2)) * 100;
+        const top = (1 - (clampedZ + MAP_BOUNDS) / (MAP_BOUNDS * 2)) * 100;
+        return { id: `stair-${index}`, left, top };
+      }),
+    [MAP_BOUNDS]
+  );
+
   if (phase !== 'hunting') return null;
 
   return (
@@ -96,7 +116,7 @@ export default function MirrorWorldUI() {
         </div>
         {showHint && (
           <div className="max-w-xs text-center bg-purple-950/80 border border-purple-500/40 text-purple-100 text-xs px-3 py-2 rounded-lg backdrop-blur-md">
-            Follow the purple dots on the map to rooftop anchors. Use jump + stairs to climb.
+            Follow the purple dots on the map to rooftop anchors. Use the glowing stairs with purple beacons to climb.
           </div>
         )}
       </div>
@@ -162,6 +182,21 @@ export default function MirrorWorldUI() {
                 style={{ left: `${anchor.left}%`, top: `${anchor.top}%`, transform: 'translate(-50%, -50%)' }}
               />
             ))}
+            {mapStairs.map((stair) => (
+              <div
+                key={stair.id}
+                className="absolute h-0 w-0"
+                style={{
+                  left: `${stair.left}%`,
+                  top: `${stair.top}%`,
+                  transform: 'translate(-50%, -50%)',
+                  borderLeft: '4px solid transparent',
+                  borderRight: '4px solid transparent',
+                  borderBottom: '7px solid rgba(196, 181, 253, 0.95)',
+                  filter: 'drop-shadow(0 0 4px rgba(196, 181, 253, 0.9))',
+                }}
+              />
+            ))}
             <div
               className="absolute h-2.5 w-2.5 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.9)]"
               style={{ left: `${mapPlayer.left}%`, top: `${mapPlayer.top}%`, transform: 'translate(-50%, -50%)' }}
@@ -175,6 +210,10 @@ export default function MirrorWorldUI() {
             <span className="flex items-center gap-1">
               <span className="inline-block h-2 w-2 rounded-full bg-purple-200" />
               Anchor
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-sm bg-purple-200" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }} />
+              Stairs
             </span>
           </div>
         </div>

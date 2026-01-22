@@ -830,6 +830,49 @@ function GhostHuntGhosts({ isNight }: { isNight: boolean }) {
   );
 }
 
+function MirrorWorldStairs() {
+  const stairSets = [
+    { position: [12, 0, 24] as [number, number, number], rotation: 0 },
+    { position: [-12, 0, 20] as [number, number, number], rotation: Math.PI },
+    { position: [32, 0, 6] as [number, number, number], rotation: Math.PI / 2 },
+    { position: [-32, 0, -6] as [number, number, number], rotation: -Math.PI / 2 },
+    { position: [0, 0, -36] as [number, number, number], rotation: 0 },
+  ];
+  const stepCount = 10;
+  const stepHeight = 0.8;
+  const stepDepth = 1.6;
+  const stepWidth = 4.2;
+  const beaconHeight = stepCount * stepHeight + 1.2;
+
+  return (
+    <group>
+      {stairSets.map((stair, stairIndex) => (
+        <group key={`mirror-stair-${stairIndex}`} position={stair.position} rotation={[0, stair.rotation, 0]}>
+          {Array.from({ length: stepCount }).map((_, stepIndex) => (
+            <mesh
+              key={`mirror-step-${stairIndex}-${stepIndex}`}
+              position={[0, stepHeight / 2 + stepIndex * stepHeight, stepIndex * stepDepth]}
+            >
+              <boxGeometry args={[stepWidth, stepHeight, stepDepth]} />
+              <meshStandardMaterial color="#4B2B7F" emissive="#2A1244" emissiveIntensity={0.6} />
+            </mesh>
+          ))}
+          <mesh position={[0, beaconHeight / 2, stepDepth * (stepCount - 1)]}>
+            <cylinderGeometry args={[0.25, 0.35, beaconHeight, 8]} />
+            <meshStandardMaterial color="#B992FF" emissive="#8B5CF6" emissiveIntensity={1.2} />
+          </mesh>
+          <pointLight
+            position={[0, beaconHeight, stepDepth * (stepCount - 1)]}
+            intensity={1.4}
+            distance={12}
+            color="#C4B5FD"
+          />
+        </group>
+      ))}
+    </group>
+  );
+}
+
 function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer, mirrorWorldActive }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
@@ -921,6 +964,8 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
 
       {/* === ROUNDABOUT === */}
       <Roundabout isNight={isNight} />
+
+      {mirrorWorldActive && <MirrorWorldStairs />}
 
       {/* === SHOPS - Render BrandedShop if branding data exists, otherwise regular Shop === */}
       {mainBoulevardShops.map((shop, i) => {
