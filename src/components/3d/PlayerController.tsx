@@ -47,18 +47,18 @@ const BENCH_COLLIDERS = [
 ];
 
 const MIRROR_WORLD_LADDERS = [
-  { x: 12, z: 30, rotation: Math.PI / 2 },
-  { x: -12, z: 18, rotation: -Math.PI / 2 },
-  { x: 39, z: 8, rotation: Math.PI / 2 },
-  { x: -28, z: -16, rotation: -Math.PI / 2 },
-  { x: 4, z: -44, rotation: Math.PI / 2 },
+  { x: 14, z: 40, rotation: Math.PI / 2 },
+  { x: -14, z: 28, rotation: -Math.PI / 2 },
+  { x: 43, z: 18, rotation: Math.PI / 2 },
+  { x: -31, z: -18, rotation: -Math.PI / 2 },
+  { x: 14, z: -40, rotation: Math.PI / 2 },
 ];
 const MIRROR_ROOFTOPS = [
-  { x: 15, z: 35, width: 7, depth: 7, height: 8.2 },
-  { x: -15, z: 22, width: 7, depth: 7, height: 8.2 },
-  { x: 45, z: 12, width: 8, depth: 8, height: 8.2 },
-  { x: -32, z: -12, width: 8, depth: 8, height: 8.2 },
-  { x: 0, z: -48, width: 7, depth: 7, height: 8.2 },
+  { x: 18, z: 40, width: 8, depth: 8, height: 8.2 },
+  { x: -18, z: 28, width: 8, depth: 8, height: 8.2 },
+  { x: 47, z: 18, width: 8, depth: 8, height: 8.2 },
+  { x: -35, z: -18, width: 8, depth: 8, height: 8.2 },
+  { x: 18, z: -40, width: 8, depth: 8, height: 8.2 },
 ];
 
 type CircularPlatform = {
@@ -167,6 +167,7 @@ const PlayerController = ({
   });
   const [characterRotation, setCharacterRotation] = useState(0);
   const [isJumping, setIsJumping] = useState(false);
+  const lastRoofAtRef = useRef(0);
 
   // Use store for position to persist across game mode changes
   const { position, setPosition, jumpCounter, incrementJump } = usePlayerStore();
@@ -192,7 +193,8 @@ const PlayerController = ({
     y: number = positionRef.current.y,
     radius: number = PLAYER_RADIUS,
   ): boolean => {
-    const ignoreBuildingCollision = mirrorWorldActive && y > 6;
+    const recentlyOnRoof = mirrorWorldActive && performance.now() - lastRoofAtRef.current < 1500;
+    const ignoreBuildingCollision = mirrorWorldActive && (y > 6 || recentlyOnRoof);
     for (const box of COLLISION_BOXES) {
       if (ignoreBuildingCollision) {
         break;
@@ -347,6 +349,10 @@ const PlayerController = ({
   // Movement and camera logic
   useFrame(() => {
     if (!groupRef.current) return;
+
+    if (mirrorWorldActive && positionRef.current.y > 6) {
+      lastRoofAtRef.current = performance.now();
+    }
 
     const direction = new THREE.Vector3();
 

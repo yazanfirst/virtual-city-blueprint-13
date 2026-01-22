@@ -49,11 +49,11 @@ interface MirrorWorldState {
 }
 
 const ANCHOR_POSITIONS: [number, number, number][] = [
-  [15, 8, 35],
-  [-15, 8, 22],
-  [45, 8, 12],
-  [-32, 8, -12],
-  [0, 8, -48],
+  [18, 8, 40],
+  [-18, 8, 28],
+  [47, 8, 18],
+  [-35, 8, -18],
+  [18, 8, -40],
 ];
 
 const BASE_SHADOW_SPEED = 0.5;
