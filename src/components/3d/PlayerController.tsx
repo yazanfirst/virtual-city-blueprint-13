@@ -172,6 +172,8 @@ const PlayerController = ({
   const mirrorWorldActive = useMirrorWorldStore((state) => state.isActive && state.phase === 'hunting');
   const positionRef = useRef(new THREE.Vector3(...position));
   const lastJumpCounterRef = useRef(jumpCounter);
+  const roofDropAtRef = useRef(0);
+  const wasOnRoofRef = useRef(false);
 
   const { camera } = useThree();
 
@@ -222,7 +224,9 @@ const PlayerController = ({
   ): boolean => {
     const roofHeight = getSurfaceHeight(x, z).height;
     const onRoofSurface = mirrorWorldActive && roofHeight >= 7.5;
-    const ignoreBuildingCollision = mirrorWorldActive && onRoofSurface;
+    const recentlyLeftRoof =
+      mirrorWorldActive && performance.now() - roofDropAtRef.current < 1200 && y > 1.5;
+    const ignoreBuildingCollision = mirrorWorldActive && (onRoofSurface || recentlyLeftRoof);
     for (const box of COLLISION_BOXES) {
       if (ignoreBuildingCollision) {
         break;
@@ -415,6 +419,12 @@ const PlayerController = ({
     const groundInfo = getSurfaceHeight(positionRef.current.x, positionRef.current.z);
     const groundHeight = groundInfo.height;
     const onMirrorRoof = mirrorWorldActive && groundHeight >= 7.5;
+    if (onMirrorRoof) {
+      wasOnRoofRef.current = true;
+    } else if (wasOnRoofRef.current) {
+      roofDropAtRef.current = performance.now();
+      wasOnRoofRef.current = false;
+    }
     if (onMirrorRoof && positionRef.current.y < groundHeight) {
       positionRef.current.y = groundHeight;
       verticalVelocityRef.current = 0;

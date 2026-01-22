@@ -14,7 +14,7 @@ interface RealityAnchorProps {
   shieldActive?: boolean;
 }
 
-const COLLECT_DISTANCE = 3.0;
+const COLLECT_DISTANCE = 4.5;
 const PROMPT_DISTANCE = 3.2;
 const CHASE_SPEED = 0.35;
 const BOUNDS = 70;
@@ -35,7 +35,7 @@ export default function RealityAnchor({
   const meshRef = useRef<THREE.Mesh>(null);
   const orbitRef = useRef<THREE.Group>(null);
   const [floatPhase] = useState(() => Math.random() * Math.PI * 2);
-  const [visible, setVisible] = useState(isVisible);
+  const [visible] = useState(isVisible);
   const stationaryTimeRef = useRef(0);
   const [riddleActiveAt, setRiddleActiveAt] = useState<number | null>(null);
   const lastPlayerPos = useRef<[number, number, number] | null>(null);
@@ -102,13 +102,8 @@ export default function RealityAnchor({
       clearPrompt(id);
     }
 
-    if (type === 'pulse') {
-      const nextVisible = Math.floor(time / 2) % 2 === 0;
-      if (nextVisible !== visible) {
-        setVisible(nextVisible);
-        updateAnchorState(id, { isVisible: nextVisible });
-      }
-      if (!nextVisible) return;
+    if (type === 'pulse' && !visible) {
+      updateAnchorState(id, { isVisible: true });
     }
 
     if (type === 'chase') {
@@ -159,7 +154,7 @@ export default function RealityAnchor({
     }
   });
 
-  if (isCollected || (type === 'pulse' && !visible)) return null;
+  if (isCollected) return null;
 
   return (
     <group position={position}>
