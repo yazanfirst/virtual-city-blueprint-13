@@ -193,8 +193,8 @@ const PlayerController = ({
     y: number = positionRef.current.y,
     radius: number = PLAYER_RADIUS,
   ): boolean => {
-    const recentlyOnRoof = mirrorWorldActive && performance.now() - lastRoofAtRef.current < 1500;
-    const ignoreBuildingCollision = mirrorWorldActive && (y > 6 || recentlyOnRoof);
+    const recentlyOnRoof = mirrorWorldActive && performance.now() - lastRoofAtRef.current < 1800;
+    const ignoreBuildingCollision = mirrorWorldActive && (y > 4.5 || recentlyOnRoof);
     for (const box of COLLISION_BOXES) {
       if (ignoreBuildingCollision) {
         break;

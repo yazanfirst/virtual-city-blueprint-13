@@ -136,7 +136,7 @@ export default function MirrorWorldUI() {
         </div>
         {showHint && (
           <div className="max-w-xs text-center bg-purple-950/80 border border-purple-500/40 text-purple-100 text-xs px-3 py-2 rounded-lg backdrop-blur-md">
-            Follow the purple dots on the map to rooftop anchors. Use the Climb button near the purple ladders, then touch anchors to collect them.
+            Follow the purple dots on the map to rooftop anchors. Look for glowing ladder panels and use Climb, then touch anchors to collect them.
           </div>
         )}
         {canClimb && (

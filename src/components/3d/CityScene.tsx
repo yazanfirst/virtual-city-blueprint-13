@@ -855,6 +855,11 @@ function MirrorWorldLadders() {
             <cylinderGeometry args={[0.07, 0.07, ladderHeight, 8]} />
             <meshStandardMaterial color="#5A30A3" emissive="#2A1244" emissiveIntensity={0.7} />
           </mesh>
+          <mesh position={[0, 1.4, 0.5]}>
+            <planeGeometry args={[1.1, 2.2]} />
+            <meshStandardMaterial color="#A78BFA" emissive="#7C3AED" emissiveIntensity={1.4} />
+          </mesh>
+          <pointLight position={[0, 1.4, 0.6]} intensity={1.2} distance={6} color="#C4B5FD" />
           {Array.from({ length: rungCount }).map((_, rungIndex) => (
             <mesh
               key={`mirror-rung-${ladderIndex}-${rungIndex}`}
