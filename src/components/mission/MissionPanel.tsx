@@ -11,6 +11,7 @@ interface MissionPanelProps {
   shopItemsMap: Map<string, ShopItem[]>;
   onActivate: () => void;
   isCompact?: boolean;
+  disableActivation?: boolean;
 }
 
 export default function MissionPanel({
@@ -18,6 +19,7 @@ export default function MissionPanel({
   shopItemsMap,
   onActivate,
   isCompact = false,
+  disableActivation = false,
 }: MissionPanelProps) {
   const {
     isActive,
@@ -51,6 +53,12 @@ export default function MissionPanel({
   
   // Render based on phase
   if (phase === 'inactive') {
+    const activationDisabled = disableActivation || !canActivate;
+    const activationLabel = disableActivation
+      ? 'Finish Current Mission'
+      : canActivate
+        ? 'Activate Mission'
+        : 'No Shops Available';
     return (
       <div className={`bg-card/90 backdrop-blur-md border border-border/50 rounded-xl ${isCompact ? 'p-3' : 'p-4 md:p-6'} shadow-xl`}>
         <div className={`flex items-center gap-3 ${isCompact ? 'mb-2' : 'mb-4'} pb-3 border-b border-border/30`}>
@@ -69,18 +77,23 @@ export default function MissionPanel({
           Escape the zombies, find the target shop, and remember everything you see. Trust your memory — you may only get one chance.
           Finish before the countdown reaches zero.
         </p>
+        {disableActivation && (
+          <p className={`text-xs text-yellow-300/90 mb-3 ${isCompact ? '' : 'md:text-sm'}`}>
+            Finish your current mission to start another.
+          </p>
+        )}
         
         <Button
           variant="cyber"
           className="w-full touch-manipulation select-none active:scale-[0.98]"
           onPointerDown={(e) => {
             e.stopPropagation();
-            if (canActivate) handleActivate();
+            if (!activationDisabled) handleActivate();
           }}
-          disabled={!canActivate}
+          disabled={activationDisabled}
         >
           <Play className="h-4 w-4 mr-2" />
-          {canActivate ? 'Activate Mission' : 'No Shops Available'}
+          {activationLabel}
         </Button>
       </div>
     );

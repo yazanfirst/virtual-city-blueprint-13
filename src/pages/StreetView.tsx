@@ -126,6 +126,7 @@ const StreetView = () => {
   const [hasExitedShopOnce, setHasExitedShopOnce] = useState(false);
 
   const isAnyMissionActive = mission.isActive || ghostHunt.isActive || mirrorWorld.isActive;
+  const activeMissionTab = mirrorWorld.isActive ? 'mirror' : ghostHunt.isActive ? 'ghost' : mission.isActive ? 'zombie' : 'zombie';
 
   // Tutorial triggers - IN ORDER:
   // 1. Movement tutorial when game starts
@@ -786,36 +787,37 @@ const StreetView = () => {
           </div>
           
           {/* Left side - Mission Tab Button */}
-          {!isAnyMissionActive && (
-            <div className="absolute top-10 md:top-16 left-2 md:left-4 pointer-events-auto" style={{ zIndex: 150 }}>
-              <button
-                type="button"
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  setShowMissions(true);
-                  mission.setNotification(false);
-                  if (mission.isActive && mission.phase === 'escape') {
-                    mission.pauseZombies();
-                  }
-                }}
-                className="relative flex items-center gap-2 px-4 py-3 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg touch-manipulation select-none active:scale-95"
-                data-control-ignore="true"
-              >
-                <Target className="h-4 w-4 text-primary" />
-                <span className="font-display text-xs md:text-sm font-bold uppercase tracking-wider">Missions</span>
-                {/* Notification indicator */}
-                {mission.hasNotification && (
-                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
-                  </span>
-                )}
-              </button>
-            </div>
-          )}
+          <div className="absolute top-10 md:top-16 left-2 md:left-4 pointer-events-auto" style={{ zIndex: 150 }}>
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                setMissionTab(isAnyMissionActive ? activeMissionTab : missionTab);
+                setShowMissions(true);
+                mission.setNotification(false);
+                if (mission.isActive && mission.phase === 'escape') {
+                  mission.pauseZombies();
+                }
+              }}
+              className="relative flex items-center gap-2 px-4 py-3 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg touch-manipulation select-none active:scale-95"
+              data-control-ignore="true"
+            >
+              <Target className="h-4 w-4 text-primary" />
+              <span className="font-display text-xs md:text-sm font-bold uppercase tracking-wider">
+                {isAnyMissionActive ? 'Mission Guide' : 'Missions'}
+              </span>
+              {/* Notification indicator */}
+              {mission.hasNotification && !isAnyMissionActive && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                </span>
+              )}
+            </button>
+          </div>
           
           {/* Mission Popup */}
-          {showMissions && !isAnyMissionActive && (
+          {showMissions && (
             <div 
               className="absolute inset-0 flex items-center justify-center pointer-events-auto"
               style={{ zIndex: 200, touchAction: 'manipulation' }}
@@ -843,7 +845,7 @@ const StreetView = () => {
                       <Target className="h-5 w-5 text-primary" />
                     </div>
                     <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
-                      Missions
+                      {isAnyMissionActive ? 'Mission Guide' : 'Missions'}
                     </h3>
                   </div>
                   <button 
@@ -921,6 +923,7 @@ const StreetView = () => {
                         handleMissionActivate();
                         setShowMissions(false);
                       }}
+                      disableActivation={isAnyMissionActive && !mission.isActive}
                       isCompact
                     />
                   )}
@@ -936,6 +939,7 @@ const StreetView = () => {
                         setShowMissions(false);
                       }}
                       isUnlocked={mission.phase === 'completed'}
+                      disableActivation={isAnyMissionActive && !ghostHunt.isActive}
                       isCompact
                     />
                   )}
@@ -950,6 +954,7 @@ const StreetView = () => {
                         setShowJumpScare(false);
                         setShowMissions(false);
                       }}
+                      disableActivation={isAnyMissionActive && !mirrorWorld.isActive}
                       isCompact
                     />
                   )}

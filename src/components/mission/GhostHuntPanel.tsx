@@ -6,12 +6,14 @@ interface GhostHuntPanelProps {
   onActivate: () => void;
   isCompact?: boolean;
   isUnlocked?: boolean;
+  disableActivation?: boolean;
 }
 
 export default function GhostHuntPanel({
   onActivate,
   isCompact = false,
   isUnlocked = false,
+  disableActivation = false,
 }: GhostHuntPanelProps) {
   const {
     isActive,
@@ -34,6 +36,12 @@ export default function GhostHuntPanel({
   
   // Render based on phase
   if (phase === 'inactive') {
+    const activationDisabled = disableActivation || !isUnlocked;
+    const activationLabel = disableActivation
+      ? 'Finish Current Mission'
+      : isUnlocked
+        ? 'Start Ghost Hunt'
+        : 'Locked';
     return (
       <div className={`bg-card/90 backdrop-blur-md border border-purple-500/30 rounded-xl ${isCompact ? 'p-3' : 'p-4 md:p-6'} shadow-xl`}>
         <div className={`flex items-center gap-3 ${isCompact ? 'mb-2' : 'mb-4'} pb-3 border-b border-purple-500/20`}>
@@ -61,6 +69,11 @@ export default function GhostHuntPanel({
             Complete Mission 1 to unlock the Ghost Hunt.
           </p>
         )}
+        {disableActivation && (
+          <p className={`text-xs text-yellow-300/90 mb-3 ${isCompact ? '' : 'md:text-sm'}`}>
+            Finish your current mission to start another.
+          </p>
+        )}
         
         <div className={`bg-purple-950/30 rounded-lg p-2 mb-3 border border-purple-500/20 ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
           <div className="flex items-center justify-between text-muted-foreground">
@@ -74,14 +87,14 @@ export default function GhostHuntPanel({
           className="w-full touch-manipulation select-none active:scale-[0.98] bg-purple-600 hover:bg-purple-500 border-purple-400"
           onPointerDown={(e) => {
             e.stopPropagation();
-            if (isUnlocked) {
+            if (!activationDisabled && isUnlocked) {
               handleActivate();
             }
           }}
-          disabled={!isUnlocked}
+          disabled={activationDisabled}
         >
           <Play className="h-4 w-4 mr-2" />
-          {isUnlocked ? 'Start Ghost Hunt' : 'Locked'}
+          {activationLabel}
         </Button>
       </div>
     );

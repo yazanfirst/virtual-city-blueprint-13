@@ -5,9 +5,14 @@ import { useMirrorWorldStore } from '@/stores/mirrorWorldStore';
 interface MirrorWorldPanelProps {
   onActivate: () => void;
   isCompact?: boolean;
+  disableActivation?: boolean;
 }
 
-export default function MirrorWorldPanel({ onActivate, isCompact = false }: MirrorWorldPanelProps) {
+export default function MirrorWorldPanel({
+  onActivate,
+  isCompact = false,
+  disableActivation = false,
+}: MirrorWorldPanelProps) {
   const { phase, startMission, resetMission } = useMirrorWorldStore();
 
   const handleActivate = () => {
@@ -63,6 +68,11 @@ export default function MirrorWorldPanel({ onActivate, isCompact = false }: Mirr
       <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
         Enter the inverted city, clear 5 anchor challenges, and outrun your Shadow.
       </p>
+      {disableActivation && (
+        <p className={`text-xs text-yellow-300/90 mb-3 ${isCompact ? '' : 'md:text-sm'}`}>
+          Finish your current mission to start another.
+        </p>
+      )}
 
       <div className={`bg-purple-950/30 rounded-lg p-2 mb-3 border border-purple-500/20 ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
         <div className="flex items-center justify-between text-muted-foreground">
@@ -76,11 +86,14 @@ export default function MirrorWorldPanel({ onActivate, isCompact = false }: Mirr
         className="w-full touch-manipulation select-none active:scale-[0.98] bg-purple-600 hover:bg-purple-500 border-purple-400"
         onPointerDown={(e) => {
           e.stopPropagation();
-          handleActivate();
+          if (!disableActivation) {
+            handleActivate();
+          }
         }}
+        disabled={disableActivation}
       >
         <Play className="h-4 w-4 mr-2" />
-        Enter Mirror World
+        {disableActivation ? 'Finish Current Mission' : 'Enter Mirror World'}
       </Button>
     </div>
   );
