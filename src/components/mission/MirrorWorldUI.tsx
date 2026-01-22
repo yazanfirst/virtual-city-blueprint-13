@@ -30,6 +30,7 @@ export default function MirrorWorldUI() {
   ] as const;
   const [showHint, setShowHint] = useState(false);
   const [canClimb, setCanClimb] = useState<null | typeof LADDER_POSITIONS[number]>(null);
+  const isOnRoof = playerPosition[1] >= 7.5;
   const setPlayerPosition = usePlayerStore((state) => state.setPosition);
 
   useEffect(() => {
@@ -157,6 +158,15 @@ export default function MirrorWorldUI() {
             onClick={() => setPlayerPosition(canClimb.top)}
           >
             Climb
+          </button>
+        )}
+        {isOnRoof && (
+          <button
+            type="button"
+            className="pointer-events-auto rounded-full bg-slate-900/80 px-4 py-2 text-xs font-semibold text-white shadow-lg transition hover:bg-slate-800"
+            onClick={() => setPlayerPosition([playerPosition[0], 0.25, playerPosition[2]])}
+          >
+            Drop Down
           </button>
         )}
       </div>
