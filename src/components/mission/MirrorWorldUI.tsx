@@ -32,6 +32,7 @@ export default function MirrorWorldUI() {
   const [canClimb, setCanClimb] = useState<null | typeof LADDER_POSITIONS[number]>(null);
   const isOnRoof = playerPosition[1] >= 7.5;
   const setPlayerPosition = usePlayerStore((state) => state.setPosition);
+  const resetToSafeSpawn = usePlayerStore((state) => state.resetToSafeSpawn);
 
   useEffect(() => {
     if (phase !== 'hunting') return;
@@ -164,7 +165,25 @@ export default function MirrorWorldUI() {
           <button
             type="button"
             className="pointer-events-auto rounded-full bg-slate-900/80 px-4 py-2 text-xs font-semibold text-white shadow-lg transition hover:bg-slate-800"
-            onClick={() => setPlayerPosition([playerPosition[0], 0.25, playerPosition[2]])}
+            onClick={() => {
+              const [px, , pz] = playerPosition;
+              let nearest = LADDER_POSITIONS[0];
+              let nearestDist = Number.POSITIVE_INFINITY;
+              LADDER_POSITIONS.forEach((ladder) => {
+                const dx = ladder.base[0] - px;
+                const dz = ladder.base[2] - pz;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+                if (dist < nearestDist) {
+                  nearestDist = dist;
+                  nearest = ladder;
+                }
+              });
+              if (nearest) {
+                setPlayerPosition([nearest.base[0], 0.25, nearest.base[2]]);
+              } else {
+                resetToSafeSpawn();
+              }
+            }}
           >
             Drop Down
           </button>
