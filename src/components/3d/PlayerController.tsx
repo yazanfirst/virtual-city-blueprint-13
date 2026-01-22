@@ -46,17 +46,13 @@ const BENCH_COLLIDERS = [
   { minX: -45.75, maxX: -44.25, minZ: 37.75, maxZ: 38.25 },
 ];
 
-const MIRROR_WORLD_STAIRS = [
+const MIRROR_WORLD_LADDERS = [
   { x: 12, z: 30, rotation: Math.PI / 2 },
   { x: -12, z: 18, rotation: -Math.PI / 2 },
   { x: 39, z: 8, rotation: Math.PI / 2 },
   { x: -28, z: -16, rotation: -Math.PI / 2 },
   { x: 4, z: -44, rotation: Math.PI / 2 },
 ];
-const MIRROR_STAIR_STEP_COUNT = 32;
-const MIRROR_STAIR_STEP_HEIGHT = 0.25;
-const MIRROR_STAIR_STEP_DEPTH = 0.9;
-const MIRROR_STAIR_STEP_WIDTH = 4.2;
 const MIRROR_ROOFTOPS = [
   { x: 15, z: 35, width: 7, depth: 7, height: 8.2 },
   { x: -15, z: 22, width: 7, depth: 7, height: 8.2 },
@@ -98,58 +94,6 @@ const PLATFORM_SURFACES: PlatformSurface[] = [
     height: BENCH_PLATFORM_HEIGHT,
     requiresJump: true,
   } as PlatformSurface)),
-  ...MIRROR_WORLD_STAIRS.flatMap((stair) => {
-    return Array.from({ length: MIRROR_STAIR_STEP_COUNT }).map((_, stepIndex) => {
-      const height = MIRROR_STAIR_STEP_HEIGHT * (stepIndex + 1);
-      const depthOffset = stepIndex * MIRROR_STAIR_STEP_DEPTH;
-
-      if (stair.rotation === Math.PI / 2) {
-        return {
-          type: 'box',
-          minX: stair.x + depthOffset - MIRROR_STAIR_STEP_DEPTH / 2,
-          maxX: stair.x + depthOffset + MIRROR_STAIR_STEP_DEPTH / 2,
-          minZ: stair.z - MIRROR_STAIR_STEP_WIDTH / 2,
-          maxZ: stair.z + MIRROR_STAIR_STEP_WIDTH / 2,
-          height,
-          mirrorWorldOnly: true,
-        } as PlatformSurface;
-      }
-
-      if (stair.rotation === -Math.PI / 2) {
-        return {
-          type: 'box',
-          minX: stair.x - depthOffset - MIRROR_STAIR_STEP_DEPTH / 2,
-          maxX: stair.x - depthOffset + MIRROR_STAIR_STEP_DEPTH / 2,
-          minZ: stair.z - MIRROR_STAIR_STEP_WIDTH / 2,
-          maxZ: stair.z + MIRROR_STAIR_STEP_WIDTH / 2,
-          height,
-          mirrorWorldOnly: true,
-        } as PlatformSurface;
-      }
-
-      if (stair.rotation === Math.PI) {
-        return {
-          type: 'box',
-          minX: stair.x - MIRROR_STAIR_STEP_WIDTH / 2,
-          maxX: stair.x + MIRROR_STAIR_STEP_WIDTH / 2,
-          minZ: stair.z - depthOffset - MIRROR_STAIR_STEP_DEPTH / 2,
-          maxZ: stair.z - depthOffset + MIRROR_STAIR_STEP_DEPTH / 2,
-          height,
-          mirrorWorldOnly: true,
-        } as PlatformSurface;
-      }
-
-      return {
-        type: 'box',
-        minX: stair.x - MIRROR_STAIR_STEP_WIDTH / 2,
-        maxX: stair.x + MIRROR_STAIR_STEP_WIDTH / 2,
-        minZ: stair.z + depthOffset - MIRROR_STAIR_STEP_DEPTH / 2,
-        maxZ: stair.z + depthOffset + MIRROR_STAIR_STEP_DEPTH / 2,
-        height,
-        mirrorWorldOnly: true,
-      } as PlatformSurface;
-    });
-  }),
   ...MIRROR_ROOFTOPS.map((roof) => ({
     type: 'box',
     minX: roof.x - roof.width / 2,

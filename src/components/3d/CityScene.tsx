@@ -830,43 +830,45 @@ function GhostHuntGhosts({ isNight }: { isNight: boolean }) {
   );
 }
 
-function MirrorWorldStairs() {
-  const stairSets = [
+function MirrorWorldLadders() {
+  const ladderSets = [
     { position: [12, 0, 30] as [number, number, number], rotation: Math.PI / 2 },
     { position: [-12, 0, 18] as [number, number, number], rotation: -Math.PI / 2 },
     { position: [39, 0, 8] as [number, number, number], rotation: Math.PI / 2 },
     { position: [-28, 0, -16] as [number, number, number], rotation: -Math.PI / 2 },
     { position: [4, 0, -44] as [number, number, number], rotation: Math.PI / 2 },
   ];
-  const stepCount = 32;
-  const stepHeight = 0.25;
-  const stepDepth = 0.9;
-  const stepWidth = 4.2;
-  const beaconHeight = stepCount * stepHeight + 1.2;
+  const ladderHeight = 8.6;
+  const railOffset = 0.35;
+  const rungCount = 10;
+  const rungSpacing = ladderHeight / (rungCount + 1);
 
   return (
     <group>
-      {stairSets.map((stair, stairIndex) => (
-        <group key={`mirror-stair-${stairIndex}`} position={stair.position} rotation={[0, stair.rotation, 0]}>
-          {Array.from({ length: stepCount }).map((_, stepIndex) => (
+      {ladderSets.map((ladder, ladderIndex) => (
+        <group key={`mirror-ladder-${ladderIndex}`} position={ladder.position} rotation={[0, ladder.rotation, 0]}>
+          <mesh position={[-railOffset, ladderHeight / 2, 0]}>
+            <cylinderGeometry args={[0.07, 0.07, ladderHeight, 8]} />
+            <meshStandardMaterial color="#5A30A3" emissive="#2A1244" emissiveIntensity={0.7} />
+          </mesh>
+          <mesh position={[railOffset, ladderHeight / 2, 0]}>
+            <cylinderGeometry args={[0.07, 0.07, ladderHeight, 8]} />
+            <meshStandardMaterial color="#5A30A3" emissive="#2A1244" emissiveIntensity={0.7} />
+          </mesh>
+          {Array.from({ length: rungCount }).map((_, rungIndex) => (
             <mesh
-              key={`mirror-step-${stairIndex}-${stepIndex}`}
-              position={[0, stepHeight / 2 + stepIndex * stepHeight, stepIndex * stepDepth]}
+              key={`mirror-rung-${ladderIndex}-${rungIndex}`}
+              position={[0, rungSpacing * (rungIndex + 1), 0]}
             >
-              <boxGeometry args={[stepWidth, stepHeight, stepDepth]} />
-              <meshStandardMaterial color="#4B2B7F" emissive="#2A1244" emissiveIntensity={0.6} />
+              <boxGeometry args={[railOffset * 2.2, 0.08, 0.12]} />
+              <meshStandardMaterial color="#8B5CF6" emissive="#4C1D95" emissiveIntensity={0.9} />
             </mesh>
           ))}
-          <mesh position={[0, beaconHeight / 2, stepDepth * (stepCount - 1)]}>
-            <cylinderGeometry args={[0.25, 0.35, beaconHeight, 8]} />
+          <mesh position={[0, ladderHeight + 0.8, 0]}>
+            <cylinderGeometry args={[0.25, 0.35, 1.6, 8]} />
             <meshStandardMaterial color="#B992FF" emissive="#8B5CF6" emissiveIntensity={1.2} />
           </mesh>
-          <pointLight
-            position={[0, beaconHeight, stepDepth * (stepCount - 1)]}
-            intensity={1.4}
-            distance={12}
-            color="#C4B5FD"
-          />
+          <pointLight position={[0, ladderHeight + 1.2, 0]} intensity={1.4} distance={12} color="#C4B5FD" />
         </group>
       ))}
     </group>
@@ -965,7 +967,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {/* === ROUNDABOUT === */}
       <Roundabout isNight={isNight} />
 
-      {mirrorWorldActive && <MirrorWorldStairs />}
+      {mirrorWorldActive && <MirrorWorldLadders />}
 
       {/* === SHOPS - Render BrandedShop if branding data exists, otherwise regular Shop === */}
       {mainBoulevardShops.map((shop, i) => {

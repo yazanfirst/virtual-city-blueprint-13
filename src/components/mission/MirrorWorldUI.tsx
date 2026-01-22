@@ -20,15 +20,15 @@ export default function MirrorWorldUI() {
   const playerPosition = usePlayerStore((state) => state.position);
   const MAP_BOUNDS = 60;
   const MAP_SIZE = 144;
-  const STAIR_POSITIONS = [
-    { id: 'stair-1', base: [12, 0, 30], top: [15, 8.2, 35] },
-    { id: 'stair-2', base: [-12, 0, 18], top: [-15, 8.2, 22] },
-    { id: 'stair-3', base: [39, 0, 8], top: [45, 8.2, 12] },
-    { id: 'stair-4', base: [-28, 0, -16], top: [-32, 8.2, -12] },
-    { id: 'stair-5', base: [4, 0, -44], top: [0, 8.2, -48] },
+  const LADDER_POSITIONS = [
+    { id: 'ladder-1', base: [12, 0, 30], top: [15, 8.2, 35] },
+    { id: 'ladder-2', base: [-12, 0, 18], top: [-15, 8.2, 22] },
+    { id: 'ladder-3', base: [39, 0, 8], top: [45, 8.2, 12] },
+    { id: 'ladder-4', base: [-28, 0, -16], top: [-32, 8.2, -12] },
+    { id: 'ladder-5', base: [4, 0, -44], top: [0, 8.2, -48] },
   ] as const;
   const [showHint, setShowHint] = useState(false);
-  const [canClimb, setCanClimb] = useState<null | typeof STAIR_POSITIONS[number]>(null);
+  const [canClimb, setCanClimb] = useState<null | typeof LADDER_POSITIONS[number]>(null);
   const setPlayerPosition = usePlayerStore((state) => state.setPosition);
 
   useEffect(() => {
@@ -89,15 +89,15 @@ export default function MirrorWorldUI() {
     [anchors]
   );
 
-  const mapStairs = useMemo(
+  const mapLadders = useMemo(
     () =>
-      STAIR_POSITIONS.map((stair) => {
-        const [x, , z] = stair.base;
+      LADDER_POSITIONS.map((ladder) => {
+        const [x, , z] = ladder.base;
         const clampedX = Math.max(-MAP_BOUNDS, Math.min(MAP_BOUNDS, x));
         const clampedZ = Math.max(-MAP_BOUNDS, Math.min(MAP_BOUNDS, z));
         const left = ((clampedX + MAP_BOUNDS) / (MAP_BOUNDS * 2)) * 100;
         const top = (1 - (clampedZ + MAP_BOUNDS) / (MAP_BOUNDS * 2)) * 100;
-        return { id: stair.id, left, top };
+        return { id: ladder.id, left, top };
       }),
     [MAP_BOUNDS]
   );
@@ -112,9 +112,9 @@ export default function MirrorWorldUI() {
       setCanClimb(null);
       return;
     }
-    const nearest = STAIR_POSITIONS.find((stair) => {
-      const dx = stair.base[0] - px;
-      const dz = stair.base[2] - pz;
+    const nearest = LADDER_POSITIONS.find((ladder) => {
+      const dx = ladder.base[0] - px;
+      const dz = ladder.base[2] - pz;
       return Math.sqrt(dx * dx + dz * dz) < 2.4;
     });
     setCanClimb(nearest ?? null);
@@ -136,7 +136,7 @@ export default function MirrorWorldUI() {
         </div>
         {showHint && (
           <div className="max-w-xs text-center bg-purple-950/80 border border-purple-500/40 text-purple-100 text-xs px-3 py-2 rounded-lg backdrop-blur-md">
-            Follow the purple dots on the map to rooftop anchors. Use the Climb button near the purple stair beacons, then touch anchors to collect them.
+            Follow the purple dots on the map to rooftop anchors. Use the Climb button near the purple ladders, then touch anchors to collect them.
           </div>
         )}
         {canClimb && (
@@ -211,13 +211,13 @@ export default function MirrorWorldUI() {
                 style={{ left: `${anchor.left}%`, top: `${anchor.top}%`, transform: 'translate(-50%, -50%)' }}
               />
             ))}
-            {mapStairs.map((stair) => (
+            {mapLadders.map((ladder) => (
               <div
-                key={stair.id}
+                key={ladder.id}
                 className="absolute h-0 w-0"
                 style={{
-                  left: `${stair.left}%`,
-                  top: `${stair.top}%`,
+                  left: `${ladder.left}%`,
+                  top: `${ladder.top}%`,
                   transform: 'translate(-50%, -50%)',
                   borderLeft: '4px solid transparent',
                   borderRight: '4px solid transparent',
@@ -242,7 +242,7 @@ export default function MirrorWorldUI() {
             </span>
             <span className="flex items-center gap-1">
               <span className="inline-block h-2 w-2 rounded-sm bg-purple-200" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }} />
-              Stairs
+              Ladder
             </span>
           </div>
         </div>
