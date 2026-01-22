@@ -58,7 +58,7 @@ const ANCHOR_POSITIONS: [number, number, number][] = [
 
 const BASE_SHADOW_SPEED = 0.5;
 const START_LIVES = 2;
-const START_TIME = 75;
+const START_TIME = 100;
 const PROTECTION_DURATION = 3000;
 const HIT_INVINCIBILITY = 2000;
 

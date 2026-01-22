@@ -47,11 +47,11 @@ const BENCH_COLLIDERS = [
 ];
 
 const MIRROR_WORLD_LADDERS = [
-  { x: 22.4, z: 40, rotation: Math.PI / 2 },
-  { x: -22.4, z: 28, rotation: -Math.PI / 2 },
-  { x: 51.4, z: 18, rotation: Math.PI / 2 },
-  { x: -39.4, z: -18, rotation: -Math.PI / 2 },
-  { x: 22.4, z: -40, rotation: Math.PI / 2 },
+  { x: 13.6, z: 40, rotation: Math.PI / 2 },
+  { x: -13.6, z: 28, rotation: -Math.PI / 2 },
+  { x: 47, z: 13.6, rotation: 0 },
+  { x: -35, z: -13.6, rotation: Math.PI },
+  { x: 13.6, z: -40, rotation: Math.PI / 2 },
 ];
 const MIRROR_ROOFTOPS = [
   { x: 18, z: 40, width: 8, depth: 8, height: 8.2 },
@@ -193,8 +193,8 @@ const PlayerController = ({
     y: number = positionRef.current.y,
     radius: number = PLAYER_RADIUS,
   ): boolean => {
-    const recentlyOnRoof = mirrorWorldActive && performance.now() - lastRoofAtRef.current < 1800;
-    const ignoreBuildingCollision = mirrorWorldActive && (y > 4.5 || recentlyOnRoof);
+    const recentlyOnRoof = mirrorWorldActive && performance.now() - lastRoofAtRef.current < 2500;
+    const ignoreBuildingCollision = mirrorWorldActive && (y > 2.5 || recentlyOnRoof);
     for (const box of COLLISION_BOXES) {
       if (ignoreBuildingCollision) {
         break;
