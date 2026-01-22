@@ -47,11 +47,11 @@ const BENCH_COLLIDERS = [
 ];
 
 const MIRROR_WORLD_LADDERS = [
-  { x: 14, z: 40, rotation: Math.PI / 2 },
-  { x: -14, z: 28, rotation: -Math.PI / 2 },
-  { x: 43, z: 18, rotation: Math.PI / 2 },
-  { x: -31, z: -18, rotation: -Math.PI / 2 },
-  { x: 14, z: -40, rotation: Math.PI / 2 },
+  { x: 22.4, z: 40, rotation: Math.PI / 2 },
+  { x: -22.4, z: 28, rotation: -Math.PI / 2 },
+  { x: 51.4, z: 18, rotation: Math.PI / 2 },
+  { x: -39.4, z: -18, rotation: -Math.PI / 2 },
+  { x: 22.4, z: -40, rotation: Math.PI / 2 },
 ];
 const MIRROR_ROOFTOPS = [
   { x: 18, z: 40, width: 8, depth: 8, height: 8.2 },

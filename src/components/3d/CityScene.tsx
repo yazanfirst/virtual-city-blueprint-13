@@ -832,11 +832,11 @@ function GhostHuntGhosts({ isNight }: { isNight: boolean }) {
 
 function MirrorWorldLadders() {
   const ladderSets = [
-    { position: [14, 0, 40] as [number, number, number], rotation: Math.PI / 2 },
-    { position: [-14, 0, 28] as [number, number, number], rotation: -Math.PI / 2 },
-    { position: [43, 0, 18] as [number, number, number], rotation: Math.PI / 2 },
-    { position: [-31, 0, -18] as [number, number, number], rotation: -Math.PI / 2 },
-    { position: [14, 0, -40] as [number, number, number], rotation: Math.PI / 2 },
+    { position: [22.4, 0, 40] as [number, number, number], rotation: Math.PI / 2 },
+    { position: [-22.4, 0, 28] as [number, number, number], rotation: -Math.PI / 2 },
+    { position: [51.4, 0, 18] as [number, number, number], rotation: Math.PI / 2 },
+    { position: [-39.4, 0, -18] as [number, number, number], rotation: -Math.PI / 2 },
+    { position: [22.4, 0, -40] as [number, number, number], rotation: Math.PI / 2 },
   ];
   const ladderHeight = 8.6;
   const railOffset = 0.35;

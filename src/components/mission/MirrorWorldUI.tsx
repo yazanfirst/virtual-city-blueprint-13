@@ -21,11 +21,11 @@ export default function MirrorWorldUI() {
   const MAP_BOUNDS = 60;
   const MAP_SIZE = 144;
   const LADDER_POSITIONS = [
-    { id: 'ladder-1', base: [14, 0, 40], top: [18, 8.2, 40] },
-    { id: 'ladder-2', base: [-14, 0, 28], top: [-18, 8.2, 28] },
-    { id: 'ladder-3', base: [43, 0, 18], top: [47, 8.2, 18] },
-    { id: 'ladder-4', base: [-31, 0, -18], top: [-35, 8.2, -18] },
-    { id: 'ladder-5', base: [14, 0, -40], top: [18, 8.2, -40] },
+    { id: 'ladder-1', base: [22.4, 0, 40], top: [18, 8.2, 40] },
+    { id: 'ladder-2', base: [-22.4, 0, 28], top: [-18, 8.2, 28] },
+    { id: 'ladder-3', base: [51.4, 0, 18], top: [47, 8.2, 18] },
+    { id: 'ladder-4', base: [-39.4, 0, -18], top: [-35, 8.2, -18] },
+    { id: 'ladder-5', base: [22.4, 0, -40], top: [18, 8.2, -40] },
   ] as const;
   const [showHint, setShowHint] = useState(false);
   const [canClimb, setCanClimb] = useState<null | typeof LADDER_POSITIONS[number]>(null);
