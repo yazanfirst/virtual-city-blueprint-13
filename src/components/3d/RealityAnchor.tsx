@@ -14,11 +14,10 @@ interface RealityAnchorProps {
   shieldActive?: boolean;
 }
 
-const COLLECT_DISTANCE = 2.4;
+const COLLECT_DISTANCE = 3.0;
 const PROMPT_DISTANCE = 3.2;
 const CHASE_SPEED = 0.35;
 const BOUNDS = 70;
-const GUARDIAN_GAP = Math.PI / 3;
 const SACRIFICE_HOLD = 3;
 const MOVEMENT_THRESHOLD = 0.02;
 
@@ -126,13 +125,6 @@ export default function RealityAnchor({
 
     if (type === 'guardian' && orbitRef.current) {
       orbitRef.current.rotation.y += delta * 0.8;
-      const gapCenter = orbitRef.current.rotation.y;
-      const playerAngle = Math.atan2(dz, dx);
-      const angleDiff = Math.atan2(Math.sin(playerAngle - gapCenter), Math.cos(playerAngle - gapCenter));
-      const withinGap = Math.abs(angleDiff) < GUARDIAN_GAP / 2;
-      if (distance < COLLECT_DISTANCE && withinGap) {
-        collectAnchor(id);
-      }
     }
 
     if (type === 'sacrifice' && shieldActive) {

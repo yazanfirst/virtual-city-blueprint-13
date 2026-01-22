@@ -186,6 +186,35 @@ const PlayerController = ({
   const cameraDistance = viewMode === "firstPerson" ? 0 : 10;
   const cameraHeight = viewMode === "firstPerson" ? 2.5 : 4;
 
+  const getSurfaceHeight = useCallback((x: number, z: number): { height: number; requiresJump: boolean } => {
+    let surface = { height: 0.25, requiresJump: false };
+
+    for (const platform of PLATFORM_SURFACES) {
+      if (platform.mirrorWorldOnly && !mirrorWorldActive) {
+        continue;
+      }
+
+      if (platform.type === 'circle') {
+        const dx = x - platform.x;
+        const dz = z - platform.z;
+        if (dx * dx + dz * dz <= platform.radius * platform.radius && platform.height > surface.height) {
+          surface = { height: platform.height, requiresJump: Boolean(platform.requiresJump) };
+        }
+      } else if (
+        platform.type === 'box' &&
+        x >= platform.minX &&
+        x <= platform.maxX &&
+        z >= platform.minZ &&
+        z <= platform.maxZ &&
+        platform.height > surface.height
+      ) {
+        surface = { height: platform.height, requiresJump: Boolean(platform.requiresJump) };
+      }
+    }
+
+    return surface;
+  }, [mirrorWorldActive]);
+
   // Check collision with buildings and props
   const checkCollision = (
     x: number,
@@ -194,7 +223,9 @@ const PlayerController = ({
     radius: number = PLAYER_RADIUS,
   ): boolean => {
     const recentlyOnRoof = mirrorWorldActive && performance.now() - lastRoofAtRef.current < 2500;
-    const ignoreBuildingCollision = mirrorWorldActive && (y > 2.5 || recentlyOnRoof);
+    const roofHeight = getSurfaceHeight(x, z).height;
+    const onRoofSurface = mirrorWorldActive && roofHeight >= 7.5;
+    const ignoreBuildingCollision = mirrorWorldActive && (onRoofSurface || y > 2.5 || recentlyOnRoof);
     for (const box of COLLISION_BOXES) {
       if (ignoreBuildingCollision) {
         break;
@@ -236,35 +267,6 @@ const PlayerController = ({
 
     return false;
   };
-
-  const getSurfaceHeight = useCallback((x: number, z: number): { height: number; requiresJump: boolean } => {
-    let surface = { height: 0.25, requiresJump: false };
-
-    for (const platform of PLATFORM_SURFACES) {
-      if (platform.mirrorWorldOnly && !mirrorWorldActive) {
-        continue;
-      }
-
-      if (platform.type === 'circle') {
-        const dx = x - platform.x;
-        const dz = z - platform.z;
-        if (dx * dx + dz * dz <= platform.radius * platform.radius && platform.height > surface.height) {
-          surface = { height: platform.height, requiresJump: Boolean(platform.requiresJump) };
-        }
-      } else if (
-        platform.type === 'box' &&
-        x >= platform.minX &&
-        x <= platform.maxX &&
-        z >= platform.minZ &&
-        z <= platform.maxZ &&
-        platform.height > surface.height
-      ) {
-        surface = { height: platform.height, requiresJump: Boolean(platform.requiresJump) };
-      }
-    }
-
-    return surface;
-  }, [mirrorWorldActive]);
 
 
   const attemptJump = useCallback(() => {
