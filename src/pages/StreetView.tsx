@@ -126,6 +126,9 @@ const StreetView = () => {
   const [hasExitedShopOnce, setHasExitedShopOnce] = useState(false);
 
   const isAnyMissionActive = mission.isActive || ghostHunt.isActive || mirrorWorld.isActive;
+  const isMissionBlocking = (mission.isActive && mission.phase !== 'completed' && mission.phase !== 'failed') ||
+    (ghostHunt.isActive && ghostHunt.phase !== 'completed' && ghostHunt.phase !== 'failed') ||
+    (mirrorWorld.isActive && mirrorWorld.phase !== 'completed' && mirrorWorld.phase !== 'failed');
   const activeMissionTab = mirrorWorld.isActive ? 'mirror' : ghostHunt.isActive ? 'ghost' : mission.isActive ? 'zombie' : 'zombie';
 
   // Tutorial triggers - IN ORDER:
@@ -804,10 +807,10 @@ const StreetView = () => {
             >
               <Target className="h-4 w-4 text-primary" />
               <span className="font-display text-xs md:text-sm font-bold uppercase tracking-wider">
-                {isAnyMissionActive ? 'Mission Guide' : 'Missions'}
+                {isMissionBlocking ? 'Mission Guide' : 'Missions'}
               </span>
               {/* Notification indicator */}
-              {mission.hasNotification && !isAnyMissionActive && (
+              {mission.hasNotification && !isMissionBlocking && (
                 <span className="absolute -top-1 -right-1 flex h-3 w-3">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
@@ -845,7 +848,7 @@ const StreetView = () => {
                       <Target className="h-5 w-5 text-primary" />
                     </div>
                     <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
-                      {isAnyMissionActive ? 'Mission Guide' : 'Missions'}
+                      {isMissionBlocking ? 'Mission Guide' : 'Missions'}
                     </h3>
                   </div>
                   <button 
@@ -923,7 +926,7 @@ const StreetView = () => {
                         handleMissionActivate();
                         setShowMissions(false);
                       }}
-                      disableActivation={isAnyMissionActive && !mission.isActive}
+                      disableActivation={isMissionBlocking && !mission.isActive}
                       isCompact
                     />
                   )}
@@ -939,7 +942,7 @@ const StreetView = () => {
                         setShowMissions(false);
                       }}
                       isUnlocked={mission.phase === 'completed'}
-                      disableActivation={isAnyMissionActive && !ghostHunt.isActive}
+                      disableActivation={isMissionBlocking && !ghostHunt.isActive}
                       isCompact
                     />
                   )}
@@ -954,7 +957,7 @@ const StreetView = () => {
                         setShowJumpScare(false);
                         setShowMissions(false);
                       }}
-                      disableActivation={isAnyMissionActive && !mirrorWorld.isActive}
+                      disableActivation={isMissionBlocking && !mirrorWorld.isActive}
                       isCompact
                     />
                   )}
