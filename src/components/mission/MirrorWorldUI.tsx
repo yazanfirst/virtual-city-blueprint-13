@@ -20,14 +20,16 @@ export default function MirrorWorldUI() {
   const playerPosition = usePlayerStore((state) => state.position);
   const MAP_BOUNDS = 60;
   const MAP_SIZE = 144;
-  const STAIR_POSITIONS: [number, number, number][] = [
-    [12, 0, 24],
-    [-12, 0, 20],
-    [32, 0, 6],
-    [-32, 0, -6],
-    [0, 0, -36],
-  ];
+  const STAIR_POSITIONS = [
+    { id: 'stair-1', base: [12, 0, 30], top: [15, 8.2, 35] },
+    { id: 'stair-2', base: [-12, 0, 18], top: [-15, 8.2, 22] },
+    { id: 'stair-3', base: [39, 0, 8], top: [45, 8.2, 12] },
+    { id: 'stair-4', base: [-28, 0, -16], top: [-32, 8.2, -12] },
+    { id: 'stair-5', base: [4, 0, -44], top: [0, 8.2, -48] },
+  ] as const;
   const [showHint, setShowHint] = useState(false);
+  const [canClimb, setCanClimb] = useState<null | typeof STAIR_POSITIONS[number]>(null);
+  const setPlayerPosition = usePlayerStore((state) => state.setPosition);
 
   useEffect(() => {
     if (phase !== 'hunting') return;
@@ -89,16 +91,34 @@ export default function MirrorWorldUI() {
 
   const mapStairs = useMemo(
     () =>
-      STAIR_POSITIONS.map((position, index) => {
-        const [x, , z] = position;
+      STAIR_POSITIONS.map((stair) => {
+        const [x, , z] = stair.base;
         const clampedX = Math.max(-MAP_BOUNDS, Math.min(MAP_BOUNDS, x));
         const clampedZ = Math.max(-MAP_BOUNDS, Math.min(MAP_BOUNDS, z));
         const left = ((clampedX + MAP_BOUNDS) / (MAP_BOUNDS * 2)) * 100;
         const top = (1 - (clampedZ + MAP_BOUNDS) / (MAP_BOUNDS * 2)) * 100;
-        return { id: `stair-${index}`, left, top };
+        return { id: stair.id, left, top };
       }),
     [MAP_BOUNDS]
   );
+
+  useEffect(() => {
+    if (phase !== 'hunting') {
+      setCanClimb(null);
+      return;
+    }
+    const [px, py, pz] = playerPosition;
+    if (py > 1.5) {
+      setCanClimb(null);
+      return;
+    }
+    const nearest = STAIR_POSITIONS.find((stair) => {
+      const dx = stair.base[0] - px;
+      const dz = stair.base[2] - pz;
+      return Math.sqrt(dx * dx + dz * dz) < 2.4;
+    });
+    setCanClimb(nearest ?? null);
+  }, [phase, playerPosition]);
 
   if (phase !== 'hunting') return null;
 
@@ -116,8 +136,17 @@ export default function MirrorWorldUI() {
         </div>
         {showHint && (
           <div className="max-w-xs text-center bg-purple-950/80 border border-purple-500/40 text-purple-100 text-xs px-3 py-2 rounded-lg backdrop-blur-md">
-            Follow the purple dots on the map to rooftop anchors. Walk up the glowing stairs with purple beacons, then touch anchors to collect them.
+            Follow the purple dots on the map to rooftop anchors. Use the Climb button near the purple stair beacons, then touch anchors to collect them.
           </div>
+        )}
+        {canClimb && (
+          <button
+            type="button"
+            className="pointer-events-auto rounded-full bg-purple-500/90 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-purple-500/40 transition hover:bg-purple-400"
+            onClick={() => setPlayerPosition(canClimb.top)}
+          >
+            Climb
+          </button>
         )}
       </div>
 

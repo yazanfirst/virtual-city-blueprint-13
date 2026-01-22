@@ -832,11 +832,11 @@ function GhostHuntGhosts({ isNight }: { isNight: boolean }) {
 
 function MirrorWorldStairs() {
   const stairSets = [
-    { position: [12, 0, 24] as [number, number, number], rotation: 0 },
-    { position: [-12, 0, 20] as [number, number, number], rotation: Math.PI },
-    { position: [32, 0, 6] as [number, number, number], rotation: Math.PI / 2 },
-    { position: [-32, 0, -6] as [number, number, number], rotation: -Math.PI / 2 },
-    { position: [0, 0, -36] as [number, number, number], rotation: 0 },
+    { position: [12, 0, 30] as [number, number, number], rotation: Math.PI / 2 },
+    { position: [-12, 0, 18] as [number, number, number], rotation: -Math.PI / 2 },
+    { position: [39, 0, 8] as [number, number, number], rotation: Math.PI / 2 },
+    { position: [-28, 0, -16] as [number, number, number], rotation: -Math.PI / 2 },
+    { position: [4, 0, -44] as [number, number, number], rotation: Math.PI / 2 },
   ];
   const stepCount = 32;
   const stepHeight = 0.25;

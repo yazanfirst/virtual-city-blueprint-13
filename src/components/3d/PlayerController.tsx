@@ -47,16 +47,23 @@ const BENCH_COLLIDERS = [
 ];
 
 const MIRROR_WORLD_STAIRS = [
-  { x: 12, z: 24, rotation: 0 },
-  { x: -12, z: 20, rotation: Math.PI },
-  { x: 32, z: 6, rotation: Math.PI / 2 },
-  { x: -32, z: -6, rotation: -Math.PI / 2 },
-  { x: 0, z: -36, rotation: 0 },
+  { x: 12, z: 30, rotation: Math.PI / 2 },
+  { x: -12, z: 18, rotation: -Math.PI / 2 },
+  { x: 39, z: 8, rotation: Math.PI / 2 },
+  { x: -28, z: -16, rotation: -Math.PI / 2 },
+  { x: 4, z: -44, rotation: Math.PI / 2 },
 ];
 const MIRROR_STAIR_STEP_COUNT = 32;
 const MIRROR_STAIR_STEP_HEIGHT = 0.25;
 const MIRROR_STAIR_STEP_DEPTH = 0.9;
 const MIRROR_STAIR_STEP_WIDTH = 4.2;
+const MIRROR_ROOFTOPS = [
+  { x: 15, z: 35, width: 7, depth: 7, height: 8.2 },
+  { x: -15, z: 22, width: 7, depth: 7, height: 8.2 },
+  { x: 45, z: 12, width: 8, depth: 8, height: 8.2 },
+  { x: -32, z: -12, width: 8, depth: 8, height: 8.2 },
+  { x: 0, z: -48, width: 7, depth: 7, height: 8.2 },
+];
 
 type CircularPlatform = {
   type: 'circle';
@@ -143,6 +150,15 @@ const PLATFORM_SURFACES: PlatformSurface[] = [
       } as PlatformSurface;
     });
   }),
+  ...MIRROR_ROOFTOPS.map((roof) => ({
+    type: 'box',
+    minX: roof.x - roof.width / 2,
+    maxX: roof.x + roof.width / 2,
+    minZ: roof.z - roof.depth / 2,
+    maxZ: roof.z + roof.depth / 2,
+    height: roof.height,
+    mirrorWorldOnly: true,
+  }) as PlatformSurface),
 ];
 
 const CYLINDER_COLLIDERS = [
@@ -232,7 +248,11 @@ const PlayerController = ({
     y: number = positionRef.current.y,
     radius: number = PLAYER_RADIUS,
   ): boolean => {
+    const ignoreBuildingCollision = mirrorWorldActive && y > 6;
     for (const box of COLLISION_BOXES) {
+      if (ignoreBuildingCollision) {
+        break;
+      }
       if (
         x + radius > box.minX &&
         x - radius < box.maxX &&

@@ -176,16 +176,20 @@ export default function RealityAnchor({
   return (
     <group position={position}>
       <mesh ref={meshRef}>
-        <octahedronGeometry args={[0.35]} />
+        <octahedronGeometry args={[0.6]} />
         <meshStandardMaterial
           color="#D6F4FF"
           emissive="#7FE7FF"
-          emissiveIntensity={1}
+          emissiveIntensity={1.2}
           metalness={0.4}
           roughness={0.2}
         />
       </mesh>
-      <pointLight position={[0, 0.4, 0]} intensity={0.8} distance={4} color="#7FE7FF" />
+      <mesh position={[0, 1.4, 0]}>
+        <cylinderGeometry args={[0.12, 0.22, 2.6, 12]} />
+        <meshBasicMaterial color="#8BDBFF" transparent opacity={0.35} />
+      </mesh>
+      <pointLight position={[0, 0.8, 0]} intensity={1.2} distance={6} color="#7FE7FF" />
       {type === 'guardian' && (
         <group ref={orbitRef}>
           {Array.from({ length: 4 }).map((_, index) => (

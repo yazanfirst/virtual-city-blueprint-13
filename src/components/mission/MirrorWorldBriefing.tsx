@@ -24,7 +24,8 @@ export default function MirrorWorldBriefing() {
               <li>• Collect {requiredAnchors} Reality Anchors on the rooftops</li>
               <li>• Escape before time collapses (75 seconds)</li>
               <li>• Shadow mirrors your movement in the opposite direction</li>
-              <li>• Use the glowing stairs with beacons to reach rooftops, then touch anchors to collect</li>
+              <li>• Use the Climb button near glowing stair beacons to reach rooftops</li>
+              <li>• Touch anchors to collect them</li>
             </ul>
           </div>
           <div className="bg-red-950/40 rounded-lg p-3 border border-red-500/30">
