@@ -14,7 +14,7 @@ interface RealityAnchorProps {
   shieldActive?: boolean;
 }
 
-const COLLECT_DISTANCE = 1.8;
+const COLLECT_DISTANCE = 2.4;
 const PROMPT_DISTANCE = 3.2;
 const CHASE_SPEED = 0.35;
 const BOUNDS = 70;
@@ -133,7 +133,6 @@ export default function RealityAnchor({
       if (distance < COLLECT_DISTANCE && withinGap) {
         collectAnchor(id);
       }
-      return;
     }
 
     if (type === 'sacrifice' && shieldActive) {
@@ -154,8 +153,6 @@ export default function RealityAnchor({
         updateAnchorState(id, { shieldActive: false });
         stationaryTimeRef.current = 0;
       }
-
-      return;
     }
 
     if (type === 'riddle') {
@@ -163,7 +160,6 @@ export default function RealityAnchor({
         setRiddleActiveAt(Date.now());
         setPrompt(id, 'Press the key before time runs out.', requiredKey ?? null);
       }
-      return;
     }
 
     if (distance < COLLECT_DISTANCE) {

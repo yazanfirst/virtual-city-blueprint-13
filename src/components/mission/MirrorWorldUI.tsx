@@ -15,6 +15,7 @@ export default function MirrorWorldUI() {
     anchors,
     promptMessage,
     promptKey,
+    toastMessage,
     updateTimer,
   } = useMirrorWorldStore();
   const playerPosition = usePlayerStore((state) => state.position);
@@ -134,6 +135,11 @@ export default function MirrorWorldUI() {
             {formatTime(timeRemaining)}
           </span>
         </div>
+        {toastMessage && (
+          <div className="max-w-sm text-center bg-emerald-500/90 border border-emerald-200/80 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-lg shadow-emerald-500/30">
+            {toastMessage}
+          </div>
+        )}
         {showHint && (
           <div className="max-w-xs text-center bg-purple-950/80 border border-purple-500/40 text-purple-100 text-xs px-3 py-2 rounded-lg backdrop-blur-md">
             Follow the purple dots on the map to rooftop anchors. Look for glowing ladder panels and use Climb, then touch anchors to collect them.

@@ -32,6 +32,7 @@ interface MirrorWorldState {
   promptMessage: string | null;
   promptKey: string | null;
   promptAnchorId: string | null;
+  toastMessage: string | null;
   failReason: FailReason | null;
   startMission: () => void;
   completeBriefing: () => void;
@@ -59,11 +60,13 @@ const ANCHOR_POSITIONS: [number, number, number][] = [
 const BASE_SHADOW_SPEED = 0.5;
 const START_LIVES = 2;
 const START_TIME = 100;
+const ANCHOR_TIME_BONUS = 8;
 const PROTECTION_DURATION = 3000;
 const HIT_INVINCIBILITY = 2000;
 
 let protectionTimeout: ReturnType<typeof setTimeout> | null = null;
 let hitTimeout: ReturnType<typeof setTimeout> | null = null;
+let toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
 const createAnchors = (): RealityAnchor[] =>
   ANCHOR_POSITIONS.map((position, index) => {
@@ -102,6 +105,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
   promptMessage: null,
   promptKey: null,
   promptAnchorId: null,
+  toastMessage: null,
   failReason: null,
 
   startMission: () => {
@@ -125,6 +129,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       promptMessage: null,
       promptKey: null,
       promptAnchorId: null,
+      toastMessage: null,
       failReason: null,
     });
   },
@@ -146,19 +151,28 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
     const { anchors, collectedCount, requiredAnchors } = get();
     const targetAnchor = anchors.find((anchor) => anchor.id === anchorId);
     if (!targetAnchor || targetAnchor.isCollected) return;
+    if (toastTimeout) {
+      clearTimeout(toastTimeout);
+    }
     const nextAnchors = anchors.map((anchor) =>
       anchor.id === anchorId ? { ...anchor, isCollected: true } : anchor
     );
     const nextCollectedCount = collectedCount + 1;
+    const nextTime = Math.max(0, get().timeRemaining + ANCHOR_TIME_BONUS);
 
     if (nextCollectedCount >= requiredAnchors) {
       set({
         anchors: nextAnchors,
         collectedCount: nextCollectedCount,
+        timeRemaining: nextTime,
         promptAnchorId: null,
         promptMessage: null,
         promptKey: null,
+        toastMessage: `Reality Anchor collected! +${ANCHOR_TIME_BONUS}s`,
       });
+      toastTimeout = setTimeout(() => {
+        set({ toastMessage: null });
+      }, 2000);
       get().completeMission();
       return;
     }
@@ -166,10 +180,15 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
     set({
       anchors: nextAnchors,
       collectedCount: nextCollectedCount,
+      timeRemaining: nextTime,
       promptAnchorId: null,
       promptMessage: null,
       promptKey: null,
+      toastMessage: `Reality Anchor collected! +${ANCHOR_TIME_BONUS}s`,
     });
+    toastTimeout = setTimeout(() => {
+      set({ toastMessage: null });
+    }, 2000);
   },
 
   updateShadowPosition: (pos) => set({ shadowPosition: pos }),
@@ -224,6 +243,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
   resetMission: () => {
     clearTimeoutSafely(protectionTimeout);
     clearTimeoutSafely(hitTimeout);
+    clearTimeoutSafely(toastTimeout);
     set({
       isActive: false,
       phase: 'inactive',
@@ -237,6 +257,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       promptMessage: null,
       promptKey: null,
       promptAnchorId: null,
+      toastMessage: null,
       failReason: null,
     });
   },
