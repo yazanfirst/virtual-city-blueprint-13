@@ -167,8 +167,6 @@ const PlayerController = ({
   });
   const [characterRotation, setCharacterRotation] = useState(0);
   const [isJumping, setIsJumping] = useState(false);
-  const lastRoofAtRef = useRef(0);
-
   // Use store for position to persist across game mode changes
   const { position, setPosition, jumpCounter, incrementJump } = usePlayerStore();
   const mirrorWorldActive = useMirrorWorldStore((state) => state.isActive && state.phase === 'hunting');
@@ -222,10 +220,9 @@ const PlayerController = ({
     y: number = positionRef.current.y,
     radius: number = PLAYER_RADIUS,
   ): boolean => {
-    const recentlyOnRoof = mirrorWorldActive && performance.now() - lastRoofAtRef.current < 2500;
     const roofHeight = getSurfaceHeight(x, z).height;
     const onRoofSurface = mirrorWorldActive && roofHeight >= 7.5;
-    const ignoreBuildingCollision = mirrorWorldActive && (onRoofSurface || y > 2.5 || recentlyOnRoof);
+    const ignoreBuildingCollision = mirrorWorldActive && onRoofSurface;
     for (const box of COLLISION_BOXES) {
       if (ignoreBuildingCollision) {
         break;
@@ -351,10 +348,6 @@ const PlayerController = ({
   // Movement and camera logic
   useFrame(() => {
     if (!groupRef.current) return;
-
-    if (mirrorWorldActive && positionRef.current.y > 6) {
-      lastRoofAtRef.current = performance.now();
-    }
 
     const direction = new THREE.Vector3();
 
