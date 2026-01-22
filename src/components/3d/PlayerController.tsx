@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import LowPolyCharacter from './LowPolyCharacter';
 import { usePlayerStore } from '@/stores/playerStore';
+import { useMirrorWorldStore } from '@/stores/mirrorWorldStore';
 import { playSounds } from '@/hooks/useGameAudio';
 
 const PLAYER_RADIUS = 0.45;
@@ -45,6 +46,18 @@ const BENCH_COLLIDERS = [
   { minX: -45.75, maxX: -44.25, minZ: 37.75, maxZ: 38.25 },
 ];
 
+const MIRROR_WORLD_STAIRS = [
+  { x: 12, z: 24, rotation: 0 },
+  { x: -12, z: 20, rotation: Math.PI },
+  { x: 32, z: 6, rotation: Math.PI / 2 },
+  { x: -32, z: -6, rotation: -Math.PI / 2 },
+  { x: 0, z: -36, rotation: 0 },
+];
+const MIRROR_STAIR_STEP_COUNT = 32;
+const MIRROR_STAIR_STEP_HEIGHT = 0.25;
+const MIRROR_STAIR_STEP_DEPTH = 0.9;
+const MIRROR_STAIR_STEP_WIDTH = 4.2;
+
 type CircularPlatform = {
   type: 'circle';
   x: number;
@@ -52,6 +65,7 @@ type CircularPlatform = {
   radius: number;
   height: number;
   requiresJump?: boolean;
+  mirrorWorldOnly?: boolean;
 };
 
 type BoxPlatform = {
@@ -62,6 +76,7 @@ type BoxPlatform = {
   maxZ: number;
   height: number;
   requiresJump?: boolean;
+  mirrorWorldOnly?: boolean;
 };
 
 type PlatformSurface = CircularPlatform | BoxPlatform;
@@ -76,6 +91,58 @@ const PLATFORM_SURFACES: PlatformSurface[] = [
     height: BENCH_PLATFORM_HEIGHT,
     requiresJump: true,
   } as PlatformSurface)),
+  ...MIRROR_WORLD_STAIRS.flatMap((stair) => {
+    return Array.from({ length: MIRROR_STAIR_STEP_COUNT }).map((_, stepIndex) => {
+      const height = MIRROR_STAIR_STEP_HEIGHT * (stepIndex + 1);
+      const depthOffset = stepIndex * MIRROR_STAIR_STEP_DEPTH;
+
+      if (stair.rotation === Math.PI / 2) {
+        return {
+          type: 'box',
+          minX: stair.x + depthOffset - MIRROR_STAIR_STEP_DEPTH / 2,
+          maxX: stair.x + depthOffset + MIRROR_STAIR_STEP_DEPTH / 2,
+          minZ: stair.z - MIRROR_STAIR_STEP_WIDTH / 2,
+          maxZ: stair.z + MIRROR_STAIR_STEP_WIDTH / 2,
+          height,
+          mirrorWorldOnly: true,
+        } as PlatformSurface;
+      }
+
+      if (stair.rotation === -Math.PI / 2) {
+        return {
+          type: 'box',
+          minX: stair.x - depthOffset - MIRROR_STAIR_STEP_DEPTH / 2,
+          maxX: stair.x - depthOffset + MIRROR_STAIR_STEP_DEPTH / 2,
+          minZ: stair.z - MIRROR_STAIR_STEP_WIDTH / 2,
+          maxZ: stair.z + MIRROR_STAIR_STEP_WIDTH / 2,
+          height,
+          mirrorWorldOnly: true,
+        } as PlatformSurface;
+      }
+
+      if (stair.rotation === Math.PI) {
+        return {
+          type: 'box',
+          minX: stair.x - MIRROR_STAIR_STEP_WIDTH / 2,
+          maxX: stair.x + MIRROR_STAIR_STEP_WIDTH / 2,
+          minZ: stair.z - depthOffset - MIRROR_STAIR_STEP_DEPTH / 2,
+          maxZ: stair.z - depthOffset + MIRROR_STAIR_STEP_DEPTH / 2,
+          height,
+          mirrorWorldOnly: true,
+        } as PlatformSurface;
+      }
+
+      return {
+        type: 'box',
+        minX: stair.x - MIRROR_STAIR_STEP_WIDTH / 2,
+        maxX: stair.x + MIRROR_STAIR_STEP_WIDTH / 2,
+        minZ: stair.z + depthOffset - MIRROR_STAIR_STEP_DEPTH / 2,
+        maxZ: stair.z + depthOffset + MIRROR_STAIR_STEP_DEPTH / 2,
+        height,
+        mirrorWorldOnly: true,
+      } as PlatformSurface;
+    });
+  }),
 ];
 
 const CYLINDER_COLLIDERS = [
@@ -143,6 +210,7 @@ const PlayerController = ({
 
   // Use store for position to persist across game mode changes
   const { position, setPosition, jumpCounter, incrementJump } = usePlayerStore();
+  const mirrorWorldActive = useMirrorWorldStore((state) => state.isActive && state.phase === 'hunting');
   const positionRef = useRef(new THREE.Vector3(...position));
   const lastJumpCounterRef = useRef(jumpCounter);
 
@@ -207,6 +275,10 @@ const PlayerController = ({
     let surface = { height: 0.25, requiresJump: false };
 
     for (const platform of PLATFORM_SURFACES) {
+      if (platform.mirrorWorldOnly && !mirrorWorldActive) {
+        continue;
+      }
+
       if (platform.type === 'circle') {
         const dx = x - platform.x;
         const dz = z - platform.z;
@@ -226,7 +298,7 @@ const PlayerController = ({
     }
 
     return surface;
-  }, []);
+  }, [mirrorWorldActive]);
 
 
   const attemptJump = useCallback(() => {

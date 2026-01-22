@@ -838,9 +838,9 @@ function MirrorWorldStairs() {
     { position: [-32, 0, -6] as [number, number, number], rotation: -Math.PI / 2 },
     { position: [0, 0, -36] as [number, number, number], rotation: 0 },
   ];
-  const stepCount = 10;
-  const stepHeight = 0.8;
-  const stepDepth = 1.6;
+  const stepCount = 32;
+  const stepHeight = 0.25;
+  const stepDepth = 0.9;
   const stepWidth = 4.2;
   const beaconHeight = stepCount * stepHeight + 1.2;
 
