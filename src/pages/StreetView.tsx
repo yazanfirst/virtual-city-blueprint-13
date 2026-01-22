@@ -125,27 +125,29 @@ const StreetView = () => {
   // Track if user has exited a shop for first time (to show mission intro)
   const [hasExitedShopOnce, setHasExitedShopOnce] = useState(false);
 
+  const isAnyMissionActive = mission.isActive || ghostHunt.isActive || mirrorWorld.isActive;
+
   // Tutorial triggers - IN ORDER:
   // 1. Movement tutorial when game starts
   useEffect(() => {
-    if (hasGameStarted && isMaximized && !isInsideShop && !mission.isActive && !ghostHunt.isActive) {
+    if (hasGameStarted && isMaximized && !isInsideShop && !isAnyMissionActive) {
       tutorial.showTutorialStep('movement');
     }
-  }, [hasGameStarted, isMaximized, isInsideShop, mission.isActive, ghostHunt.isActive, tutorial]);
+  }, [hasGameStarted, isMaximized, isInsideShop, isAnyMissionActive, tutorial]);
 
   // 2. Shop nearby tutorial
   useEffect(() => {
-    if (nearbyShop && hasGameStarted && !isInsideShop && !mission.isActive && !ghostHunt.isActive) {
+    if (nearbyShop && hasGameStarted && !isInsideShop && !isAnyMissionActive) {
       tutorial.showTutorialStep('shop_nearby');
     }
-  }, [nearbyShop, hasGameStarted, isInsideShop, mission.isActive, ghostHunt.isActive, tutorial]);
+  }, [nearbyShop, hasGameStarted, isInsideShop, isAnyMissionActive, tutorial]);
 
   // 3. Shop exit tutorial (after first exit - not during mission) - introduce missions
   useEffect(() => {
-    if (hasExitedShopOnce && !isInsideShop && !mission.isActive && !ghostHunt.isActive) {
+    if (hasExitedShopOnce && !isInsideShop && !isAnyMissionActive) {
       tutorial.showTutorialStep('shop_exit_missions');
     }
-  }, [hasExitedShopOnce, isInsideShop, mission.isActive, ghostHunt.isActive, tutorial]);
+  }, [hasExitedShopOnce, isInsideShop, isAnyMissionActive, tutorial]);
 
   // 4. Mission activated tutorial - right after clicking activate
   useEffect(() => {
@@ -157,7 +159,19 @@ const StreetView = () => {
   // Question phase - no tutorial needed, questions appear directly
 
   // PAUSE GAME when ANY popup/modal is active
-  const isAnyPopupOpen = tutorial.activeTooltip || showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare || mirrorWorld.phase === 'briefing';
+  const isAnyPopupOpen = tutorial.activeTooltip ||
+    showMissions ||
+    show2DMap ||
+    showShopModal ||
+    showQuestionModal ||
+    showFailedModal ||
+    showJumpScare ||
+    showGhostHuntFailed ||
+    showGhostHuntComplete ||
+    ghostHunt.phase === 'briefing' ||
+    mirrorWorld.phase === 'briefing' ||
+    mirrorWorld.phase === 'completed' ||
+    mirrorWorld.phase === 'failed';
   const hideMobileControls = Boolean(
     tutorial.activeTooltip ||
     showMissions ||
@@ -183,6 +197,12 @@ const StreetView = () => {
       }
     }
   }, [isAnyPopupOpen, mission.isActive]);
+
+  useEffect(() => {
+    if (isAnyMissionActive) {
+      tutorial.dismissTooltip();
+    }
+  }, [isAnyMissionActive, tutorial]);
 
   // Resume game when tutorial tooltip is dismissed
   const handleTutorialDismiss = useCallback(() => {
@@ -405,6 +425,9 @@ const StreetView = () => {
     if (mission.isActive && mission.phase === 'escape') {
       mission.pauseZombies();
     }
+    if (mirrorWorld.isActive && mirrorWorld.phase === 'hunting') {
+      mirrorWorld.setPaused(true);
+    }
   };
 
   const handleResumeGame = () => {
@@ -412,6 +435,9 @@ const StreetView = () => {
     setIsMaximized(true);
     if (mission.isActive && mission.phase === 'escape') {
       mission.resumeZombies();
+    }
+    if (mirrorWorld.isActive && mirrorWorld.phase === 'hunting') {
+      mirrorWorld.setPaused(false);
     }
   };
 
@@ -437,6 +463,7 @@ const StreetView = () => {
     resetGame();
     mission.resetMission();
     ghostHunt.resetMission();
+    mirrorWorld.resetMission();
   };
 
   const handleExitToCityMap = () => {
@@ -759,34 +786,36 @@ const StreetView = () => {
           </div>
           
           {/* Left side - Mission Tab Button */}
-          <div className="absolute top-10 md:top-16 left-2 md:left-4 pointer-events-auto" style={{ zIndex: 150 }}>
-            <button
-              type="button"
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                setShowMissions(true);
-                mission.setNotification(false);
-                if (mission.isActive && mission.phase === 'escape') {
-                  mission.pauseZombies();
-                }
-              }}
-              className="relative flex items-center gap-2 px-4 py-3 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg touch-manipulation select-none active:scale-95"
-              data-control-ignore="true"
-            >
-              <Target className="h-4 w-4 text-primary" />
-              <span className="font-display text-xs md:text-sm font-bold uppercase tracking-wider">Missions</span>
-              {/* Notification indicator */}
-              {mission.hasNotification && (
-                <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
-                </span>
-              )}
-            </button>
-          </div>
+          {!isAnyMissionActive && (
+            <div className="absolute top-10 md:top-16 left-2 md:left-4 pointer-events-auto" style={{ zIndex: 150 }}>
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setShowMissions(true);
+                  mission.setNotification(false);
+                  if (mission.isActive && mission.phase === 'escape') {
+                    mission.pauseZombies();
+                  }
+                }}
+                className="relative flex items-center gap-2 px-4 py-3 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg touch-manipulation select-none active:scale-95"
+                data-control-ignore="true"
+              >
+                <Target className="h-4 w-4 text-primary" />
+                <span className="font-display text-xs md:text-sm font-bold uppercase tracking-wider">Missions</span>
+                {/* Notification indicator */}
+                {mission.hasNotification && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
           
           {/* Mission Popup */}
-          {showMissions && (
+          {showMissions && !isAnyMissionActive && (
             <div 
               className="absolute inset-0 flex items-center justify-center pointer-events-auto"
               style={{ zIndex: 200, touchAction: 'manipulation' }}

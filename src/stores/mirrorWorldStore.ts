@@ -34,6 +34,7 @@ interface MirrorWorldState {
   promptAnchorId: string | null;
   toastMessage: string | null;
   failReason: FailReason | null;
+  isPaused: boolean;
   startMission: () => void;
   completeBriefing: () => void;
   updateTimer: (delta: number) => void;
@@ -47,6 +48,7 @@ interface MirrorWorldState {
   completeMission: () => void;
   failMission: (reason: FailReason) => void;
   resetMission: () => void;
+  setPaused: (paused: boolean) => void;
 }
 
 const ANCHOR_POSITIONS: [number, number, number][] = [
@@ -107,6 +109,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
   promptAnchorId: null,
   toastMessage: null,
   failReason: null,
+  isPaused: false,
 
   startMission: () => {
     clearTimeoutSafely(protectionTimeout);
@@ -131,14 +134,15 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       promptAnchorId: null,
       toastMessage: null,
       failReason: null,
+      isPaused: false,
     });
   },
 
   completeBriefing: () => set({ phase: 'hunting' }),
 
   updateTimer: (delta) => {
-    const { timeRemaining, phase } = get();
-    if (phase !== 'hunting') return;
+    const { timeRemaining, phase, isPaused } = get();
+    if (phase !== 'hunting' || isPaused) return;
     const nextTime = Math.max(0, timeRemaining - delta);
     if (nextTime <= 0) {
       get().failMission('time');
@@ -259,6 +263,8 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       promptAnchorId: null,
       toastMessage: null,
       failReason: null,
+      isPaused: false,
     });
   },
+  setPaused: (paused) => set({ isPaused: paused }),
 }));
