@@ -693,7 +693,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
       </div>
 
       {/* 3D Canvas */}
-      {!showFallback && (
+      {!showFallback ? (
         <Canvas 
           key={shop.shopId}
           camera={{ position: [0, 2.2, 4.2], fov: 65 }} 
@@ -733,6 +733,49 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
             rotateSpeed={0.5}
           />
         </Canvas>
+      ) : (
+        <div className="flex-1 overflow-auto bg-background px-4 pt-20 pb-28">
+          <div className="mx-auto max-w-xl">
+            <div className="mb-4 rounded-lg border border-border/60 bg-card/90 px-4 py-3 text-xs text-muted-foreground shadow-lg">
+              3D view isn’t available right now. Browse the shop items below.
+            </div>
+            {filledSlots.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {filledSlots.map((item) => (
+                  <button
+                    key={item?.id ?? item?.title}
+                    type="button"
+                    onPointerDown={(event) => {
+                      event.stopPropagation();
+                      if (!item) return;
+                      const slotIndex = wallItems.findIndex((slot) => slot?.id === item.id);
+                      if (slotIndex >= 0) {
+                        handleFrameClick(slotIndex);
+                      }
+                    }}
+                    className="rounded-lg border border-border/60 bg-card/80 p-2 text-left text-[10px] text-muted-foreground shadow-sm hover:bg-card"
+                  >
+                    <div className="mb-2 aspect-[4/3] w-full overflow-hidden rounded-md bg-muted/40 flex items-center justify-center">
+                      {item?.image_url ? (
+                        <img src={item.image_url} alt={item.title} className="h-full w-full object-contain" />
+                      ) : (
+                        <Package className="h-6 w-6 text-muted-foreground/40" />
+                      )}
+                    </div>
+                    <div className="font-medium text-foreground truncate">{item?.title ?? 'Item'}</div>
+                    {item?.price != null && (
+                      <div className="text-[10px] text-primary">${Number(item.price).toFixed(2)}</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border/60 bg-card/80 p-6 text-center text-xs text-muted-foreground">
+                No items on display yet.
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {(!showFallback && (!canvasReady || !sceneReady)) && (
@@ -744,10 +787,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
       )}
 
       {showFallback && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/95 px-6 text-center">
-          <div className="rounded-lg border border-border/60 bg-card/90 px-4 py-3 text-xs text-muted-foreground shadow-lg">
-            The 3D shop couldn’t load here. You can still browse items below.
-          </div>
+        <div className="absolute inset-x-0 bottom-6 z-10 flex items-center justify-center px-6">
           <button
             type="button"
             onPointerDown={(event) => {
