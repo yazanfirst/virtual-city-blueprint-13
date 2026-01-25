@@ -275,19 +275,20 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
     clearTimeoutSafely(protectionTimeout);
     clearTimeoutSafely(hitTimeout);
     clearTimeoutSafely(toastTimeout);
+    const levelConfig = getMirrorWorldLevelConfig(get().difficultyLevel);
     set({
       isActive: false,
       phase: 'inactive',
-      timeRemaining: START_TIME,
+      timeRemaining: levelConfig.baseTime,
       shadowPosition: [0, 8, 30],
-      shadowSpeed: BASE_SHADOW_SPEED,
-      collisionDistance: DEFAULT_COLLISION_DISTANCE,
-      chaseAnchorSpeed: DEFAULT_CHASE_SPEED,
-      anchorTimeBonus: ANCHOR_TIME_BONUS,
+      shadowSpeed: levelConfig.shadowSpeed,
+      collisionDistance: levelConfig.collisionDistance,
+      chaseAnchorSpeed: levelConfig.chaseAnchorSpeed,
+      anchorTimeBonus: levelConfig.anchorBonus,
       anchors: createAnchors(),
       collectedCount: 0,
-      requiredAnchors: 5,
-      playerLives: START_LIVES,
+      requiredAnchors: levelConfig.requiredAnchors,
+      playerLives: levelConfig.lives,
       isProtected: false,
       promptMessage: null,
       promptKey: null,
@@ -301,6 +302,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
   unlockNextLevel: () => {
     const state = get();
     if (state.unlockedLevel >= state.maxLevel) return;
+    if (state.difficultyLevel !== state.unlockedLevel) return;
     set({ unlockedLevel: state.unlockedLevel + 1 });
   },
   setDifficultyLevel: (level) => {

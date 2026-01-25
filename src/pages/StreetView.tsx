@@ -1027,7 +1027,12 @@ const StreetView = () => {
               mirrorWorld.setDifficultyLevel(nextLevel);
               mirrorWorld.startMission();
             }}
-            onExit={() => mirrorWorld.resetMission()}
+            onExit={() => {
+              mirrorWorld.resetMission();
+              resetToSafeSpawn();
+              setIsInsideShop(false);
+              setInteriorShop(null);
+            }}
           />
 
           <MirrorWorldFailed
@@ -1036,7 +1041,12 @@ const StreetView = () => {
               mirrorWorld.resetMission();
               mirrorWorld.startMission();
             }}
-            onExit={() => mirrorWorld.resetMission()}
+            onExit={() => {
+              mirrorWorld.resetMission();
+              resetToSafeSpawn();
+              setIsInsideShop(false);
+              setInteriorShop(null);
+            }}
           />
           
           {/* Ghost Hunt Failed Modal */}

@@ -487,6 +487,7 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
   unlockNextLevel: () => {
     const state = get();
     if (state.unlockedLevel >= state.maxLevel) return;
+    if (state.difficultyLevel !== state.unlockedLevel) return;
     set({ unlockedLevel: state.unlockedLevel + 1 });
   },
 

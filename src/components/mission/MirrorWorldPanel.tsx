@@ -13,7 +13,7 @@ export default function MirrorWorldPanel({
   isCompact = false,
   disableActivation = false,
 }: MirrorWorldPanelProps) {
-  const { phase, startMission, resetMission, difficultyLevel, unlockedLevel, maxLevel, setDifficultyLevel } = useMirrorWorldStore();
+  const { phase, startMission, resetMission, difficultyLevel, unlockedLevel, maxLevel, requiredAnchors, setDifficultyLevel } = useMirrorWorldStore();
 
   const handleActivate = () => {
     startMission();
@@ -66,7 +66,7 @@ export default function MirrorWorldPanel({
       </div>
 
       <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
-        Enter the inverted city, clear 5 anchor challenges, and outrun your Shadow.
+        Enter the inverted city, clear {requiredAnchors} anchor challenges, and outrun your Shadow.
       </p>
       {disableActivation && (
         <p className={`text-xs text-yellow-300/90 mb-3 ${isCompact ? '' : 'md:text-sm'}`}>

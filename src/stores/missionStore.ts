@@ -570,6 +570,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   unlockNextLevel: () => {
     const state = get();
     if (state.unlockedLevel >= state.maxLevel) return;
+    if (state.level !== state.unlockedLevel) return;
     set({ unlockedLevel: state.unlockedLevel + 1 });
   },
 
