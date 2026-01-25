@@ -247,6 +247,7 @@ const InteriorScene = ({
   isMissionMode = false,
   showRechargePickup,
   onCollectRecharge,
+  onSceneReady,
 }: {
   shop: ShopBranding;
   items: (ShopItem | undefined)[];
@@ -255,10 +256,15 @@ const InteriorScene = ({
   isMissionMode?: boolean;
   showRechargePickup: boolean;
   onCollectRecharge: (type: 'emf' | 'flashlight' | 'trap') => void;
+  onSceneReady: () => void;
 }) => {
   const brickTexture = useBrickTexture();
   const accent = shop.accentColor || "#10B981";
   const primary = shop.primaryColor || "#3B82F6";
+
+  useEffect(() => {
+    onSceneReady();
+  }, [onSceneReady]);
 
   return (
     <group>
@@ -552,6 +558,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
   } = useGhostHuntStore();
   const controlsRef = useRef<any>(null);
   const [canvasReady, setCanvasReady] = useState(false);
+  const [sceneReady, setSceneReady] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -574,6 +581,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
 
   useEffect(() => {
     setCanvasReady(false);
+    setSceneReady(false);
   }, [shop.shopId]);
 
   const handleCollectRecharge = (type: 'emf' | 'flashlight' | 'trap') => {
@@ -660,10 +668,13 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
 
       {/* 3D Canvas */}
       <Canvas 
+        key={shop.shopId}
         camera={{ position: [0, 2.2, 4.2], fov: 65 }} 
         className="flex-1 touch-none"
         gl={{ antialias: true, powerPreference: "high-performance" }}
-        onCreated={() => setCanvasReady(true)}
+        onCreated={() => {
+          requestAnimationFrame(() => setCanvasReady(true));
+        }}
       >
         <color attach="background" args={["#e8dcc8"]} />
         <fog attach="fog" args={["#e8dcc8", 15, 30]} />
@@ -676,6 +687,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
             isMissionMode={isMissionMode}
             showRechargePickup={showRechargePickup}
             onCollectRecharge={handleCollectRecharge}
+            onSceneReady={() => setSceneReady(true)}
           />
         </React.Suspense>
 
@@ -695,7 +707,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
         />
       </Canvas>
 
-      {!canvasReady && (
+      {(!canvasReady || !sceneReady) && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/90">
           <div className="rounded-lg border border-border/60 bg-card/90 px-4 py-3 text-center text-xs text-muted-foreground shadow-lg">
             Loading shop interior...
