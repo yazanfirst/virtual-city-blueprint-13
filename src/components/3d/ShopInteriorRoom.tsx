@@ -262,9 +262,14 @@ const InteriorScene = ({
   const accent = shop.accentColor || "#10B981";
   const primary = shop.primaryColor || "#3B82F6";
 
-  useEffect(() => {
-    onSceneReady();
-  }, [onSceneReady]);
+  const hasRenderedRef = useRef(false);
+
+  useFrame(() => {
+    if (!hasRenderedRef.current) {
+      hasRenderedRef.current = true;
+      onSceneReady();
+    }
+  });
 
   return (
     <group>
