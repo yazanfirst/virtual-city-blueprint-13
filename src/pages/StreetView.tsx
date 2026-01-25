@@ -35,6 +35,7 @@ import { useMirrorWorldStore } from "@/stores/mirrorWorldStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useTutorialProgress } from "@/hooks/useTutorialProgress";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
+import { getEligibleShops } from "@/lib/missionShopSelection";
 import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
 import { useFlashlightReveal } from "@/hooks/useFlashlightReveal";
@@ -252,6 +253,24 @@ const StreetView = () => {
     
     fetchAllShopItems();
   }, [shopBrandings.length]); // use length instead of array to avoid infinite loop
+
+  useEffect(() => {
+    if (!ghostHunt.isActive || ghostHunt.phase !== 'briefing') return;
+    if (ghostHunt.rechargeShopId) return;
+    if (!shopBrandings || shopBrandings.length === 0) return;
+
+    const eligible = getEligibleShops(shopBrandings, shopItemsMap, []);
+    if (eligible.length === 0) {
+      console.debug('[GhostHunt] Recharge pickup skipped: no eligible shops.');
+      return;
+    }
+
+    const seed = Date.now();
+    const index = Math.abs(seed) % eligible.length;
+    const chosen = eligible[index];
+    ghostHunt.setRechargeShopId(chosen.shop.shopId ?? null);
+    console.debug('[GhostHunt] Recharge pickup shop selected:', chosen.shop.shopId);
+  }, [ghostHunt.isActive, ghostHunt.phase, ghostHunt.rechargeShopId, ghostHunt.setRechargeShopId, shopBrandings, shopItemsMap]);
 
   // Proximity detection - find nearby shop
   useEffect(() => {

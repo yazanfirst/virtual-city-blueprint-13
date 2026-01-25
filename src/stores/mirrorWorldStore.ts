@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { usePlayerStore } from '@/stores/playerStore';
+import { getMirrorWorldLevelConfig } from '@/lib/missionLevels';
 
 export type MirrorWorldPhase = 'inactive' | 'briefing' | 'hunting' | 'completed' | 'failed';
 
@@ -23,12 +24,16 @@ interface MirrorWorldState {
   timeRemaining: number;
   shadowPosition: [number, number, number];
   shadowSpeed: number;
+  collisionDistance: number;
+  chaseAnchorSpeed: number;
+  anchorTimeBonus: number;
   anchors: RealityAnchor[];
   collectedCount: number;
   requiredAnchors: number;
   playerLives: number;
   isProtected: boolean;
   difficultyLevel: number;
+  maxLevel: number;
   promptMessage: string | null;
   promptKey: string | null;
   promptAnchorId: string | null;
@@ -63,6 +68,9 @@ const BASE_SHADOW_SPEED = 0.5;
 const START_LIVES = 2;
 const START_TIME = 100;
 const ANCHOR_TIME_BONUS = 8;
+const DEFAULT_COLLISION_DISTANCE = 2;
+const DEFAULT_CHASE_SPEED = 0.35;
+const MAX_MIRROR_LEVEL = 5;
 const PROTECTION_DURATION = 3000;
 const HIT_INVINCIBILITY = 2000;
 
@@ -98,12 +106,16 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
   timeRemaining: START_TIME,
   shadowPosition: [0, 8, 30],
   shadowSpeed: BASE_SHADOW_SPEED,
+  collisionDistance: DEFAULT_COLLISION_DISTANCE,
+  chaseAnchorSpeed: DEFAULT_CHASE_SPEED,
+  anchorTimeBonus: ANCHOR_TIME_BONUS,
   anchors: createAnchors(),
   collectedCount: 0,
   requiredAnchors: 5,
   playerLives: START_LIVES,
   isProtected: false,
   difficultyLevel: 1,
+  maxLevel: MAX_MIRROR_LEVEL,
   promptMessage: null,
   promptKey: null,
   promptAnchorId: null,
@@ -115,6 +127,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
     clearTimeoutSafely(protectionTimeout);
     clearTimeoutSafely(hitTimeout);
     const playerPosition = usePlayerStore.getState().position;
+    const levelConfig = getMirrorWorldLevelConfig(get().difficultyLevel);
     protectionTimeout = setTimeout(() => {
       set({ isProtected: false });
     }, PROTECTION_DURATION);
@@ -122,12 +135,16 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
     set({
       isActive: true,
       phase: 'briefing',
-      timeRemaining: START_TIME,
+      timeRemaining: levelConfig.baseTime,
       shadowPosition: [playerPosition[0] - 6, playerPosition[1] + 1, playerPosition[2] - 6],
-      shadowSpeed: BASE_SHADOW_SPEED,
+      shadowSpeed: levelConfig.shadowSpeed,
+      collisionDistance: levelConfig.collisionDistance,
+      chaseAnchorSpeed: levelConfig.chaseAnchorSpeed,
+      anchorTimeBonus: levelConfig.anchorBonus,
       anchors: createAnchors(),
       collectedCount: 0,
-      playerLives: START_LIVES,
+      requiredAnchors: levelConfig.requiredAnchors,
+      playerLives: levelConfig.lives,
       isProtected: true,
       promptMessage: null,
       promptKey: null,
@@ -152,7 +169,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
   },
 
   collectAnchor: (anchorId) => {
-    const { anchors, collectedCount, requiredAnchors } = get();
+    const { anchors, collectedCount, requiredAnchors, anchorTimeBonus } = get();
     const targetAnchor = anchors.find((anchor) => anchor.id === anchorId);
     if (!targetAnchor || targetAnchor.isCollected) return;
     if (toastTimeout) {
@@ -162,7 +179,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       anchor.id === anchorId ? { ...anchor, isCollected: true } : anchor
     );
     const nextCollectedCount = collectedCount + 1;
-    const nextTime = Math.max(0, get().timeRemaining + ANCHOR_TIME_BONUS);
+    const nextTime = Math.max(0, get().timeRemaining + anchorTimeBonus);
 
     if (nextCollectedCount >= requiredAnchors) {
       set({
@@ -172,7 +189,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
         promptAnchorId: null,
         promptMessage: null,
         promptKey: null,
-        toastMessage: `Reality Anchor collected! +${ANCHOR_TIME_BONUS}s`,
+        toastMessage: `Reality Anchor collected! +${anchorTimeBonus}s`,
       });
       toastTimeout = setTimeout(() => {
         set({ toastMessage: null });
@@ -188,7 +205,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       promptAnchorId: null,
       promptMessage: null,
       promptKey: null,
-      toastMessage: `Reality Anchor collected! +${ANCHOR_TIME_BONUS}s`,
+        toastMessage: `Reality Anchor collected! +${anchorTimeBonus}s`,
     });
     toastTimeout = setTimeout(() => {
       set({ toastMessage: null });
@@ -240,7 +257,14 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
     });
   },
 
-  completeMission: () => set({ phase: 'completed', isActive: true }),
+  completeMission: () => {
+    const state = get();
+    set({
+      phase: 'completed',
+      isActive: true,
+      difficultyLevel: Math.min(state.maxLevel, state.difficultyLevel + 1),
+    });
+  },
 
   failMission: (reason) => set({ phase: 'failed', isActive: true, failReason: reason }),
 
@@ -254,8 +278,12 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       timeRemaining: START_TIME,
       shadowPosition: [0, 8, 30],
       shadowSpeed: BASE_SHADOW_SPEED,
+      collisionDistance: DEFAULT_COLLISION_DISTANCE,
+      chaseAnchorSpeed: DEFAULT_CHASE_SPEED,
+      anchorTimeBonus: ANCHOR_TIME_BONUS,
       anchors: createAnchors(),
       collectedCount: 0,
+      requiredAnchors: 5,
       playerLives: START_LIVES,
       isProtected: false,
       promptMessage: null,

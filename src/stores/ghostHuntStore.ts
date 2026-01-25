@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getGhostHuntLevelConfig } from '@/lib/missionLevels';
 
 /**
  * Ghost Hunt Mission Store
@@ -61,6 +62,10 @@ export interface GhostHuntState {
   
   // Difficulty scaling
   difficultyLevel: number;   // 1-5, increases each successful hunt
+  maxLevel: number;
+  ghostSpeedMultiplier: number;
+  emfDrainPerSecond: number;
+  flashlightDrainPerUse: number;
   
   // Player state during hunt
   playerLives: number;
@@ -68,6 +73,8 @@ export interface GhostHuntState {
   
   // Spawn variety tracking
   recentSpawnSeeds: number[];
+  rechargeShopId: string | null;
+  rechargeCollected: boolean;
   
   // Actions
   startMission: () => void;
@@ -79,6 +86,8 @@ export interface GhostHuntState {
   useFlashlight: () => void;
   fireGhostTrap: () => void;
   drainBattery: (type: 'emf' | 'flashlight', amount: number) => void;
+  setRechargeShopId: (shopId: string | null) => void;
+  collectRechargePickup: () => void;
   
   // Ghost interactions
   revealGhost: (ghostId: string) => void;
@@ -164,17 +173,7 @@ function generateGhosts(count: number, seed: number): GhostData[] {
   return ghosts;
 }
 
-// Calculate ghost count based on difficulty
-function getGhostCount(difficulty: number): number {
-  // Base 3 ghosts, +1 per difficulty level, max 7
-  return Math.min(7, 3 + Math.floor(difficulty / 2));
-}
-
-// Calculate time limit based on difficulty
-function getTimeLimit(difficulty: number): number {
-  // Base 90 seconds, -5 per difficulty level, min 60
-  return Math.max(60, 90 - (difficulty - 1) * 5);
-}
+const MAX_GHOST_LEVEL = 5;
 
 export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
   // Initial state
@@ -196,14 +195,21 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
     trapCharges: 3,
   },
   difficultyLevel: 1,
+  maxLevel: MAX_GHOST_LEVEL,
+  ghostSpeedMultiplier: 1,
+  emfDrainPerSecond: 2,
+  flashlightDrainPerUse: 15,
   playerLives: 3,
   isProtected: true,
   recentSpawnSeeds: [],
+  rechargeShopId: null,
+  rechargeCollected: false,
   
   // Start mission
   startMission: () => {
     const state = get();
     const difficulty = state.difficultyLevel;
+    const config = getGhostHuntLevelConfig(difficulty);
     
     // Generate new seed avoiding recent ones
     let seed = Date.now();
@@ -211,8 +217,8 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
       seed += 1;
     }
     
-    const ghostCount = getGhostCount(difficulty);
-    const timeLimit = getTimeLimit(difficulty);
+    const ghostCount = config.ghostCount;
+    const timeLimit = config.timeLimit;
     const ghosts = generateGhosts(ghostCount, seed);
     
     set({
@@ -223,7 +229,7 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
       ghosts,
       totalGhosts: ghostCount,
       capturedCount: 0,
-      requiredCaptures: Math.min(ghostCount, 3 + Math.floor(difficulty / 2)),
+      requiredCaptures: Math.min(ghostCount, config.requiredCaptures),
       equipment: {
         emfActive: false,
         emfBattery: 100,
@@ -231,10 +237,15 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
         flashlightBattery: 100,
         flashlightCooldown: 0,
         trapActive: false,
-        trapCharges: Math.max(2, 4 - Math.floor(difficulty / 2)), // Fewer charges at higher difficulty
+        trapCharges: config.trapCharges,
       },
-      playerLives: Math.max(2, 4 - Math.floor(difficulty / 2)), // Fewer lives at higher difficulty
+      playerLives: config.playerLives,
       isProtected: true,
+      ghostSpeedMultiplier: config.ghostSpeedMultiplier,
+      emfDrainPerSecond: config.emfDrainPerSecond,
+      flashlightDrainPerUse: config.flashlightDrainPerUse,
+      rechargeShopId: null,
+      rechargeCollected: false,
       recentSpawnSeeds: [...state.recentSpawnSeeds.slice(-4), seed % 1000],
     });
     
@@ -292,7 +303,7 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
     if (state.equipment.flashlightCooldown > 0) return;
     
     // Drain battery
-    const newBattery = Math.max(0, state.equipment.flashlightBattery - 15);
+    const newBattery = Math.max(0, state.equipment.flashlightBattery - state.flashlightDrainPerUse);
     
     set({
       equipment: {
@@ -430,7 +441,7 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
     const state = get();
     set({
       phase: 'completed',
-      difficultyLevel: state.difficultyLevel + 1, // Increase for next time
+      difficultyLevel: Math.min(state.maxLevel, state.difficultyLevel + 1), // Increase for next time
     });
   },
   
@@ -441,6 +452,7 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
   },
   
   resetMission: () => {
+    const config = getGhostHuntLevelConfig(get().difficultyLevel);
     set({
       isActive: false,
       phase: 'inactive',
@@ -460,6 +472,29 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
       },
       playerLives: 3,
       isProtected: true,
+      ghostSpeedMultiplier: config.ghostSpeedMultiplier,
+      emfDrainPerSecond: config.emfDrainPerSecond,
+      flashlightDrainPerUse: config.flashlightDrainPerUse,
+      rechargeShopId: null,
+      rechargeCollected: false,
+    });
+  },
+
+  setRechargeShopId: (shopId) => set({ rechargeShopId: shopId, rechargeCollected: false }),
+
+  collectRechargePickup: () => {
+    const state = get();
+    if (state.rechargeCollected) return;
+    const config = getGhostHuntLevelConfig(state.difficultyLevel);
+    set({
+      rechargeCollected: true,
+      equipment: {
+        ...state.equipment,
+        emfBattery: 100,
+        flashlightBattery: 100,
+        flashlightCooldown: 0,
+        trapCharges: config.trapCharges,
+      },
     });
   },
 }));

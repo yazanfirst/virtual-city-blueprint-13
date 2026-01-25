@@ -19,6 +19,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
     equipment,
     playerLives,
     difficultyLevel,
+    emfDrainPerSecond,
     updateTimer,
     toggleEMF,
     useFlashlight,
@@ -43,11 +44,11 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
     if (phase !== 'hunting' || !equipment.emfActive) return;
     
     const interval = setInterval(() => {
-      drainBattery('emf', 2);
+      drainBattery('emf', emfDrainPerSecond);
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [phase, equipment.emfActive, drainBattery]);
+  }, [phase, equipment.emfActive, drainBattery, emfDrainPerSecond]);
   
   // Track phase changes
   useEffect(() => {

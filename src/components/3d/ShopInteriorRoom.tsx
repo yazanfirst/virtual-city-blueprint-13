@@ -6,6 +6,7 @@ import { ShopBranding } from "@/hooks/use3DShops";
 import { Button } from "@/components/ui/button";
 import { ShopItem, useShopItems } from "@/hooks/useShopItems";
 import { X, ExternalLink, ChevronLeft, ChevronRight, Package, ShoppingBag } from "lucide-react";
+import { useGhostHuntStore } from "@/stores/ghostHuntStore";
 import {
   Dialog,
   DialogContent,
@@ -244,12 +245,16 @@ const InteriorScene = ({
   selectedSlot,
   onSelectItem,
   isMissionMode = false,
+  showRechargePickup,
+  onCollectRecharge,
 }: {
   shop: ShopBranding;
   items: (ShopItem | undefined)[];
   selectedSlot: number | null;
   onSelectItem: (slot: number) => void;
   isMissionMode?: boolean;
+  showRechargePickup: boolean;
+  onCollectRecharge: () => void;
 }) => {
   const brickTexture = useBrickTexture();
   const accent = shop.accentColor || "#10B981";
@@ -438,6 +443,42 @@ const InteriorScene = ({
           decay={2}
         />
       </group>
+
+      {showRechargePickup && (
+        <group position={[3.6, 0.6, 2.8]}>
+          <mesh
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              onCollectRecharge();
+            }}
+          >
+            <cylinderGeometry args={[0.25, 0.25, 0.5, 16]} />
+            <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.6} />
+          </mesh>
+          <mesh position={[0, 0.4, 0]}>
+            <sphereGeometry args={[0.18, 12, 12]} />
+            <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.8} />
+          </mesh>
+          <Html
+            transform
+            position={[0, 0.9, 0]}
+            distanceFactor={6}
+            className="pointer-events-auto"
+          >
+            <button
+              type="button"
+              onPointerDown={(event) => {
+                event.stopPropagation();
+                onCollectRecharge();
+              }}
+              className="px-2 py-1 rounded-md bg-black/70 text-white text-[10px] uppercase tracking-wide border border-white/30"
+            >
+              Recharge Kit
+            </button>
+          </Html>
+          <pointLight position={[0, 0.4, 0]} intensity={0.8} distance={3} color={accent} />
+        </group>
+      )}
     </group>
   );
 };
@@ -477,6 +518,12 @@ function RoomCameraClamp({
 
 const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorRoomProps) => {
   const { data: items = [], isLoading } = useShopItems(shop.shopId);
+  const {
+    isActive: ghostHuntActive,
+    rechargeShopId,
+    rechargeCollected,
+    collectRechargePickup,
+  } = useGhostHuntStore();
   const controlsRef = useRef<any>(null);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -495,6 +542,15 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
   const primary = shop.primaryColor || "#3B82F6";
   const selectedItem = selectedSlot !== null ? wallItems[selectedSlot] : undefined;
   const filledSlots = wallItems.filter(Boolean);
+
+  const showRechargePickup =
+    ghostHuntActive && !rechargeCollected && Boolean(shop.shopId && shop.shopId === rechargeShopId);
+
+  const handleCollectRecharge = () => {
+    if (!showRechargePickup) return;
+    collectRechargePickup();
+    console.debug('[GhostHunt] Recharge pickup collected in shop:', shop.shopId);
+  };
   
   const handleFrameClick = (slot: number) => {
     const item = wallItems[slot];
@@ -581,12 +637,14 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
         <color attach="background" args={["#e8dcc8"]} />
         <fog attach="fog" args={["#e8dcc8", 15, 30]} />
         <React.Suspense fallback={null}>
-          <InteriorScene 
-            shop={shop} 
-            items={wallItems} 
+          <InteriorScene
+            shop={shop}
+            items={wallItems}
             selectedSlot={selectedSlot}
             onSelectItem={handleFrameClick}
             isMissionMode={isMissionMode}
+            showRechargePickup={showRechargePickup}
+            onCollectRecharge={handleCollectRecharge}
           />
         </React.Suspense>
 

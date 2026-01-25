@@ -79,6 +79,7 @@ export default function GhostCharacter({
     equipment, 
     phase,
     isProtected,
+    ghostSpeedMultiplier,
   } = useGhostHuntStore();
   
   const config = GHOST_CONFIGS[type];
@@ -141,6 +142,8 @@ export default function GhostCharacter({
     let newX = gx;
     let newZ = gz;
     
+    const adjustedSpeed = config.speed * ghostSpeedMultiplier;
+
     switch (config.movePattern) {
       case 'wander':
         // Random wandering
@@ -159,8 +162,8 @@ export default function GhostCharacter({
         const tdz = tz - gz;
         const tDist = Math.sqrt(tdx * tdx + tdz * tdz);
         if (tDist > 0.5) {
-          newX = gx + (tdx / tDist) * config.speed;
-          newZ = gz + (tdz / tDist) * config.speed;
+          newX = gx + (tdx / tDist) * adjustedSpeed;
+          newZ = gz + (tdz / tDist) * adjustedSpeed;
         }
         break;
         
@@ -184,8 +187,8 @@ export default function GhostCharacter({
       case 'stalk':
         // Slowly moves toward player when not revealed
         if (!isRevealed && distance > ATTACK_RANGE) {
-          newX = gx + (dx / distance) * config.speed;
-          newZ = gz + (dz / distance) * config.speed;
+          newX = gx + (dx / distance) * adjustedSpeed;
+          newZ = gz + (dz / distance) * adjustedSpeed;
         }
         break;
     }
