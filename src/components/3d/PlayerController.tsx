@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import LowPolyCharacter from './LowPolyCharacter';
 import { usePlayerStore } from '@/stores/playerStore';
+import { useMirrorWorldStore } from '@/stores/mirrorWorldStore';
 import { playSounds } from '@/hooks/useGameAudio';
 
 const PLAYER_RADIUS = 0.45;
@@ -45,6 +46,21 @@ const BENCH_COLLIDERS = [
   { minX: -45.75, maxX: -44.25, minZ: 37.75, maxZ: 38.25 },
 ];
 
+const MIRROR_WORLD_LADDERS = [
+  { x: 13.6, z: 40, rotation: Math.PI / 2 },
+  { x: -13.6, z: 28, rotation: -Math.PI / 2 },
+  { x: 47, z: 13.6, rotation: 0 },
+  { x: -35, z: -13.6, rotation: Math.PI },
+  { x: 13.6, z: -40, rotation: Math.PI / 2 },
+];
+const MIRROR_ROOFTOPS = [
+  { x: 18, z: 40, width: 8, depth: 8, height: 8.2 },
+  { x: -18, z: 28, width: 8, depth: 8, height: 8.2 },
+  { x: 47, z: 18, width: 8, depth: 8, height: 8.2 },
+  { x: -35, z: -18, width: 8, depth: 8, height: 8.2 },
+  { x: 18, z: -40, width: 8, depth: 8, height: 8.2 },
+];
+
 type CircularPlatform = {
   type: 'circle';
   x: number;
@@ -52,6 +68,7 @@ type CircularPlatform = {
   radius: number;
   height: number;
   requiresJump?: boolean;
+  mirrorWorldOnly?: boolean;
 };
 
 type BoxPlatform = {
@@ -62,6 +79,7 @@ type BoxPlatform = {
   maxZ: number;
   height: number;
   requiresJump?: boolean;
+  mirrorWorldOnly?: boolean;
 };
 
 type PlatformSurface = CircularPlatform | BoxPlatform;
@@ -76,6 +94,15 @@ const PLATFORM_SURFACES: PlatformSurface[] = [
     height: BENCH_PLATFORM_HEIGHT,
     requiresJump: true,
   } as PlatformSurface)),
+  ...MIRROR_ROOFTOPS.map((roof) => ({
+    type: 'box',
+    minX: roof.x - roof.width / 2,
+    maxX: roof.x + roof.width / 2,
+    minZ: roof.z - roof.depth / 2,
+    maxZ: roof.z + roof.depth / 2,
+    height: roof.height,
+    mirrorWorldOnly: true,
+  }) as PlatformSurface),
 ];
 
 const CYLINDER_COLLIDERS = [
@@ -140,11 +167,13 @@ const PlayerController = ({
   });
   const [characterRotation, setCharacterRotation] = useState(0);
   const [isJumping, setIsJumping] = useState(false);
-
   // Use store for position to persist across game mode changes
   const { position, setPosition, jumpCounter, incrementJump } = usePlayerStore();
+  const mirrorWorldActive = useMirrorWorldStore((state) => state.isActive && state.phase === 'hunting');
   const positionRef = useRef(new THREE.Vector3(...position));
   const lastJumpCounterRef = useRef(jumpCounter);
+  const roofDropAtRef = useRef(0);
+  const wasOnRoofRef = useRef(false);
 
   const { camera } = useThree();
 
@@ -157,6 +186,35 @@ const PlayerController = ({
   const cameraDistance = viewMode === "firstPerson" ? 0 : 10;
   const cameraHeight = viewMode === "firstPerson" ? 2.5 : 4;
 
+  const getSurfaceHeight = useCallback((x: number, z: number): { height: number; requiresJump: boolean } => {
+    let surface = { height: 0.25, requiresJump: false };
+
+    for (const platform of PLATFORM_SURFACES) {
+      if (platform.mirrorWorldOnly && !mirrorWorldActive) {
+        continue;
+      }
+
+      if (platform.type === 'circle') {
+        const dx = x - platform.x;
+        const dz = z - platform.z;
+        if (dx * dx + dz * dz <= platform.radius * platform.radius && platform.height > surface.height) {
+          surface = { height: platform.height, requiresJump: Boolean(platform.requiresJump) };
+        }
+      } else if (
+        platform.type === 'box' &&
+        x >= platform.minX &&
+        x <= platform.maxX &&
+        z >= platform.minZ &&
+        z <= platform.maxZ &&
+        platform.height > surface.height
+      ) {
+        surface = { height: platform.height, requiresJump: Boolean(platform.requiresJump) };
+      }
+    }
+
+    return surface;
+  }, [mirrorWorldActive]);
+
   // Check collision with buildings and props
   const checkCollision = (
     x: number,
@@ -164,7 +222,15 @@ const PlayerController = ({
     y: number = positionRef.current.y,
     radius: number = PLAYER_RADIUS,
   ): boolean => {
+    const roofHeight = getSurfaceHeight(x, z).height;
+    const onRoofSurface = mirrorWorldActive && roofHeight >= 7.5;
+    const recentlyLeftRoof =
+      mirrorWorldActive && performance.now() - roofDropAtRef.current < 1200 && y > 1.5;
+    const ignoreBuildingCollision = mirrorWorldActive && (onRoofSurface || recentlyLeftRoof);
     for (const box of COLLISION_BOXES) {
+      if (ignoreBuildingCollision) {
+        break;
+      }
       if (
         x + radius > box.minX &&
         x - radius < box.maxX &&
@@ -202,31 +268,6 @@ const PlayerController = ({
 
     return false;
   };
-
-  const getSurfaceHeight = useCallback((x: number, z: number): { height: number; requiresJump: boolean } => {
-    let surface = { height: 0.25, requiresJump: false };
-
-    for (const platform of PLATFORM_SURFACES) {
-      if (platform.type === 'circle') {
-        const dx = x - platform.x;
-        const dz = z - platform.z;
-        if (dx * dx + dz * dz <= platform.radius * platform.radius && platform.height > surface.height) {
-          surface = { height: platform.height, requiresJump: Boolean(platform.requiresJump) };
-        }
-      } else if (
-        platform.type === 'box' &&
-        x >= platform.minX &&
-        x <= platform.maxX &&
-        z >= platform.minZ &&
-        z <= platform.maxZ &&
-        platform.height > surface.height
-      ) {
-        surface = { height: platform.height, requiresJump: Boolean(platform.requiresJump) };
-      }
-    }
-
-    return surface;
-  }, []);
 
 
   const attemptJump = useCallback(() => {
@@ -377,6 +418,19 @@ const PlayerController = ({
     // Apply jump/gravity
     const groundInfo = getSurfaceHeight(positionRef.current.x, positionRef.current.z);
     const groundHeight = groundInfo.height;
+    const onMirrorRoof = mirrorWorldActive && groundHeight >= 7.5;
+    if (onMirrorRoof) {
+      wasOnRoofRef.current = true;
+    } else if (wasOnRoofRef.current) {
+      roofDropAtRef.current = performance.now();
+      wasOnRoofRef.current = false;
+    }
+    if (onMirrorRoof && positionRef.current.y < groundHeight) {
+      positionRef.current.y = groundHeight;
+      verticalVelocityRef.current = 0;
+      setIsJumping(false);
+      positionChanged = true;
+    }
 
     // Walking footsteps (soft)
     const now = performance.now();

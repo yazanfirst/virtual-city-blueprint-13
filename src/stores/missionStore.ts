@@ -387,6 +387,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
 
   completeMission: () => {
     set({
+      isActive: false,
       phase: 'completed',
       zombies: [],
       zombiesPaused: true,

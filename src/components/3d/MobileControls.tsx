@@ -181,7 +181,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
     >
       <div className="pointer-events-none absolute inset-0">
         {/* Left side - Joystick visual - BIGGER for mobile */}
-        <div className="pointer-events-none absolute bottom-6 left-6 landscape:bottom-4 landscape:left-4 flex items-center gap-5">
+        <div className="mobile-controls__joystick pointer-events-none absolute bottom-6 left-6 landscape:bottom-4 landscape:left-4 flex items-center gap-5">
           <div
             ref={joystickRef}
             className="pointer-events-auto h-28 w-28 landscape:h-24 landscape:w-24 rounded-full border-2 border-white/40 bg-black/50 backdrop-blur-sm"
@@ -199,7 +199,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
         </div>
 
         {/* Right side - Jump button - BIGGER for mobile */}
-        <div className="pointer-events-none absolute bottom-6 right-6 landscape:bottom-4 landscape:right-4 flex flex-col items-end gap-2">
+        <div className="mobile-controls__jump pointer-events-none absolute bottom-6 right-6 landscape:bottom-4 landscape:right-4 flex flex-col items-end gap-2">
           <button
             type="button"
             aria-label="Jump"
@@ -211,12 +211,11 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
               triggerJump();
             }}
             onTouchEnd={() => setJumpPressed(false)}
-            className={`pointer-events-auto flex h-18 w-18 landscape:h-16 landscape:w-16 items-center justify-center rounded-full border-2 text-sm font-bold shadow-[0_8px_24px_rgba(0,0,0,0.5)] transition duration-150 ${
+            className={`mobile-controls__jump-button pointer-events-auto flex items-center justify-center rounded-full border-2 text-sm font-bold shadow-[0_8px_24px_rgba(0,0,0,0.5)] transition duration-150 ${
               jumpPressed
                 ? 'scale-95 border-white/90 bg-amber-300 ring-4 ring-white/70 ring-offset-2 ring-offset-amber-200'
                 : 'border-white/70 bg-amber-200/95 ring-2 ring-white/50'
             }`}
-            style={{ width: '72px', height: '72px' }}
           >
             Jump
           </button>

@@ -1,5 +1,6 @@
-import { Play, Gamepad2, Target, Store } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { Play, Gamepad2, Target, Store, RotateCcw } from "lucide-react";
+import { useDeviceType } from "@/hooks/useDeviceType";
 
 interface GameStartScreenProps {
   streetName: string;
@@ -8,9 +9,33 @@ interface GameStartScreenProps {
 }
 
 const GameStartScreen = ({ streetName, category, onStartGame }: GameStartScreenProps) => {
+  const deviceType = useDeviceType();
+  const [isLandscape, setIsLandscape] = useState(true);
+
+  useEffect(() => {
+    if (deviceType !== "mobile") return;
+    const mediaQuery = window.matchMedia("(orientation: landscape)");
+    const updateOrientation = () => setIsLandscape(mediaQuery.matches);
+    updateOrientation();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updateOrientation);
+      return () => mediaQuery.removeEventListener("change", updateOrientation);
+    }
+
+    mediaQuery.addListener(updateOrientation);
+    return () => mediaQuery.removeListener(updateOrientation);
+  }, [deviceType]);
+
   return (
     <div className="h-full w-full bg-gradient-to-br from-background via-background/95 to-primary/10 flex items-center justify-center px-4">
       <div className="text-center space-y-5 sm:space-y-8 p-4 sm:p-8 max-w-lg w-full">
+        {deviceType === "mobile" && !isLandscape && (
+          <div className="flex items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs text-primary">
+            <RotateCcw className="h-3.5 w-3.5" />
+            Rotate your phone to landscape for the best experience.
+          </div>
+        )}
         {/* Game Icon */}
         <div className="flex justify-center">
           <div className="relative">
