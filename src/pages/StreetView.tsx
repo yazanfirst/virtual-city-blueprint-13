@@ -14,6 +14,7 @@ import GhostHuntPanel from "@/components/mission/GhostHuntPanel";
 import GhostHuntUI from "@/components/mission/GhostHuntUI";
 import GhostHuntFailedModal from "@/components/mission/GhostHuntFailedModal";
 import GhostHuntCompleteModal from "@/components/mission/GhostHuntCompleteModal";
+import ZombieMissionCompleteModal from "@/components/mission/ZombieMissionCompleteModal";
 import MirrorWorldPanel from "@/components/mission/MirrorWorldPanel";
 import MirrorWorldBriefing from "@/components/mission/MirrorWorldBriefing";
 import MirrorWorldUI from "@/components/mission/MirrorWorldUI";
@@ -35,6 +36,7 @@ import { useMirrorWorldStore } from "@/stores/mirrorWorldStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useTutorialProgress } from "@/hooks/useTutorialProgress";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
+import { selectMissionTargetShop } from "@/lib/missionShopSelection";
 import { getEligibleShops } from "@/lib/missionShopSelection";
 import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
@@ -105,6 +107,7 @@ const StreetView = () => {
   const [showJumpScare, setShowJumpScare] = useState(false);
   const [showGhostHuntFailed, setShowGhostHuntFailed] = useState(false);
   const [showGhostHuntComplete, setShowGhostHuntComplete] = useState(false);
+  const [showZombieComplete, setShowZombieComplete] = useState(false);
   const [missionTab, setMissionTab] = useState<'zombie' | 'ghost' | 'mirror'>('zombie');
   const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
   
@@ -122,6 +125,10 @@ const StreetView = () => {
 
   // Transform spots data to shop brandings - MUST be before useEffect that uses it
   const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
+  const rechargeSpotId = useMemo(() => {
+    if (!ghostHunt.rechargeShopId) return "";
+    return shopBrandings.find((shop) => shop.shopId === ghostHunt.rechargeShopId)?.spotId ?? "";
+  }, [ghostHunt.rechargeShopId, shopBrandings]);
 
   // Track if user has exited a shop for first time (to show mission intro)
   const [hasExitedShopOnce, setHasExitedShopOnce] = useState(false);
@@ -208,6 +215,14 @@ const StreetView = () => {
       tutorial.dismissTooltip();
     }
   }, [isAnyMissionActive, tutorial]);
+
+  useEffect(() => {
+    if (mission.phase === 'completed') {
+      setShowZombieComplete(true);
+    } else {
+      setShowZombieComplete(false);
+    }
+  }, [mission.phase]);
 
   // Resume game when tutorial tooltip is dismissed
   const handleTutorialDismiss = useCallback(() => {
@@ -960,7 +975,6 @@ const StreetView = () => {
                         setShowJumpScare(false);
                         setShowMissions(false);
                       }}
-                      isUnlocked={mission.phase === 'completed'}
                       disableActivation={isMissionBlocking && !ghostHunt.isActive}
                       isCompact
                     />
@@ -1005,7 +1019,15 @@ const StreetView = () => {
 
           <MirrorWorldComplete
             isOpen={mirrorWorld.phase === 'completed'}
-            onContinue={() => mirrorWorld.resetMission()}
+            nextLevel={Math.min(mirrorWorld.maxLevel, mirrorWorld.unlockedLevel)}
+            currentLevel={mirrorWorld.difficultyLevel}
+            onContinue={() => {
+              const nextLevel = Math.min(mirrorWorld.maxLevel, mirrorWorld.unlockedLevel);
+              mirrorWorld.resetMission();
+              mirrorWorld.setDifficultyLevel(nextLevel);
+              mirrorWorld.startMission();
+            }}
+            onExit={() => mirrorWorld.resetMission()}
           />
 
           <MirrorWorldFailed
@@ -1042,14 +1064,45 @@ const StreetView = () => {
             <GhostHuntCompleteModal
               capturedCount={ghostHunt.capturedCount}
               totalGhosts={ghostHunt.totalGhosts}
-              nextDifficulty={ghostHunt.difficultyLevel}
+              currentLevel={ghostHunt.difficultyLevel}
+              unlockedLevel={ghostHunt.unlockedLevel}
+              maxLevel={ghostHunt.maxLevel}
               timeBonus={Math.floor(ghostHunt.timeRemaining * 2)}
               onContinue={() => {
+                const nextLevel = Math.min(ghostHunt.maxLevel, ghostHunt.unlockedLevel);
+                ghostHunt.resetMission();
+                ghostHunt.setDifficultyLevel(nextLevel);
+                ghostHunt.startMission();
+                setShowGhostHuntComplete(false);
+              }}
+              onExit={() => {
                 setShowGhostHuntComplete(false);
                 ghostHunt.resetMission();
               }}
             />
           )}
+
+          <ZombieMissionCompleteModal
+            isOpen={showZombieComplete}
+            currentLevel={mission.level}
+            unlockedLevel={mission.unlockedLevel}
+            maxLevel={mission.maxLevel}
+            onContinue={() => {
+              const nextLevel = Math.min(mission.maxLevel, mission.unlockedLevel);
+              mission.resetMission();
+              mission.setLevel(nextLevel);
+              const selected = selectMissionTargetShop(shopBrandings, shopItemsMap, mission.recentlyUsedShopIds);
+              if (selected) {
+                mission.activateMission(selected.shop, selected.items);
+                handleMissionActivate();
+              }
+              setShowZombieComplete(false);
+            }}
+            onExit={() => {
+              mission.resetMission();
+              setShowZombieComplete(false);
+            }}
+          />
           
           {/* 2D Map Overlay - Full screen on mobile, positioned on desktop */}
           {show2DMap && spotsWithShops && (
@@ -1087,7 +1140,8 @@ const StreetView = () => {
                       spots={spotsWithShops}
                       selectedSpotId=""
                       onSelectSpot={() => {}}
-                      highlightedSpotId={selectedSpotId}
+                      highlightedSpotId={ghostHunt.isActive && rechargeSpotId ? rechargeSpotId : selectedSpotId}
+                      highlightedSpotLabel={ghostHunt.isActive && rechargeSpotId ? 'Recharge Kit' : undefined}
                     />
                   </div>
                 </div>

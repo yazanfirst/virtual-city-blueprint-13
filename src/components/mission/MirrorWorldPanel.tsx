@@ -13,7 +13,7 @@ export default function MirrorWorldPanel({
   isCompact = false,
   disableActivation = false,
 }: MirrorWorldPanelProps) {
-  const { phase, startMission, resetMission } = useMirrorWorldStore();
+  const { phase, startMission, resetMission, difficultyLevel, unlockedLevel, maxLevel, setDifficultyLevel } = useMirrorWorldStore();
 
   const handleActivate = () => {
     startMission();
@@ -61,7 +61,7 @@ export default function MirrorWorldPanel({
         </div>
         <div className="ml-auto flex items-center gap-1 px-2 py-1 rounded bg-purple-500/20 border border-purple-500/30">
           <Clock className="h-3 w-3 text-purple-300" />
-          <span className="text-[10px] text-purple-200 font-bold">75S</span>
+          <span className="text-[10px] text-purple-200 font-bold">LVL {difficultyLevel}/{maxLevel}</span>
         </div>
       </div>
 
@@ -76,10 +76,24 @@ export default function MirrorWorldPanel({
 
       <div className={`bg-purple-950/30 rounded-lg p-2 mb-3 border border-purple-500/20 ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
         <div className="flex items-center justify-between text-muted-foreground">
-          <span>Shadow speeds up every 10s</span>
+          <span>Unlocked Level {unlockedLevel}/{maxLevel}</span>
           <span className="text-purple-300 font-bold">HARD</span>
         </div>
       </div>
+
+      {unlockedLevel > difficultyLevel && (
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            setDifficultyLevel(unlockedLevel);
+          }}
+          className="w-full mb-2 h-9 rounded-md flex items-center justify-center border border-purple-500/40 text-purple-100 hover:bg-purple-900/40 touch-manipulation select-none active:scale-[0.98] transition-all text-xs font-semibold"
+          data-control-ignore="true"
+        >
+          Switch to Level {unlockedLevel}
+        </button>
+      )}
 
       <Button
         variant="cyber"

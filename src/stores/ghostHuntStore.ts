@@ -62,6 +62,7 @@ export interface GhostHuntState {
   
   // Difficulty scaling
   difficultyLevel: number;   // 1-5, increases each successful hunt
+  unlockedLevel: number;
   maxLevel: number;
   ghostSpeedMultiplier: number;
   emfDrainPerSecond: number;
@@ -102,6 +103,8 @@ export interface GhostHuntState {
   completeMission: () => void;
   failMission: (reason: 'time' | 'death') => void;
   resetMission: () => void;
+  unlockNextLevel: () => void;
+  setDifficultyLevel: (level: number) => void;
 }
 
 // Ghost spawn locations - spread across the city
@@ -195,6 +198,7 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
     trapCharges: 3,
   },
   difficultyLevel: 1,
+  unlockedLevel: 1,
   maxLevel: MAX_GHOST_LEVEL,
   ghostSpeedMultiplier: 1,
   emfDrainPerSecond: 2,
@@ -441,8 +445,8 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
     const state = get();
     set({
       phase: 'completed',
-      difficultyLevel: Math.min(state.maxLevel, state.difficultyLevel + 1), // Increase for next time
     });
+    get().unlockNextLevel();
   },
   
   failMission: (reason) => {
@@ -478,6 +482,18 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
       rechargeShopId: null,
       rechargeCollected: false,
     });
+  },
+
+  unlockNextLevel: () => {
+    const state = get();
+    if (state.unlockedLevel >= state.maxLevel) return;
+    set({ unlockedLevel: state.unlockedLevel + 1 });
+  },
+
+  setDifficultyLevel: (level) => {
+    const state = get();
+    const nextLevel = Math.max(1, Math.min(level, state.unlockedLevel));
+    set({ difficultyLevel: nextLevel });
   },
 
   setRechargeShopId: (shopId) => set({ rechargeShopId: shopId, rechargeCollected: false }),

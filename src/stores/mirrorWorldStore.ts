@@ -33,6 +33,7 @@ interface MirrorWorldState {
   playerLives: number;
   isProtected: boolean;
   difficultyLevel: number;
+  unlockedLevel: number;
   maxLevel: number;
   promptMessage: string | null;
   promptKey: string | null;
@@ -54,6 +55,8 @@ interface MirrorWorldState {
   failMission: (reason: FailReason) => void;
   resetMission: () => void;
   setPaused: (paused: boolean) => void;
+  unlockNextLevel: () => void;
+  setDifficultyLevel: (level: number) => void;
 }
 
 const ANCHOR_POSITIONS: [number, number, number][] = [
@@ -115,6 +118,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
   playerLives: START_LIVES,
   isProtected: false,
   difficultyLevel: 1,
+  unlockedLevel: 1,
   maxLevel: MAX_MIRROR_LEVEL,
   promptMessage: null,
   promptKey: null,
@@ -258,12 +262,11 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
   },
 
   completeMission: () => {
-    const state = get();
     set({
       phase: 'completed',
       isActive: true,
-      difficultyLevel: Math.min(state.maxLevel, state.difficultyLevel + 1),
     });
+    get().unlockNextLevel();
   },
 
   failMission: (reason) => set({ phase: 'failed', isActive: true, failReason: reason }),
@@ -295,4 +298,14 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
     });
   },
   setPaused: (paused) => set({ isPaused: paused }),
+  unlockNextLevel: () => {
+    const state = get();
+    if (state.unlockedLevel >= state.maxLevel) return;
+    set({ unlockedLevel: state.unlockedLevel + 1 });
+  },
+  setDifficultyLevel: (level) => {
+    const state = get();
+    const nextLevel = Math.max(1, Math.min(level, state.unlockedLevel));
+    set({ difficultyLevel: nextLevel });
+  },
 }));

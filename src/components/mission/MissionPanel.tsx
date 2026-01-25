@@ -29,6 +29,10 @@ export default function MissionPanel({
     activateMission,
     resetMission,
     recentlyUsedShopIds,
+    level,
+    unlockedLevel,
+    maxLevel,
+    setLevel,
   } = useMissionStore();
   
   const [canActivate, setCanActivate] = useState(false);
@@ -71,12 +75,35 @@ export default function MissionPanel({
             </h3>
             <p className={`text-muted-foreground ${isCompact ? 'text-[10px]' : 'text-xs'}`}>Night Escape</p>
           </div>
+          <div className="ml-auto flex items-center gap-1 px-2 py-1 rounded bg-primary/20 border border-primary/30">
+            <Target className="h-3 w-3 text-primary" />
+            <span className="text-[10px] text-primary font-bold">LVL {level}/{maxLevel}</span>
+          </div>
         </div>
         
         <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
           Escape the zombies, find the target shop, and remember everything you see. Trust your memory — you may only get one chance.
           Finish before the countdown reaches zero.
         </p>
+        <div className={`bg-emerald-950/20 rounded-lg p-2 mb-3 border border-emerald-500/20 ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span>Unlocked Level {unlockedLevel}/{maxLevel}</span>
+            <span className="text-emerald-300 font-bold">ESCAPE</span>
+          </div>
+        </div>
+        {unlockedLevel > level && (
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              setLevel(unlockedLevel);
+            }}
+            className="w-full mb-2 h-9 rounded-md flex items-center justify-center border border-emerald-500/40 text-emerald-100 hover:bg-emerald-900/40 touch-manipulation select-none active:scale-[0.98] transition-all text-xs font-semibold"
+            data-control-ignore="true"
+          >
+            Switch to Level {unlockedLevel}
+          </button>
+        )}
         {disableActivation && (
           <p className={`text-xs text-yellow-300/90 mb-3 ${isCompact ? '' : 'md:text-sm'}`}>
             Finish your current mission to start another.

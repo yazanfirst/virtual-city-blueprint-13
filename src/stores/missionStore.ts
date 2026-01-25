@@ -43,6 +43,7 @@ interface MissionState {
   phase: MissionPhase;
   missionNumber: number;
   level: number;
+  unlockedLevel: number;
   maxLevel: number;
 
   // Mission timer
@@ -123,7 +124,8 @@ interface MissionState {
   setNotification: (has: boolean) => void;
   getSafeSpawnPosition: () => [number, number, number];
   updateTimer: (delta: number) => void;
-  advanceLevel: () => void;
+  unlockNextLevel: () => void;
+  setLevel: (level: number) => void;
 }
 
 const ZOMBIE_SPAWNS: Omit<ZombieData, 'speed'>[] = [
@@ -161,6 +163,7 @@ const seededRandom = (seed: number) => {
 // Generate zombie spawn positions with varied behavior types
 function generateZombieSpawns(level: number): ZombieData[] {
   const config = getZombieLevelConfig(level);
+  const seed = Date.now();
   const sortedByDistance = [...ZOMBIE_SPAWNS].sort(
     (a, b) => getSpawnDistance(b.position) - getSpawnDistance(a.position)
   );
@@ -168,7 +171,13 @@ function generateZombieSpawns(level: number): ZombieData[] {
     (spawn) => getSpawnDistance(spawn.position) >= config.minSpawnDistance
   );
   const pool = distantPool.length >= config.zombieCount ? distantPool : sortedByDistance;
-  const selected = pool.slice(0, Math.min(config.zombieCount, pool.length));
+  const preferredTypes = level <= 2 ? ['direct', 'flanker'] : ['direct', 'flanker', 'ambusher', 'patrol'];
+  const preferred = pool.filter((spawn) => preferredTypes.includes(spawn.behaviorType));
+  const fallback = pool.filter((spawn) => !preferredTypes.includes(spawn.behaviorType));
+  const shuffled = [...preferred, ...fallback].sort(
+    (a, b) => seededRandom(seed + ZOMBIE_SPAWNS.indexOf(a)) - seededRandom(seed + ZOMBIE_SPAWNS.indexOf(b))
+  );
+  const selected = shuffled.slice(0, Math.min(config.zombieCount, shuffled.length));
   return selected.map((spawn) => ({
     ...spawn,
     speed: config.zombieSpeed,
@@ -213,6 +222,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   phase: 'inactive',
   missionNumber: 1,
   level: 1,
+  unlockedLevel: 1,
   maxLevel: MAX_ZOMBIE_LEVEL,
 
   timeRemaining: DEFAULT_ZOMBIE_TIME_LIMIT,
@@ -376,9 +386,9 @@ export const useMissionStore = create<MissionState>((set, get) => ({
         phase: 'completed',
         zombies: [],
         zombiesPaused: true,
-        traps: [],
-      });
-      get().advanceLevel();
+      traps: [],
+    });
+      get().unlockNextLevel();
       return true;
     }
     
@@ -557,9 +567,15 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     }
   },
 
-  advanceLevel: () => {
+  unlockNextLevel: () => {
     const state = get();
-    if (state.level >= state.maxLevel) return;
-    set({ level: state.level + 1 });
+    if (state.unlockedLevel >= state.maxLevel) return;
+    set({ unlockedLevel: state.unlockedLevel + 1 });
+  },
+
+  setLevel: (level) => {
+    const state = get();
+    const nextLevel = Math.max(1, Math.min(level, state.unlockedLevel));
+    set({ level: nextLevel });
   },
 }));
