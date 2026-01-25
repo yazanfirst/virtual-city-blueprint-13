@@ -565,6 +565,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
   const [canvasReady, setCanvasReady] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
+  const [forceFallback, setForceFallback] = useState(false);
   const [webglSupported, setWebglSupported] = useState(true);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -590,6 +591,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
     setCanvasReady(false);
     setSceneReady(false);
     setShowFallback(false);
+    setForceFallback(false);
   }, [shop.shopId]);
 
   useEffect(() => {
@@ -614,6 +616,8 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
     }, 2000);
     return () => clearTimeout(timeout);
   }, [sceneReady, showFallback, webglSupported]);
+
+  const isFallbackActive = showFallback || forceFallback;
 
   const handleCollectRecharge = (type: 'emf' | 'flashlight' | 'trap') => {
     if (!showRechargePickup || rechargeCollected[type]) return;
@@ -669,6 +673,19 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
         </div>
         
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button
+            type="button"
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              if (showFallback) return;
+              setForceFallback((prev) => !prev);
+            }}
+            className="h-10 px-3 sm:px-4 rounded-md flex items-center justify-center gap-1.5 bg-transparent border border-border text-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-accent"
+            data-control-ignore="true"
+            disabled={showFallback}
+          >
+            {isFallbackActive ? '3D View' : '2D View'}
+          </button>
           {shop.externalLink && (
             <a 
               href={shop.externalLink} 
@@ -698,7 +715,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
       </div>
 
       {/* 3D Canvas */}
-      {!showFallback ? (
+      {!isFallbackActive ? (
         <Canvas 
           key={shop.shopId}
           camera={{ position: [0, 2.2, 4.2], fov: 65 }} 
@@ -783,7 +800,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
         </div>
       )}
 
-      {(!showFallback && (!canvasReady || !sceneReady)) && (
+      {(!isFallbackActive && (!canvasReady || !sceneReady)) && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/90">
           <div className="rounded-lg border border-border/60 bg-card/90 px-4 py-3 text-center text-xs text-muted-foreground shadow-lg">
             Loading shop interior...
@@ -791,7 +808,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
         </div>
       )}
 
-      {showFallback && (
+      {isFallbackActive && (
         <div className="absolute inset-x-0 bottom-6 z-10 flex items-center justify-center px-6">
           <button
             type="button"
