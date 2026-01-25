@@ -5,6 +5,7 @@ interface ZombieMissionCompleteModalProps {
   currentLevel: number;
   unlockedLevel: number;
   maxLevel: number;
+  isAllComplete: boolean;
   onContinue: () => void;
   onExit: () => void;
 }
@@ -14,6 +15,7 @@ export default function ZombieMissionCompleteModal({
   currentLevel,
   unlockedLevel,
   maxLevel,
+  isAllComplete,
   onContinue,
   onExit,
 }: ZombieMissionCompleteModalProps) {
@@ -29,11 +31,13 @@ export default function ZombieMissionCompleteModal({
         <div className="flex items-center justify-center gap-2 mb-3">
           <Trophy className="h-6 w-6 text-emerald-300" />
           <h2 className="font-display text-lg font-bold text-emerald-200 uppercase tracking-wider">
-            Level {currentLevel} Complete
+            {isAllComplete ? 'All Levels Complete' : `Level ${currentLevel} Complete`}
           </h2>
         </div>
         <p className="text-sm text-emerald-100/80 mb-4">
-          You escaped the zombies. Keep pushing or return to explore.
+          {isAllComplete
+            ? 'You finished all Zombie Escape levels. Replay from Level 1 or return to explore.'
+            : 'You escaped the zombies. Keep pushing or return to explore.'}
         </p>
         <div className="space-y-2">
           <button
@@ -45,7 +49,11 @@ export default function ZombieMissionCompleteModal({
             className="w-full py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase tracking-wider transition-colors touch-manipulation active:scale-[0.98] flex items-center justify-center gap-2"
             disabled={!canContinue}
           >
-            {hasNext ? `Continue to Level ${nextLevel}` : `Replay Level ${currentLevel}`}
+            {isAllComplete
+              ? 'Replay from Level 1'
+              : hasNext
+                ? `Continue to Level ${nextLevel}`
+                : `Replay Level ${currentLevel}`}
             <ArrowRight className="h-4 w-4" />
           </button>
           <button

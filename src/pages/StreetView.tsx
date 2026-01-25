@@ -1097,8 +1097,9 @@ const StreetView = () => {
             currentLevel={mission.level}
             unlockedLevel={mission.unlockedLevel}
             maxLevel={mission.maxLevel}
+            isAllComplete={mission.level >= mission.maxLevel}
             onContinue={() => {
-              const nextLevel = Math.min(mission.maxLevel, mission.unlockedLevel);
+              const nextLevel = mission.level >= mission.maxLevel ? 1 : Math.min(mission.maxLevel, mission.unlockedLevel);
               mission.resetMission();
               mission.setLevel(nextLevel);
               const selected = selectMissionTargetShop(shopBrandings, shopItemsMap, mission.recentlyUsedShopIds);

@@ -36,15 +36,21 @@ export default function MissionPanel({
   } = useMissionStore();
   
   const [canActivate, setCanActivate] = useState(false);
+  const [previewSeed, setPreviewSeed] = useState(() => Date.now());
   
   // Check if mission can be activated
   useEffect(() => {
     const eligible = selectMissionTargetShop(shops, shopItemsMap, recentlyUsedShopIds);
     setCanActivate(eligible !== null);
+    if (eligible) {
+      setPreviewSeed(Date.now());
+    }
   }, [shops, shopItemsMap, recentlyUsedShopIds]);
+
+  const previewTarget = selectMissionTargetShop(shops, shopItemsMap, recentlyUsedShopIds, previewSeed);
   
   const handleActivate = () => {
-    const selected = selectMissionTargetShop(shops, shopItemsMap, recentlyUsedShopIds);
+    const selected = previewTarget ?? selectMissionTargetShop(shops, shopItemsMap, recentlyUsedShopIds);
     if (selected) {
       activateMission(selected.shop, selected.items);
       onActivate();
@@ -85,6 +91,10 @@ export default function MissionPanel({
           Escape the zombies, find the target shop, and remember everything you see. Trust your memory — you may only get one chance.
           Finish before the countdown reaches zero.
         </p>
+        <div className={`bg-emerald-950/30 rounded-lg px-3 py-2 mb-3 border border-emerald-500/20 ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
+          <p className="text-emerald-200 uppercase tracking-wider mb-1">Target Shop:</p>
+          <p className="text-white font-bold text-sm">{previewTarget?.shop.shopName || 'Unknown'}</p>
+        </div>
         <div className={`bg-emerald-950/20 rounded-lg p-2 mb-3 border border-emerald-500/20 ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
           <div className="flex items-center justify-between text-muted-foreground">
             <span>Unlocked Level {unlockedLevel}/{maxLevel}</span>
