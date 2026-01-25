@@ -559,6 +559,8 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
   const controlsRef = useRef<any>(null);
   const [canvasReady, setCanvasReady] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
+  const [showFallback, setShowFallback] = useState(false);
+  const [webglSupported, setWebglSupported] = useState(true);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -582,7 +584,31 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
   useEffect(() => {
     setCanvasReady(false);
     setSceneReady(false);
+    setShowFallback(false);
   }, [shop.shopId]);
+
+  useEffect(() => {
+    const testCanvas = document.createElement('canvas');
+    const gl =
+      testCanvas.getContext('webgl2') ||
+      testCanvas.getContext('webgl') ||
+      testCanvas.getContext('experimental-webgl');
+    const supported = Boolean(gl);
+    setWebglSupported(supported);
+    if (!supported) {
+      setShowFallback(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showFallback || !webglSupported) return;
+    const timeout = setTimeout(() => {
+      if (!sceneReady) {
+        setShowFallback(true);
+      }
+    }, 2000);
+    return () => clearTimeout(timeout);
+  }, [sceneReady, showFallback, webglSupported]);
 
   const handleCollectRecharge = (type: 'emf' | 'flashlight' | 'trap') => {
     if (!showRechargePickup || rechargeCollected[type]) return;
@@ -667,51 +693,73 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
       </div>
 
       {/* 3D Canvas */}
-      <Canvas 
-        key={shop.shopId}
-        camera={{ position: [0, 2.2, 4.2], fov: 65 }} 
-        className="flex-1 touch-none"
-        gl={{ antialias: true, powerPreference: "high-performance" }}
-        onCreated={() => {
-          requestAnimationFrame(() => setCanvasReady(true));
-        }}
-      >
-        <color attach="background" args={["#e8dcc8"]} />
-        <fog attach="fog" args={["#e8dcc8", 15, 30]} />
-        <React.Suspense fallback={null}>
-          <InteriorScene
-            shop={shop}
-            items={wallItems}
-            selectedSlot={selectedSlot}
-            onSelectItem={handleFrameClick}
-            isMissionMode={isMissionMode}
-            showRechargePickup={showRechargePickup}
-            onCollectRecharge={handleCollectRecharge}
-            onSceneReady={() => setSceneReady(true)}
+      {!showFallback && (
+        <Canvas 
+          key={shop.shopId}
+          camera={{ position: [0, 2.2, 4.2], fov: 65 }} 
+          className="flex-1 touch-none"
+          gl={{ antialias: true, powerPreference: "high-performance" }}
+          onCreated={() => {
+            requestAnimationFrame(() => setCanvasReady(true));
+          }}
+        >
+          <color attach="background" args={["#e8dcc8"]} />
+          <fog attach="fog" args={["#e8dcc8", 15, 30]} />
+          <React.Suspense fallback={null}>
+            <InteriorScene
+              shop={shop}
+              items={wallItems}
+              selectedSlot={selectedSlot}
+              onSelectItem={handleFrameClick}
+              isMissionMode={isMissionMode}
+              showRechargePickup={showRechargePickup}
+              onCollectRecharge={handleCollectRecharge}
+              onSceneReady={() => setSceneReady(true)}
+            />
+          </React.Suspense>
+
+          <RoomCameraClamp controlsRef={controlsRef} />
+
+          <OrbitControls
+            ref={controlsRef}
+            enablePan={false}
+            enableDamping
+            dampingFactor={0.08}
+            maxDistance={4.5}
+            minDistance={1.6}
+            target={[0, 2, 0]}
+            maxPolarAngle={Math.PI / 2.05}
+            minPolarAngle={Math.PI / 5}
+            rotateSpeed={0.5}
           />
-        </React.Suspense>
+        </Canvas>
+      )}
 
-        <RoomCameraClamp controlsRef={controlsRef} />
-
-        <OrbitControls
-          ref={controlsRef}
-          enablePan={false}
-          enableDamping
-          dampingFactor={0.08}
-          maxDistance={4.5}
-          minDistance={1.6}
-          target={[0, 2, 0]}
-          maxPolarAngle={Math.PI / 2.05}
-          minPolarAngle={Math.PI / 5}
-          rotateSpeed={0.5}
-        />
-      </Canvas>
-
-      {(!canvasReady || !sceneReady) && (
+      {(!showFallback && (!canvasReady || !sceneReady)) && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/90">
           <div className="rounded-lg border border-border/60 bg-card/90 px-4 py-3 text-center text-xs text-muted-foreground shadow-lg">
             Loading shop interior...
           </div>
+        </div>
+      )}
+
+      {showFallback && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-background/95 px-6 text-center">
+          <div className="rounded-lg border border-border/60 bg-card/90 px-4 py-3 text-xs text-muted-foreground shadow-lg">
+            The 3D shop couldn’t load here. You can still browse items below.
+          </div>
+          <button
+            type="button"
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              onExit();
+            }}
+            className="h-10 px-4 rounded-md flex items-center justify-center gap-2 bg-secondary text-secondary-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-secondary/80"
+            data-control-ignore="true"
+          >
+            <X className="h-4 w-4" />
+            Exit Shop
+          </button>
         </div>
       )}
 
