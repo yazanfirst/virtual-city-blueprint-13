@@ -199,7 +199,7 @@ export default function MissionPanel({
         <div className="flex items-center gap-2 mb-2">
           <CheckCircle className="h-5 w-5 text-green-400" />
           <span className={`font-display font-bold uppercase tracking-wider text-green-400 ${isCompact ? 'text-xs' : 'text-sm'}`}>
-            {allComplete ? 'ALL MISSIONS COMPLETE' : 'MISSION COMPLETE'}
+            {allComplete ? 'ALL LEVELS COMPLETE' : 'MISSION COMPLETE'}
           </span>
         </div>
         <p className={`text-green-200 ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>

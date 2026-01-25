@@ -13,7 +13,16 @@ export default function MirrorWorldPanel({
   isCompact = false,
   disableActivation = false,
 }: MirrorWorldPanelProps) {
-  const { phase, startMission, resetMission, difficultyLevel, unlockedLevel, maxLevel, requiredAnchors, setDifficultyLevel } = useMirrorWorldStore();
+  const {
+    phase,
+    startMission,
+    resetMission,
+    difficultyLevel,
+    unlockedLevel,
+    maxLevel,
+    requiredAnchors,
+    setDifficultyLevel,
+  } = useMirrorWorldStore();
 
   const handleActivate = () => {
     startMission();
@@ -42,6 +51,39 @@ export default function MirrorWorldPanel({
           data-control-ignore="true"
         >
           Try Again
+        </button>
+      </div>
+    );
+  }
+
+  if (phase === 'completed') {
+    const allComplete = difficultyLevel >= maxLevel && unlockedLevel >= maxLevel;
+    return (
+      <div className={`bg-green-950/90 backdrop-blur-md border border-green-500/50 rounded-xl ${isCompact ? 'p-3' : 'p-4'} shadow-xl`}>
+        <div className="flex items-center gap-2 mb-2">
+          <Sparkles className="h-5 w-5 text-green-300" />
+          <span className={`font-display font-bold uppercase tracking-wider text-green-200 ${isCompact ? 'text-xs' : 'text-sm'}`}>
+            {allComplete ? 'ALL LEVELS COMPLETE' : 'MIRROR WORLD COMPLETE'}
+          </span>
+        </div>
+        <p className={`text-green-200 ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
+          {allComplete
+            ? 'You restored every Mirror World level.'
+            : 'Reality stabilizes. The next Mirror World run will be harder.'}
+        </p>
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            if (allComplete) {
+              setDifficultyLevel(1);
+            }
+            resetMission();
+          }}
+          className="w-full h-10 rounded-md flex items-center justify-center border border-green-500/50 text-green-200 hover:bg-green-900/50 touch-manipulation select-none active:scale-[0.98] transition-all text-sm font-medium"
+          data-control-ignore="true"
+        >
+          {allComplete ? 'Restart from Level 1' : `Play Again (Level ${difficultyLevel})`}
         </button>
       </div>
     );

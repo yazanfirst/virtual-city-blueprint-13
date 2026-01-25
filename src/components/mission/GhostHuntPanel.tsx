@@ -123,6 +123,9 @@ export default function GhostHuntPanel({
         <p className={`text-purple-200 ${isCompact ? 'text-xs' : 'text-sm'}`}>
           Use EMF to detect, flashlight to reveal, walk through to capture!
         </p>
+        <p className={`text-purple-200/80 mt-2 ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
+          Open the Street Map to find the recharge gear location.
+        </p>
       </div>
     );
   }
@@ -155,27 +158,33 @@ export default function GhostHuntPanel({
   }
   
   if (phase === 'completed') {
+    const allComplete = difficultyLevel >= maxLevel && unlockedLevel >= maxLevel;
     return (
       <div className={`bg-green-950/90 backdrop-blur-md border border-green-500/50 rounded-xl ${isCompact ? 'p-3' : 'p-4'} shadow-xl`}>
         <div className="flex items-center gap-2 mb-2">
           <CheckCircle className="h-5 w-5 text-green-400" />
           <span className={`font-display font-bold uppercase tracking-wider text-green-400 ${isCompact ? 'text-xs' : 'text-sm'}`}>
-            HUNT COMPLETE
+            {allComplete ? 'ALL LEVELS COMPLETE' : 'HUNT COMPLETE'}
           </span>
         </div>
         <p className={`text-green-200 ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
-          All ghosts captured! Your hunting skills have improved. Next hunt will be harder.
+          {allComplete
+            ? 'You finished every Ghost Hunt level.'
+            : 'All ghosts captured! Your hunting skills have improved. Next hunt will be harder.'}
         </p>
         <button
           type="button"
           onPointerDown={(e) => {
             e.stopPropagation();
+            if (allComplete) {
+              setDifficultyLevel(1);
+            }
             handleRetry();
           }}
           className="w-full h-10 rounded-md flex items-center justify-center border border-green-500/50 text-green-300 hover:bg-green-900/50 touch-manipulation select-none active:scale-[0.98] transition-all text-sm font-medium"
           data-control-ignore="true"
         >
-          Hunt Again (Level {difficultyLevel})
+          {allComplete ? 'Restart from Level 1' : `Hunt Again (Level ${difficultyLevel})`}
         </button>
       </div>
     );
