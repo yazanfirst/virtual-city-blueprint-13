@@ -57,6 +57,7 @@ interface MirrorWorldState {
   setPaused: (paused: boolean) => void;
   unlockNextLevel: () => void;
   setDifficultyLevel: (level: number) => void;
+  resetProgress: () => void;
 }
 
 const ANCHOR_POSITIONS: [number, number, number][] = [
@@ -309,5 +310,8 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
     const state = get();
     const nextLevel = Math.max(1, Math.min(level, state.unlockedLevel));
     set({ difficultyLevel: nextLevel });
+  },
+  resetProgress: () => {
+    set({ difficultyLevel: 1, unlockedLevel: 1 });
   },
 }));

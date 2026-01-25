@@ -105,6 +105,7 @@ export interface GhostHuntState {
   resetMission: () => void;
   unlockNextLevel: () => void;
   setDifficultyLevel: (level: number) => void;
+  resetProgress: () => void;
 }
 
 // Ghost spawn locations - spread across the city
@@ -495,6 +496,10 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
     const state = get();
     const nextLevel = Math.max(1, Math.min(level, state.unlockedLevel));
     set({ difficultyLevel: nextLevel });
+  },
+
+  resetProgress: () => {
+    set({ difficultyLevel: 1, unlockedLevel: 1 });
   },
 
   setRechargeShopId: (shopId) => set({ rechargeShopId: shopId, rechargeCollected: false }),

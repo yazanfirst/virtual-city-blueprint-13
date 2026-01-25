@@ -126,6 +126,7 @@ interface MissionState {
   updateTimer: (delta: number) => void;
   unlockNextLevel: () => void;
   setLevel: (level: number) => void;
+  resetProgress: () => void;
 }
 
 const ZOMBIE_SPAWNS: Omit<ZombieData, 'speed'>[] = [
@@ -578,5 +579,9 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     const state = get();
     const nextLevel = Math.max(1, Math.min(level, state.unlockedLevel));
     set({ level: nextLevel });
+  },
+
+  resetProgress: () => {
+    set({ level: 1, unlockedLevel: 1 });
   },
 }));

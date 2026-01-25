@@ -500,8 +500,11 @@ const StreetView = () => {
     resetPlayer();
     resetGame();
     mission.resetMission();
+    mission.resetProgress();
     ghostHunt.resetMission();
+    ghostHunt.resetProgress();
     mirrorWorld.resetMission();
+    mirrorWorld.resetProgress();
   };
 
   const handleExitToCityMap = () => {

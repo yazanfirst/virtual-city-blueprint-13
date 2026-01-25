@@ -36,21 +36,14 @@ export default function MissionPanel({
   } = useMissionStore();
   
   const [canActivate, setCanActivate] = useState(false);
-  const [previewSeed, setPreviewSeed] = useState(() => Date.now());
-  
   // Check if mission can be activated
   useEffect(() => {
     const eligible = selectMissionTargetShop(shops, shopItemsMap, recentlyUsedShopIds);
     setCanActivate(eligible !== null);
-    if (eligible) {
-      setPreviewSeed(Date.now());
-    }
   }, [shops, shopItemsMap, recentlyUsedShopIds]);
-
-  const previewTarget = selectMissionTargetShop(shops, shopItemsMap, recentlyUsedShopIds, previewSeed);
   
   const handleActivate = () => {
-    const selected = previewTarget ?? selectMissionTargetShop(shops, shopItemsMap, recentlyUsedShopIds);
+    const selected = selectMissionTargetShop(shops, shopItemsMap, recentlyUsedShopIds);
     if (selected) {
       activateMission(selected.shop, selected.items);
       onActivate();
@@ -91,10 +84,6 @@ export default function MissionPanel({
           Escape the zombies, find the target shop, and remember everything you see. Trust your memory — you may only get one chance.
           Finish before the countdown reaches zero.
         </p>
-        <div className={`bg-emerald-950/30 rounded-lg px-3 py-2 mb-3 border border-emerald-500/20 ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
-          <p className="text-emerald-200 uppercase tracking-wider mb-1">Target Shop:</p>
-          <p className="text-white font-bold text-sm">{previewTarget?.shop.shopName || 'Unknown'}</p>
-        </div>
         <div className={`bg-emerald-950/20 rounded-lg p-2 mb-3 border border-emerald-500/20 ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
           <div className="flex items-center justify-between text-muted-foreground">
             <span>Unlocked Level {unlockedLevel}/{maxLevel}</span>
@@ -204,27 +193,31 @@ export default function MissionPanel({
   }
   
   if (phase === 'completed') {
+    const allComplete = level >= maxLevel;
     return (
       <div className={`bg-green-950/90 backdrop-blur-md border border-green-500/50 rounded-xl ${isCompact ? 'p-3' : 'p-4'} shadow-xl`}>
         <div className="flex items-center gap-2 mb-2">
           <CheckCircle className="h-5 w-5 text-green-400" />
           <span className={`font-display font-bold uppercase tracking-wider text-green-400 ${isCompact ? 'text-xs' : 'text-sm'}`}>
-            MISSION COMPLETE
+            {allComplete ? 'ALL MISSIONS COMPLETE' : 'MISSION COMPLETE'}
           </span>
         </div>
         <p className={`text-green-200 ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
-          Your memory served you well. The zombies have vanished.
+          {allComplete
+            ? 'You finished every Zombie Escape level.'
+            : 'Your memory served you well. The zombies have vanished.'}
         </p>
         <button
           type="button"
           onPointerDown={(e) => {
             e.stopPropagation();
             handleRetry();
+            setLevel(1);
           }}
           className="w-full h-10 rounded-md flex items-center justify-center border border-green-500/50 text-green-300 hover:bg-green-900/50 touch-manipulation select-none active:scale-[0.98] transition-all text-sm font-medium"
           data-control-ignore="true"
         >
-          Play Again
+          {allComplete ? 'Restart from Level 1' : 'Play Again'}
         </button>
       </div>
     );
