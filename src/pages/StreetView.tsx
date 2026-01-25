@@ -1155,7 +1155,7 @@ const StreetView = () => {
                       selectedSpotId=""
                       onSelectSpot={() => {}}
                       highlightedSpotId={ghostHunt.isActive && rechargeSpotId ? rechargeSpotId : selectedSpotId}
-                      highlightedSpotLabel={ghostHunt.isActive && rechargeSpotId ? 'Recharge Kit' : undefined}
+                      highlightedSpotLabel={ghostHunt.isActive && rechargeSpotId ? 'Recharge Gear (EMF/Flash/Trap)' : undefined}
                     />
                   </div>
                 </div>

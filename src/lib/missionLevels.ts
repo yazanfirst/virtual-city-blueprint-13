@@ -34,11 +34,11 @@ export interface MirrorWorldLevelConfig {
 }
 
 export const ZOMBIE_LEVELS: ZombieLevelConfig[] = [
-  { level: 1, zombieCount: 7, zombieSpeed: 0.045, minSpawnDistance: 35, activeTrapCount: 6, timeLimit: 120, lives: 4 },
-  { level: 2, zombieCount: 8, zombieSpeed: 0.05, minSpawnDistance: 30, activeTrapCount: 8, timeLimit: 110, lives: 3 },
-  { level: 3, zombieCount: 10, zombieSpeed: 0.055, minSpawnDistance: 25, activeTrapCount: 10, timeLimit: 100, lives: 3 },
-  { level: 4, zombieCount: 11, zombieSpeed: 0.058, minSpawnDistance: 20, activeTrapCount: 12, timeLimit: 90, lives: 2 },
-  { level: 5, zombieCount: 12, zombieSpeed: 0.06, minSpawnDistance: 15, activeTrapCount: 14, timeLimit: 85, lives: 2 },
+  { level: 1, zombieCount: 6, zombieSpeed: 0.042, minSpawnDistance: 38, activeTrapCount: 6, timeLimit: 120, lives: 4 },
+  { level: 2, zombieCount: 8, zombieSpeed: 0.047, minSpawnDistance: 32, activeTrapCount: 9, timeLimit: 110, lives: 3 },
+  { level: 3, zombieCount: 10, zombieSpeed: 0.053, minSpawnDistance: 26, activeTrapCount: 12, timeLimit: 100, lives: 3 },
+  { level: 4, zombieCount: 11, zombieSpeed: 0.059, minSpawnDistance: 20, activeTrapCount: 14, timeLimit: 92, lives: 2 },
+  { level: 5, zombieCount: 12, zombieSpeed: 0.065, minSpawnDistance: 15, activeTrapCount: 16, timeLimit: 85, lives: 2 },
 ];
 
 export const GHOST_HUNT_LEVELS: GhostHuntLevelConfig[] = [

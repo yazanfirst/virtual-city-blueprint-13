@@ -75,7 +75,11 @@ export interface GhostHuntState {
   // Spawn variety tracking
   recentSpawnSeeds: number[];
   rechargeShopId: string | null;
-  rechargeCollected: boolean;
+  rechargeCollected: {
+    emf: boolean;
+    flashlight: boolean;
+    trap: boolean;
+  };
   
   // Actions
   startMission: () => void;
@@ -88,7 +92,7 @@ export interface GhostHuntState {
   fireGhostTrap: () => void;
   drainBattery: (type: 'emf' | 'flashlight', amount: number) => void;
   setRechargeShopId: (shopId: string | null) => void;
-  collectRechargePickup: () => void;
+  collectRechargePickup: (type: 'emf' | 'flashlight' | 'trap') => void;
   
   // Ghost interactions
   revealGhost: (ghostId: string) => void;
@@ -208,7 +212,11 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
   isProtected: true,
   recentSpawnSeeds: [],
   rechargeShopId: null,
-  rechargeCollected: false,
+  rechargeCollected: {
+    emf: false,
+    flashlight: false,
+    trap: false,
+  },
   
   // Start mission
   startMission: () => {
@@ -250,7 +258,11 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
       emfDrainPerSecond: config.emfDrainPerSecond,
       flashlightDrainPerUse: config.flashlightDrainPerUse,
       rechargeShopId: null,
-      rechargeCollected: false,
+      rechargeCollected: {
+        emf: false,
+        flashlight: false,
+        trap: false,
+      },
       recentSpawnSeeds: [...state.recentSpawnSeeds.slice(-4), seed % 1000],
     });
     
@@ -481,7 +493,11 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
       emfDrainPerSecond: config.emfDrainPerSecond,
       flashlightDrainPerUse: config.flashlightDrainPerUse,
       rechargeShopId: null,
-      rechargeCollected: false,
+      rechargeCollected: {
+        emf: false,
+        flashlight: false,
+        trap: false,
+      },
     });
   },
 
@@ -502,20 +518,29 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
     set({ difficultyLevel: 1, unlockedLevel: 1 });
   },
 
-  setRechargeShopId: (shopId) => set({ rechargeShopId: shopId, rechargeCollected: false }),
-
-  collectRechargePickup: () => {
-    const state = get();
-    if (state.rechargeCollected) return;
-    const config = getGhostHuntLevelConfig(state.difficultyLevel);
+  setRechargeShopId: (shopId) =>
     set({
-      rechargeCollected: true,
+      rechargeShopId: shopId,
+      rechargeCollected: {
+        emf: false,
+        flashlight: false,
+        trap: false,
+      },
+    }),
+
+  collectRechargePickup: (type) => {
+    const state = get();
+    if (state.rechargeCollected[type]) return;
+    const config = getGhostHuntLevelConfig(state.difficultyLevel);
+    const nextCollected = { ...state.rechargeCollected, [type]: true };
+    set({
+      rechargeCollected: nextCollected,
       equipment: {
         ...state.equipment,
-        emfBattery: 100,
-        flashlightBattery: 100,
-        flashlightCooldown: 0,
-        trapCharges: config.trapCharges,
+        emfBattery: type === 'emf' ? 100 : state.equipment.emfBattery,
+        flashlightBattery: type === 'flashlight' ? 100 : state.equipment.flashlightBattery,
+        flashlightCooldown: type === 'flashlight' ? 0 : state.equipment.flashlightCooldown,
+        trapCharges: type === 'trap' ? config.trapCharges : state.equipment.trapCharges,
       },
     });
   },

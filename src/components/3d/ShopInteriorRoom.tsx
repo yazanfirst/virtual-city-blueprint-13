@@ -254,7 +254,7 @@ const InteriorScene = ({
   onSelectItem: (slot: number) => void;
   isMissionMode?: boolean;
   showRechargePickup: boolean;
-  onCollectRecharge: () => void;
+  onCollectRecharge: (type: 'emf' | 'flashlight' | 'trap') => void;
 }) => {
   const brickTexture = useBrickTexture();
   const accent = shop.accentColor || "#10B981";
@@ -445,38 +445,64 @@ const InteriorScene = ({
       </group>
 
       {showRechargePickup && (
-        <group position={[3.6, 0.6, 2.8]}>
-          <mesh
-            onPointerDown={(event) => {
-              event.stopPropagation();
-              onCollectRecharge();
-            }}
-          >
-            <cylinderGeometry args={[0.25, 0.25, 0.5, 16]} />
-            <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.6} />
-          </mesh>
-          <mesh position={[0, 0.4, 0]}>
-            <sphereGeometry args={[0.18, 12, 12]} />
-            <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.8} />
-          </mesh>
-          <Html
-            transform
-            position={[0, 0.9, 0]}
-            distanceFactor={6}
-            className="pointer-events-auto"
-          >
-            <button
-              type="button"
-              onPointerDown={(event) => {
-                event.stopPropagation();
-                onCollectRecharge();
-              }}
-              className="px-2 py-1 rounded-md bg-black/70 text-white text-[10px] uppercase tracking-wide border border-white/30"
-            >
-              Recharge Kit
-            </button>
-          </Html>
-          <pointLight position={[0, 0.4, 0]} intensity={0.8} distance={3} color={accent} />
+        <group>
+          {([
+            {
+              type: 'emf' as const,
+              label: 'EMF Cell',
+              position: [3.2, 0.6, 2.8],
+              color: '#10b981',
+            },
+            {
+              type: 'flashlight' as const,
+              label: 'Flash Battery',
+              position: [3.9, 0.6, 2.55],
+              color: '#fbbf24',
+            },
+            {
+              type: 'trap' as const,
+              label: 'Trap Charge',
+              position: [3.5, 0.6, 2.25],
+              color: '#8b5cf6',
+            },
+          ]).map((device) => {
+            if (rechargeCollected[device.type]) return null;
+            return (
+              <group key={device.type} position={device.position}>
+                <mesh
+                  onPointerDown={(event) => {
+                    event.stopPropagation();
+                    onCollectRecharge(device.type);
+                  }}
+                >
+                  <cylinderGeometry args={[0.22, 0.22, 0.45, 16]} />
+                  <meshStandardMaterial color={device.color} emissive={device.color} emissiveIntensity={0.6} />
+                </mesh>
+                <mesh position={[0, 0.35, 0]}>
+                  <sphereGeometry args={[0.16, 12, 12]} />
+                  <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.8} />
+                </mesh>
+                <Html
+                  transform
+                  position={[0, 0.85, 0]}
+                  distanceFactor={6}
+                  className="pointer-events-auto"
+                >
+                  <button
+                    type="button"
+                    onPointerDown={(event) => {
+                      event.stopPropagation();
+                      onCollectRecharge(device.type);
+                    }}
+                    className="px-2 py-1 rounded-md bg-black/70 text-white text-[10px] uppercase tracking-wide border border-white/30"
+                  >
+                    {device.label}
+                  </button>
+                </Html>
+                <pointLight position={[0, 0.35, 0]} intensity={0.8} distance={3} color={device.color} />
+              </group>
+            );
+          })}
         </group>
       )}
     </group>
@@ -543,13 +569,12 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
   const selectedItem = selectedSlot !== null ? wallItems[selectedSlot] : undefined;
   const filledSlots = wallItems.filter(Boolean);
 
-  const showRechargePickup =
-    ghostHuntActive && !rechargeCollected && Boolean(shop.shopId && shop.shopId === rechargeShopId);
+  const showRechargePickup = ghostHuntActive && Boolean(shop.shopId && shop.shopId === rechargeShopId);
 
-  const handleCollectRecharge = () => {
-    if (!showRechargePickup) return;
-    collectRechargePickup();
-    console.debug('[GhostHunt] Recharge pickup collected in shop:', shop.shopId);
+  const handleCollectRecharge = (type: 'emf' | 'flashlight' | 'trap') => {
+    if (!showRechargePickup || rechargeCollected[type]) return;
+    collectRechargePickup(type);
+    console.debug('[GhostHunt] Recharge pickup collected in shop:', shop.shopId, type);
   };
   
   const handleFrameClick = (slot: number) => {
