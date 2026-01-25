@@ -987,6 +987,7 @@ const StreetView = () => {
                       onActivate={() => {
                         mission.resetMission();
                         ghostHunt.resetMission();
+                        resetToSafeSpawn();
                         tutorial.dismissTooltip();
                         setShowQuestionModal(false);
                         setShowFailedModal(false);
@@ -1026,8 +1027,9 @@ const StreetView = () => {
             currentLevel={mirrorWorld.difficultyLevel}
             onContinue={() => {
               const nextLevel = Math.min(mirrorWorld.maxLevel, mirrorWorld.unlockedLevel);
-              mirrorWorld.resetMission();
               mirrorWorld.setDifficultyLevel(nextLevel);
+              mirrorWorld.resetMission();
+              resetToSafeSpawn();
               mirrorWorld.startMission();
             }}
             onExit={() => {

@@ -551,6 +551,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
     collectRechargePickup,
   } = useGhostHuntStore();
   const controlsRef = useRef<any>(null);
+  const [canvasReady, setCanvasReady] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -570,6 +571,10 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
   const filledSlots = wallItems.filter(Boolean);
 
   const showRechargePickup = ghostHuntActive && Boolean(shop.shopId && shop.shopId === rechargeShopId);
+
+  useEffect(() => {
+    setCanvasReady(false);
+  }, [shop.shopId]);
 
   const handleCollectRecharge = (type: 'emf' | 'flashlight' | 'trap') => {
     if (!showRechargePickup || rechargeCollected[type]) return;
@@ -658,6 +663,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
         camera={{ position: [0, 2.2, 4.2], fov: 65 }} 
         className="flex-1 touch-none"
         gl={{ antialias: true, powerPreference: "high-performance" }}
+        onCreated={() => setCanvasReady(true)}
       >
         <color attach="background" args={["#e8dcc8"]} />
         <fog attach="fog" args={["#e8dcc8", 15, 30]} />
@@ -688,6 +694,14 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
           rotateSpeed={0.5}
         />
       </Canvas>
+
+      {!canvasReady && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/90">
+          <div className="rounded-lg border border-border/60 bg-card/90 px-4 py-3 text-center text-xs text-muted-foreground shadow-lg">
+            Loading shop interior...
+          </div>
+        </div>
+      )}
 
       {/* Bottom hint panel */}
       <div className="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 landscape:p-1.5 bg-gradient-to-t from-background via-background/95 to-transparent">
