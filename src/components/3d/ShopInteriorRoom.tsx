@@ -595,6 +595,12 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
   }, [shop.shopId]);
 
   useEffect(() => {
+    if (ghostHuntActive && shop.shopId && shop.shopId === rechargeShopId) {
+      setForceFallback(true);
+    }
+  }, [ghostHuntActive, rechargeShopId, shop.shopId]);
+
+  useEffect(() => {
     const testCanvas = document.createElement('canvas');
     const gl =
       testCanvas.getContext('webgl2') ||
