@@ -43,6 +43,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useFlashlightReveal } from "@/hooks/useFlashlightReveal";
 import { useGhostTrapCapture } from "@/hooks/useGhostTrapCapture";
 import { useDeviceType } from "@/hooks/useDeviceType";
+import { useMobileAppBehavior } from "@/hooks/useMobileAppBehavior";
 
 // Shop entry distance threshold (in world units)
 const SHOP_ENTRY_DISTANCE = 8;
@@ -102,6 +103,10 @@ const StreetView = () => {
   const mirrorWorld = useMirrorWorldStore();
   const deviceType = useDeviceType();
   const isMobile = deviceType === "mobile";
+  
+  // Mobile app behavior - prevents zoom, fixes viewport, etc.
+  useMobileAppBehavior(isMaximized);
+  
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showFailedModal, setShowFailedModal] = useState(false);
   const [showJumpScare, setShowJumpScare] = useState(false);
@@ -683,9 +688,9 @@ const StreetView = () => {
     ) : null;
 
     return (
-      <div className="fixed inset-0 z-50 bg-background">
+      <div className={`fixed inset-0 z-50 bg-background ${isMobile ? 'mobile-game-container' : ''}`}>
         {/* Full-screen 3D Scene */}
-        <div className="relative h-full w-full">
+        <div className="relative w-full h-full" style={{ height: 'var(--app-height, 100vh)' }}>
           <CityScene 
             streetId={street.id} 
             timeOfDay={timeOfDay} 
@@ -698,16 +703,16 @@ const StreetView = () => {
             hideMobileControls={hideMobileControls}
           />
           
-          {/* Health Display (Lives) - for both missions */}
+          {/* Health Display (Lives) - for zombie missions */}
           {mission.isActive && (
-            <div className="absolute top-14 left-2 md:left-4 pointer-events-none" style={{ zIndex: 150 }}>
+            <div className={`absolute pointer-events-none ${isMobile ? 'top-12 left-2' : 'top-14 left-4'}`} style={{ zIndex: 150 }}>
               <HealthDisplay />
             </div>
           )}
 
           {/* Zombie Mission Timer */}
           {mission.isActive && (
-            <div className="absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none" style={{ zIndex: 150 }}>
+            <div className={`absolute left-1/2 -translate-x-1/2 pointer-events-none ${isMobile ? 'top-12' : 'top-14'}`} style={{ zIndex: 150 }}>
               <MissionTimer />
             </div>
           )}
@@ -731,9 +736,9 @@ const StreetView = () => {
             />
           )}
           
-          {/* Top Controls Bar - Compact for mobile */}
-          <div className="absolute top-2 md:top-4 left-2 md:left-4 right-2 md:right-4 flex items-center justify-between pointer-events-none" style={{ zIndex: 150 }}>
-            <div className="flex items-center gap-1 md:gap-3 pointer-events-auto">
+          {/* Top Controls Bar - Optimized for mobile */}
+          <div className={`absolute left-1 right-1 flex items-center justify-between pointer-events-none ${isMobile ? 'top-1 safe-area-top' : 'top-4 left-4 right-4'}`} style={{ zIndex: 150 }}>
+            <div className="flex items-center gap-1 pointer-events-auto">
               <Button
                 variant="ghost"
                 size="icon"
