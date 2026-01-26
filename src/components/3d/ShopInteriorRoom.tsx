@@ -567,6 +567,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
   const [showFallback, setShowFallback] = useState(false);
   const [forceFallback, setForceFallback] = useState(false);
   const [webglSupported, setWebglSupported] = useState(true);
+  const [retryNonce, setRetryNonce] = useState(0);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -592,6 +593,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
     setSceneReady(false);
     setShowFallback(false);
     setForceFallback(false);
+    setRetryNonce(0);
   }, [shop.shopId]);
 
   useEffect(() => {
@@ -624,6 +626,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
   }, [sceneReady, showFallback, webglSupported]);
 
   const isFallbackActive = showFallback || forceFallback;
+  const canRetry3d = showFallback && webglSupported;
 
   const handleCollectRecharge = (type: 'emf' | 'flashlight' | 'trap') => {
     if (!showRechargePickup || rechargeCollected[type]) return;
@@ -683,14 +686,22 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
             type="button"
             onPointerDown={(event) => {
               event.stopPropagation();
-              if (showFallback) return;
-              setForceFallback((prev) => !prev);
+              if (canRetry3d) {
+                setCanvasReady(false);
+                setSceneReady(false);
+                setShowFallback(false);
+                setForceFallback(false);
+                setRetryNonce((prev) => prev + 1);
+                return;
+              }
+              if (!showFallback) {
+                setForceFallback((prev) => !prev);
+              }
             }}
             className="h-10 px-3 sm:px-4 rounded-md flex items-center justify-center gap-1.5 bg-transparent border border-border text-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-accent"
             data-control-ignore="true"
-            disabled={showFallback}
           >
-            {isFallbackActive ? '3D View' : '2D View'}
+            {canRetry3d ? 'Retry 3D' : isFallbackActive ? '3D View' : '2D View'}
           </button>
           {shop.externalLink && (
             <a 
@@ -723,7 +734,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
       {/* 3D Canvas */}
       {!isFallbackActive ? (
         <Canvas 
-          key={shop.shopId}
+          key={`${shop.shopId}-${retryNonce}`}
           camera={{ position: [0, 2.2, 4.2], fov: 65 }} 
           className="flex-1 touch-none"
           gl={{ antialias: true, powerPreference: "high-performance" }}
