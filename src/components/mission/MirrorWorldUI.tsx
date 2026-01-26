@@ -21,15 +21,16 @@ export default function MirrorWorldUI() {
   const playerPosition = usePlayerStore((state) => state.position);
   const MAP_BOUNDS = 60;
   const MAP_SIZE = 144;
-  const LADDER_POSITIONS = [
+  type LadderPosition = { id: string; base: [number, number, number]; top: [number, number, number] };
+  const LADDER_POSITIONS: LadderPosition[] = [
     { id: 'ladder-1', base: [13.6, 0, 40], top: [18, 8.2, 40] },
     { id: 'ladder-2', base: [-13.6, 0, 28], top: [-18, 8.2, 28] },
     { id: 'ladder-3', base: [47, 0, 13.6], top: [47, 8.2, 18] },
     { id: 'ladder-4', base: [-35, 0, -13.6], top: [-35, 8.2, -18] },
     { id: 'ladder-5', base: [13.6, 0, -40], top: [18, 8.2, -40] },
-  ] as const;
+  ];
   const [showHint, setShowHint] = useState(false);
-  const [canClimb, setCanClimb] = useState<null | typeof LADDER_POSITIONS[number]>(null);
+  const [canClimb, setCanClimb] = useState<null | LadderPosition>(null);
   const isOnRoof = playerPosition[1] >= 7.5;
   const setPlayerPosition = usePlayerStore((state) => state.setPosition);
   const resetToSafeSpawn = usePlayerStore((state) => state.resetToSafeSpawn);

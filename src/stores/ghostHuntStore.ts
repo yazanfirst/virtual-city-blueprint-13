@@ -84,6 +84,9 @@ export interface GhostHuntState {
     trap: boolean;
   };
   
+  // Toast message for pickups
+  toastMessage: string | null;
+  
   // Actions
   startMission: () => void;
   completeBriefing: () => void;
@@ -224,6 +227,7 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
     flashlight: false,
     trap: false,
   },
+  toastMessage: null,
   
   // Start mission
   startMission: () => {
@@ -550,6 +554,14 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
     if (state.rechargeCollected[type]) return;
     const config = getGhostHuntLevelConfig(state.difficultyLevel);
     const nextCollected = { ...state.rechargeCollected, [type]: true };
+    
+    // Build toast message
+    const labels: Record<RechargeType, string> = {
+      emf: 'EMF BATTERY RECHARGED!',
+      flashlight: 'FLASHLIGHT RECHARGED!',
+      trap: 'TRAP CHARGES RESTORED!',
+    };
+    
     set({
       rechargeCollected: nextCollected,
       equipment: {
@@ -559,6 +571,12 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
         flashlightCooldown: type === 'flashlight' ? 0 : state.equipment.flashlightCooldown,
         trapCharges: type === 'trap' ? config.trapCharges : state.equipment.trapCharges,
       },
+      toastMessage: labels[type],
     });
+    
+    // Clear toast after 2.5 seconds
+    setTimeout(() => {
+      set({ toastMessage: null });
+    }, 2500);
   },
 }));
