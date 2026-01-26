@@ -193,109 +193,95 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
         <meshLambertMaterial color={hasShop ? accentHex : darker} />
       </mesh>
       
-      {/* Signboard */}
-      <group position={[0, 5.2, 4.3]}>
-        {/* Sign board background */}
+      {/* Signboard - Flat panel style like reference image */}
+      <group position={[0, 4.8, 4.15]}>
+        {/* Sign panel background - flat solid color */}
         <mesh>
-          <boxGeometry args={[4.5, 1.3, 0.2]} />
-          <meshBasicMaterial color={hasShop ? "#1A1A2A" : (isNight ? "#1A0015" : "#1A1A2A")} />
+          <boxGeometry args={[5.5, 1.4, 0.15]} />
+          <meshLambertMaterial 
+            color={hasShop ? primaryHex : "#F5F0E6"} 
+          />
         </mesh>
         
-        {/* Border - uses accent color for branded shops */}
-        <mesh position={[0, 0, 0.11]}>
-          <boxGeometry args={[4.6, 1.4, 0.02]} />
-          <meshBasicMaterial color={hasShop ? primaryHex : (isNight ? "#FF1493" : "#882244")} />
-        </mesh>
-        
-        {/* Inner border */}
-        <mesh position={[0, 0, 0.12]}>
-          <boxGeometry args={[4.0, 0.9, 0.02]} />
-          <meshBasicMaterial color={hasShop ? accentHex : (isNight ? "#00FFFF" : "#006666")} />
-        </mesh>
-        
-        {/* Centered content container - Logo + Text centered together */}
+        {/* Sign content */}
         {hasShop ? (
           <Html
-            position={[0, 0.09, 0.16]}
+            position={[0, 0, 0.1]}
             transform
             occlude
             center
-            scale={1.1}
             style={{
-              display: 'grid',
-              gridAutoFlow: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              width: '100%',
-              maxWidth: '180px',
-              minWidth: '120px',
-              margin: '0 auto',
               pointerEvents: 'none',
             }}
           >
-            {/* Logo - if available */}
-            {logoUrl && (
-              <img
-                src={logoUrl}
-                alt="Shop logo"
-                style={{
-                  width: '26px',
-                  height: '26px',
-                  objectFit: 'contain',
-                  borderRadius: '4px',
-                  flexShrink: 0,
-                  justifySelf: 'center',
-                }}
-              />
-            )}
-            {/* Shop Name */}
             <div
               style={{
-                fontFamily: font.fontFamily,
-                fontWeight: font.fontWeight,
-                letterSpacing: font.letterSpacing,
-                fontSize:
-                  shopName && shopName.length > 12
-                    ? '10px'
-                    : shopName && shopName.length > 8
-                      ? '12px'
-                      : '14px',
-                color: isSuspended ? '#888888' : '#FFFFFF',
-                textShadow: isSuspended
-                  ? '1px 1px 2px rgba(0,0,0,0.9)'
-                  : `0 0 6px ${colors.glow}, 0 0 12px ${colors.glow}, 1px 1px 2px rgba(0,0,0,0.9)`,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                textTransform: signageFont === 'elegant' ? 'uppercase' : 'none',
-                textAlign: 'center',
-                maxWidth: logoUrl ? '130px' : '160px',
-                justifySelf: 'center',
-                minWidth: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                padding: '8px 20px',
+                minWidth: '180px',
               }}
             >
-              {shopName || "SHOP"}
+              {/* Logo on left - larger size */}
+              {logoUrl && (
+                <img
+                  src={logoUrl}
+                  alt="Shop logo"
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    objectFit: 'contain',
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+              {/* Shop Name on right - clean flat text */}
+              <div
+                style={{
+                  fontFamily: "'Arial', 'Helvetica', sans-serif",
+                  fontWeight: 700,
+                  fontSize: shopName && shopName.length > 12 ? '16px' : '20px',
+                  color: '#FFFFFF',
+                  whiteSpace: 'nowrap',
+                  letterSpacing: '0.5px',
+                }}
+              >
+                {shopName || "SHOP"}
+              </div>
             </div>
           </Html>
         ) : (
-          <Text 
-            position={[0, 0, 0.15]} 
-            fontSize={0.4}
-            color={isNight ? "#FFFF00" : "#FFDD00"}
-            anchorX="center" 
-            anchorY="middle"
-            outlineWidth={0.02}
-            outlineColor={isNight ? "#FF1493" : "#886600"}
+          /* FOR RENT - Simple dark text on light background */
+          <Html
+            position={[0, 0, 0.1]}
+            transform
+            occlude
+            center
+            style={{
+              pointerEvents: 'none',
+            }}
           >
-            FOR RENT
-          </Text>
+            <div
+              style={{
+                fontFamily: "'Arial', 'Helvetica', sans-serif",
+                fontWeight: 700,
+                fontSize: '22px',
+                color: '#3D3D3D',
+                letterSpacing: '2px',
+                padding: '8px 24px',
+              }}
+            >
+              FOR RENT
+            </div>
+          </Html>
         )}
         
         {/* CLOSED sign for suspended shops */}
         {hasShop && isSuspended && (
           <Html
-            position={[0, -0.8, 0.18]}
+            position={[0, -1.0, 0.12]}
             transform
             occlude
             center
@@ -305,16 +291,13 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
           >
             <div
               style={{
-                backgroundColor: '#EF4444',
+                backgroundColor: '#1F2937',
                 color: '#FFFFFF',
-                padding: '4px 12px',
-                borderRadius: '4px',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                fontFamily: 'Arial, sans-serif',
-                textTransform: 'uppercase',
+                padding: '6px 16px',
+                fontSize: '16px',
+                fontWeight: 700,
+                fontFamily: "'Arial', sans-serif",
                 letterSpacing: '2px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
               }}
             >
               CLOSED

@@ -151,3 +151,115 @@
     @apply absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50;
   }
 }
+
+.mirror-world-canvas {
+  filter: hue-rotate(180deg) saturate(0.8);
+}
+
+.mirror-world-void {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(84, 14, 120, 0.5) 0%, rgba(0, 0, 0, 0) 55%);
+}
+
+.mirror-world-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0) 55%, rgba(44, 0, 65, 0.6) 100%);
+}
+
+.mirror-world-particles {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.25) 1px, transparent 1px);
+  background-size: 80px 80px;
+  opacity: 0.4;
+  animation: mirror-world-float 12s linear infinite;
+}
+
+@keyframes mirror-world-float {
+  from {
+    transform: translateY(20px);
+  }
+  to {
+    transform: translateY(-40px);
+  }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+  .ghost-hunt-briefing {
+    max-width: min(520px, 92vw);
+    max-height: 84vh;
+    padding: 1rem;
+    overflow-y: auto;
+  }
+
+  .ghost-hunt-briefing__content {
+    font-size: 0.75rem;
+  }
+
+  .ghost-hunt-ui__timer {
+    top: 0.5rem;
+    left: 0.75rem;
+    transform: none;
+  }
+
+  .ghost-hunt-ui__stats {
+    top: 3rem;
+    bottom: auto;
+    left: 0.75rem;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .ghost-hunt-ui__stats > div {
+    padding: 0.35rem 0.5rem;
+  }
+
+  .ghost-hunt-ui__equipment {
+    top: auto;
+    bottom: 4.5rem;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .ghost-hunt-ui__equipment > button {
+    padding: 0.35rem 0.5rem;
+  }
+
+  .ghost-hunt-ui__equipment > button span {
+    font-size: 0.55rem;
+  }
+
+  .ghost-hunt-ui__emf {
+    bottom: 7.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .mobile-controls__jump {
+    bottom: 0.75rem;
+    right: 0.75rem;
+  }
+
+  .mobile-controls__jump-button {
+    width: 56px;
+    height: 56px;
+    font-size: 0.75rem;
+  }
+
+  .mobile-controls__joystick {
+    bottom: 0.75rem;
+    left: 0.75rem;
+  }
+}
+
+@media (max-width: 768px) and (orientation: portrait) {
+  .mobile-controls__jump-button {
+    width: 72px;
+    height: 72px;
+  }
+}

@@ -89,15 +89,14 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
         className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm"
         style={{ touchAction: 'manipulation' }}
       >
-        <div className="bg-background/95 border border-purple-500/50 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+        <div className="ghost-hunt-briefing bg-background/95 border border-purple-500/50 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
           <div className="flex items-center gap-3 mb-4">
             <Ghost className="h-8 w-8 text-purple-400" />
             <h2 className="font-display text-xl font-bold text-purple-400 uppercase tracking-wider">
               Ghost Hunt
             </h2>
           </div>
-          
-          <div className="text-sm text-muted-foreground space-y-3 mb-6">
+          <div className="ghost-hunt-briefing__content text-sm text-muted-foreground space-y-3 mb-6">
             <p className="text-foreground font-medium">
               Paranormal activity detected! Capture {requiredCaptures} ghosts before time runs out.
             </p>
@@ -150,10 +149,10 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
   if (phase !== 'hunting') return null;
   
   return (
-    <>
+    <div className="ghost-hunt-ui">
       {/* Top HUD */}
       <div 
-        className="absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none"
+        className="ghost-hunt-ui__timer absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none"
         style={{ zIndex: 150 }}
       >
         {/* Timer */}
@@ -175,7 +174,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
       
       {/* Left side - Lives & Progress */}
       <div 
-        className="absolute top-28 left-2 md:left-4 flex flex-col gap-2 pointer-events-none"
+        className="ghost-hunt-ui__stats absolute top-28 left-2 md:left-4 flex flex-col gap-2 pointer-events-none"
         style={{ zIndex: 150 }}
       >
         {/* Lives */}
@@ -205,7 +204,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
       
       {/* Right side - Equipment */}
       <div 
-        className="absolute top-28 right-2 md:right-4 flex flex-col gap-2 pointer-events-auto"
+        className="ghost-hunt-ui__equipment absolute top-28 right-2 md:right-4 flex flex-col gap-2 pointer-events-auto"
         style={{ zIndex: 150 }}
       >
         {/* EMF Detector */}
@@ -303,7 +302,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
       {/* EMF Reading Display (when active) */}
       {equipment.emfActive && (
         <div 
-          className="absolute bottom-32 left-1/2 -translate-x-1/2 pointer-events-none"
+          className="ghost-hunt-ui__emf absolute bottom-32 left-1/2 -translate-x-1/2 pointer-events-none"
           style={{ zIndex: 150 }}
         >
           <div className="bg-blue-950/90 backdrop-blur-md rounded-lg px-4 py-3 border border-blue-500/50">
@@ -367,6 +366,6 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
           />
         </div>
       )}
-    </>
+    </div>
   );
 }

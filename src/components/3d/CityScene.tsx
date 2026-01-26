@@ -18,7 +18,11 @@ import { usePlayerStore } from "@/stores/playerStore";
 import { useGameStore } from "@/stores/gameStore";
 import { useMissionStore } from "@/stores/missionStore";
 import { useGhostHuntStore } from "@/stores/ghostHuntStore";
+import { useMirrorWorldStore } from "@/stores/mirrorWorldStore";
 import { ShopBranding } from "@/hooks/use3DShops";
+import MirrorShadow from "./MirrorShadow";
+import RealityAnchor from "./RealityAnchor";
+import MirrorWorldEnvironment from "./MirrorWorldEnvironment";
 
 export type CameraView = "thirdPerson" | "firstPerson";
 
@@ -31,6 +35,7 @@ type CitySceneProps = {
   forcedTimeOfDay?: "day" | "night" | null; // For mission control
   onZombieTouchPlayer?: () => void;
   onTrapHitPlayer?: () => void;
+  hideMobileControls?: boolean;
 };
 
 type InnerProps = {
@@ -42,6 +47,7 @@ type InnerProps = {
   onShopClick?: (branding: ShopBranding) => void;
   onZombieTouchPlayer?: () => void;
   onTrapHitPlayer?: () => void;
+  mirrorWorldActive: boolean;
 };
 
 // Pastel color palette
@@ -208,11 +214,15 @@ export default function CityScene({
   forcedTimeOfDay = null,
   onZombieTouchPlayer,
   onTrapHitPlayer,
+  hideMobileControls = false,
 }: CitySceneProps) {
   // Use forced time of day if provided (for mission night mode)
   const effectiveTimeOfDay = forcedTimeOfDay ?? timeOfDay;
   const deviceType = useDeviceType();
   const isMobile = deviceType === 'mobile';
+  const mirrorWorld = useMirrorWorldStore();
+  const mission = useMissionStore();
+  const ghostHunt = useGhostHuntStore();
   const [joystickInput, setJoystickInput] = useState({ x: 0, y: 0 });
   
   // Use store for camera rotation to persist across game mode changes
@@ -284,10 +294,13 @@ export default function CityScene({
     };
   }, [isMobile, handleCameraMove]);
 
+  const showMirrorWorld = mirrorWorld.isActive && mirrorWorld.phase !== 'inactive' && !mission.isActive && !ghostHunt.isActive;
+  const mirrorWorldActive = mirrorWorld.isActive && mirrorWorld.phase === 'hunting' && !mission.isActive && !ghostHunt.isActive;
+
   return (
     <div className="relative h-full w-full">
       <Canvas
-        className="h-full w-full"
+        className={`h-full w-full ${mirrorWorldActive ? 'mirror-world-canvas' : ''}`}
         style={{ touchAction: "none" }}
         camera={{ position: [0, 10, 50], fov: 50 }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
@@ -302,10 +315,25 @@ export default function CityScene({
             onShopClick={onShopClick}
             onZombieTouchPlayer={onZombieTouchPlayer}
             onTrapHitPlayer={onTrapHitPlayer}
+            mirrorWorldActive={showMirrorWorld}
           />
+          {showMirrorWorld && (
+            <>
+              <MirrorShadow />
+              {mirrorWorld.anchors.map((anchor) => (
+                <RealityAnchor
+                  key={anchor.id}
+                  id={anchor.id}
+                  position={anchor.position}
+                  isCollected={anchor.isCollected}
+                />
+              ))}
+            </>
+          )}
         </Suspense>
       </Canvas>
-      {isMobile && (
+      {mirrorWorldActive && <MirrorWorldEnvironment />}
+      {isMobile && !hideMobileControls && (
         <MobileControls
           onJoystickMove={handleJoystickMove}
           onCameraMove={handleCameraMove}
@@ -796,11 +824,14 @@ function GhostHuntGhosts({ isNight }: { isNight: boolean }) {
   );
 }
 
-function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer }: InnerProps) {
+function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer, mirrorWorldActive }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
   const { zombies, zombiesPaused, traps, isActive: missionActive, slowedZombieIds, frozenZombieIds, freezeZombie, targetShop, phase: missionPhase } = useMissionStore();
+  const ghostHuntActive = useGhostHuntStore((state) => state.isActive);
+  const allowMissionEntities = missionActive && !ghostHuntActive && !mirrorWorldActive;
+  const allowGhosts = ghostHuntActive && !missionActive && !mirrorWorldActive;
 
   useEffect(() => {
     scene.background = null;
@@ -891,7 +922,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
         if (branding) {
           // During active mission (escape phase only), only target shop is clickable
           // During inactive or completed mission, ALL shops are clickable
-          const isEscapePhase = missionActive && missionPhase === 'escape';
+          const isEscapePhase = allowMissionEntities && missionPhase === 'escape';
           const isClickable = !isEscapePhase || branding.shopId === targetShop?.shopId;
           return (
             <BrandedShop 
@@ -909,7 +940,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
         if (branding) {
           // During active mission (escape phase only), only target shop is clickable
           // During inactive or completed mission, ALL shops are clickable
-          const isEscapePhase = missionActive && missionPhase === 'escape';
+          const isEscapePhase = allowMissionEntities && missionPhase === 'escape';
           const isClickable = !isEscapePhase || branding.shopId === targetShop?.shopId;
           return (
             <BrandedShop 
@@ -961,7 +992,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
 
       {/* === ZOMBIES (Mission) === */}
-      {missionActive && zombies.map((zombie) => (
+      {allowMissionEntities && zombies.map((zombie) => (
         <ZombieCharacter
           key={zombie.id}
           id={zombie.id}
@@ -976,7 +1007,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
 
       {/* === FIRE PIT TRAPS (Mission) === */}
-      {missionActive && traps.filter(t => t.type === 'firepit').map((trap) => (
+      {allowMissionEntities && traps.filter(t => t.type === 'firepit').map((trap) => (
         <FirePitTrap
           key={trap.id}
           id={trap.id}
@@ -987,7 +1018,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
       
       {/* === SWINGING AXE TRAPS (Mission) === */}
-      {missionActive && traps.filter(t => t.type === 'axe').map((trap) => (
+      {allowMissionEntities && traps.filter(t => t.type === 'axe').map((trap) => (
         <SwingingAxeTrap
           key={trap.id}
           id={trap.id}
@@ -999,7 +1030,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
       
       {/* === THORNS TRAPS (Mission) === */}
-      {missionActive && traps.filter(t => t.type === 'thorns').map((trap) => (
+      {allowMissionEntities && traps.filter(t => t.type === 'thorns').map((trap) => (
         <ThornsTrap
           key={trap.id}
           id={trap.id}
@@ -1010,7 +1041,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       ))}
 
       {/* === GHOSTS (Ghost Hunt Mission) === */}
-      <GhostHuntGhosts isNight={isNight} />
+      {allowGhosts && <GhostHuntGhosts isNight={isNight} />}
 
       {/* === PLAYER CHARACTER === */}
       <PlayerController 
