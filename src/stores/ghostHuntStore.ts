@@ -13,6 +13,9 @@ import { getGhostHuntLevelConfig } from '@/lib/missionLevels';
 
 export type GhostType = 'wanderer' | 'lurker' | 'trickster' | 'shadow';
 
+export type RechargeType = 'emf' | 'flashlight' | 'trap';
+export type RechargeShopIds = Record<RechargeType, string | null>;
+
 export type GhostHuntPhase = 
   | 'inactive'      // Mission not started
   | 'briefing'      // Show instructions
@@ -74,7 +77,7 @@ export interface GhostHuntState {
   
   // Spawn variety tracking
   recentSpawnSeeds: number[];
-  rechargeShopId: string | null;
+  rechargeShopIds: RechargeShopIds;
   rechargeCollected: {
     emf: boolean;
     flashlight: boolean;
@@ -91,8 +94,8 @@ export interface GhostHuntState {
   useFlashlight: () => void;
   fireGhostTrap: () => void;
   drainBattery: (type: 'emf' | 'flashlight', amount: number) => void;
-  setRechargeShopId: (shopId: string | null) => void;
-  collectRechargePickup: (type: 'emf' | 'flashlight' | 'trap') => void;
+  setRechargePickups: (shopIds: RechargeShopIds) => void;
+  collectRechargePickup: (type: RechargeType) => void;
   
   // Ghost interactions
   revealGhost: (ghostId: string) => void;
@@ -211,7 +214,11 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
   playerLives: 3,
   isProtected: true,
   recentSpawnSeeds: [],
-  rechargeShopId: null,
+  rechargeShopIds: {
+    emf: null,
+    flashlight: null,
+    trap: null,
+  },
   rechargeCollected: {
     emf: false,
     flashlight: false,
@@ -257,7 +264,11 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
       ghostSpeedMultiplier: config.ghostSpeedMultiplier,
       emfDrainPerSecond: config.emfDrainPerSecond,
       flashlightDrainPerUse: config.flashlightDrainPerUse,
-      rechargeShopId: null,
+      rechargeShopIds: {
+        emf: null,
+        flashlight: null,
+        trap: null,
+      },
       rechargeCollected: {
         emf: false,
         flashlight: false,
@@ -407,6 +418,8 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
         g.id === ghostId ? { ...g, isCaptured: true } : g
       ),
       capturedCount: newCapturedCount,
+      // Reward: +8s time per captured ghost
+      timeRemaining: state.timeRemaining + 8,
     });
     
     // Check win condition
@@ -492,7 +505,11 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
       ghostSpeedMultiplier: config.ghostSpeedMultiplier,
       emfDrainPerSecond: config.emfDrainPerSecond,
       flashlightDrainPerUse: config.flashlightDrainPerUse,
-      rechargeShopId: null,
+      rechargeShopIds: {
+        emf: null,
+        flashlight: null,
+        trap: null,
+      },
       rechargeCollected: {
         emf: false,
         flashlight: false,
@@ -518,9 +535,9 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
     set({ difficultyLevel: 1, unlockedLevel: 1 });
   },
 
-  setRechargeShopId: (shopId) =>
+  setRechargePickups: (shopIds) =>
     set({
-      rechargeShopId: shopId,
+      rechargeShopIds: shopIds,
       rechargeCollected: {
         emf: false,
         flashlight: false,
