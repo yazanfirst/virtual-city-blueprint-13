@@ -125,10 +125,19 @@ const StreetView = () => {
 
   // Transform spots data to shop brandings - MUST be before useEffect that uses it
   const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
-  const rechargeSpotId = useMemo(() => {
-    if (!ghostHunt.rechargeShopId) return "";
-    return shopBrandings.find((shop) => shop.shopId === ghostHunt.rechargeShopId)?.spotId ?? "";
-  }, [ghostHunt.rechargeShopId, shopBrandings]);
+  
+  // Get spot IDs for each recharge type (EMF, Flashlight, Trap) for map highlighting
+  const rechargeSpotIds = useMemo(() => {
+    const ids: { emf: string; flashlight: string; trap: string } = { emf: '', flashlight: '', trap: '' };
+    const shopIds = ghostHunt.rechargeShopIds;
+    if (shopIds.emf) ids.emf = shopBrandings.find((s) => s.shopId === shopIds.emf)?.spotId ?? '';
+    if (shopIds.flashlight) ids.flashlight = shopBrandings.find((s) => s.shopId === shopIds.flashlight)?.spotId ?? '';
+    if (shopIds.trap) ids.trap = shopBrandings.find((s) => s.shopId === shopIds.trap)?.spotId ?? '';
+    return ids;
+  }, [ghostHunt.rechargeShopIds, shopBrandings]);
+  
+  // Check if any recharge pickups are assigned
+  const hasAnyRechargeShop = Boolean(ghostHunt.rechargeShopIds.emf || ghostHunt.rechargeShopIds.flashlight || ghostHunt.rechargeShopIds.trap);
 
   // Track if user has exited a shop for first time (to show mission intro)
   const [hasExitedShopOnce, setHasExitedShopOnce] = useState(false);
@@ -269,23 +278,34 @@ const StreetView = () => {
     fetchAllShopItems();
   }, [shopBrandings.length]); // use length instead of array to avoid infinite loop
 
+  // Select 3 DIFFERENT random shops for EMF, Flashlight, Trap recharges
   useEffect(() => {
     if (!ghostHunt.isActive || ghostHunt.phase !== 'briefing') return;
-    if (ghostHunt.rechargeShopId) return;
+    // Already assigned
+    if (hasAnyRechargeShop) return;
     if (!shopBrandings || shopBrandings.length === 0) return;
 
     const eligible = getEligibleShops(shopBrandings, shopItemsMap, []);
-    if (eligible.length === 0) {
-      console.debug('[GhostHunt] Recharge pickup skipped: no eligible shops.');
+    if (eligible.length < 3) {
+      console.debug('[GhostHunt] Recharge pickup skipped: not enough eligible shops.');
       return;
     }
 
+    // Shuffle eligible shops using current timestamp as seed
     const seed = Date.now();
-    const index = Math.abs(seed) % eligible.length;
-    const chosen = eligible[index];
-    ghostHunt.setRechargeShopId(chosen.shop.shopId ?? null);
-    console.debug('[GhostHunt] Recharge pickup shop selected:', chosen.shop.shopId);
-  }, [ghostHunt.isActive, ghostHunt.phase, ghostHunt.rechargeShopId, ghostHunt.setRechargeShopId, shopBrandings, shopItemsMap]);
+    const shuffled = [...eligible].sort((a, b) => {
+      const hashA = Math.sin(seed + a.shop.spotId.charCodeAt(0)) * 10000;
+      const hashB = Math.sin(seed + b.shop.spotId.charCodeAt(0)) * 10000;
+      return (hashA - Math.floor(hashA)) - (hashB - Math.floor(hashB));
+    });
+
+    const emfShop = shuffled[0]?.shop.shopId ?? null;
+    const flashlightShop = shuffled[1]?.shop.shopId ?? null;
+    const trapShop = shuffled[2]?.shop.shopId ?? null;
+
+    ghostHunt.setRechargePickups({ emf: emfShop, flashlight: flashlightShop, trap: trapShop });
+    console.debug('[GhostHunt] Recharge pickups assigned:', { emf: emfShop, flashlight: flashlightShop, trap: trapShop });
+  }, [ghostHunt.isActive, ghostHunt.phase, hasAnyRechargeShop, ghostHunt.setRechargePickups, shopBrandings, shopItemsMap]);
 
   // Proximity detection - find nearby shop
   useEffect(() => {
@@ -1156,8 +1176,8 @@ const StreetView = () => {
                       spots={spotsWithShops}
                       selectedSpotId=""
                       onSelectSpot={() => {}}
-                      highlightedSpotId={ghostHunt.isActive && rechargeSpotId ? rechargeSpotId : selectedSpotId}
-                      highlightedSpotLabel={ghostHunt.isActive && rechargeSpotId ? 'Recharge Gear (EMF/Flash/Trap)' : undefined}
+                      highlightedSpotId={ghostHunt.isActive && rechargeSpotIds.emf ? rechargeSpotIds.emf : selectedSpotId}
+                      highlightedSpotLabel={ghostHunt.isActive && hasAnyRechargeShop ? 'Recharge Gear (EMF/Flash/Trap)' : undefined}
                     />
                   </div>
                 </div>

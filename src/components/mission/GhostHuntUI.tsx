@@ -20,6 +20,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
     playerLives,
     difficultyLevel,
     emfDrainPerSecond,
+    toastMessage,
     updateTimer,
     toggleEMF,
     useFlashlight,
@@ -365,6 +366,18 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
               background: 'radial-gradient(ellipse 40% 60% at 50% 50%, rgba(74, 222, 128, 0.3) 0%, transparent 70%)',
             }}
           />
+        </div>
+      )}
+      
+      {/* Big Toast Message for Recharge Pickups */}
+      {toastMessage && (
+        <div 
+          className="fixed inset-x-0 top-1/2 -translate-y-1/2 flex justify-center pointer-events-none"
+          style={{ zIndex: 200 }}
+        >
+          <div className="mx-4 max-w-lg rounded-2xl border-2 border-emerald-200/90 bg-emerald-500/95 px-8 py-5 text-center text-xl font-bold text-white shadow-2xl shadow-emerald-500/50 animate-pulse">
+            {toastMessage}
+          </div>
         </div>
       )}
     </div>
