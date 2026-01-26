@@ -152,21 +152,20 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
   
   return (
     <div className="ghost-hunt-ui">
-      {/* Top HUD */}
+      {/* Top HUD - Timer (smaller on mobile) */}
       <div 
-        className="ghost-hunt-ui__timer absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none"
+        className="ghost-hunt-ui__timer absolute left-1/2 -translate-x-1/2 pointer-events-none top-12 sm:top-14"
         style={{ zIndex: 150 }}
       >
-        {/* Timer */}
         <div className={cn(
-          "flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md border",
+          "flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg backdrop-blur-md border",
           timeRemaining <= 15 
             ? "bg-red-950/90 border-red-500/50 animate-pulse" 
             : "bg-background/80 border-border/50"
         )}>
-          <Clock className={cn("h-4 w-4", timeRemaining <= 15 ? "text-red-400" : "text-muted-foreground")} />
+          <Clock className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", timeRemaining <= 15 ? "text-red-400" : "text-muted-foreground")} />
           <span className={cn(
-            "font-mono text-lg font-bold",
+            "font-mono text-base sm:text-lg font-bold",
             timeRemaining <= 15 ? "text-red-400" : "text-foreground"
           )}>
             {formatTime(timeRemaining)}
@@ -174,18 +173,18 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
         </div>
       </div>
       
-      {/* Left side - Lives & Progress */}
+      {/* Left side - Lives & Progress (compact on mobile) */}
       <div 
-        className="ghost-hunt-ui__stats absolute top-28 left-2 md:left-4 flex flex-col gap-2 pointer-events-none"
+        className="ghost-hunt-ui__stats absolute left-1 sm:left-2 flex flex-col gap-1.5 pointer-events-none top-24 sm:top-28"
         style={{ zIndex: 150 }}
       >
         {/* Lives */}
-        <div className="flex items-center gap-1 bg-background/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50">
+        <div className="flex items-center gap-0.5 bg-background/80 backdrop-blur-md rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-border/50">
           {Array.from({ length: 3 }).map((_, i) => (
             <Heart
               key={i}
               className={cn(
-                "h-4 w-4",
+                "h-3.5 w-3.5 sm:h-4 sm:w-4",
                 i < playerLives ? "text-red-500 fill-red-500" : "text-muted-foreground"
               )}
             />
@@ -193,10 +192,9 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
         </div>
         
         {/* Capture progress */}
-        <div className="bg-background/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50">
-          <div className="flex items-center gap-2 text-xs">
-            <Ghost className="h-4 w-4 text-purple-400" />
-            <span className="text-muted-foreground">Captured:</span>
+        <div className="bg-background/80 backdrop-blur-md rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-border/50">
+          <div className="flex items-center gap-1.5 text-[10px] sm:text-xs">
+            <Ghost className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-400" />
             <span className="font-bold text-foreground">
               {capturedCount}/{requiredCaptures}
             </span>
@@ -204,9 +202,9 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
         </div>
       </div>
       
-      {/* Right side - Equipment */}
+      {/* Right side - Equipment (compact vertical stack on mobile) */}
       <div 
-        className="ghost-hunt-ui__equipment absolute top-28 right-2 md:right-4 flex flex-col gap-2 pointer-events-auto"
+        className="ghost-hunt-ui__equipment absolute right-1 sm:right-2 flex flex-col gap-1 sm:gap-2 pointer-events-auto top-24 sm:top-28"
         style={{ zIndex: 150 }}
       >
         {/* EMF Detector */}
@@ -217,17 +215,16 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
             toggleEMF();
           }}
           className={cn(
-            "flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
+            "flex flex-col items-center gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
             equipment.emfActive
               ? "bg-blue-950/90 border-blue-500/50"
               : "bg-background/80 border-border/50 hover:bg-background/90"
           )}
           disabled={equipment.emfBattery <= 0}
         >
-          <Radio className={cn("h-5 w-5", equipment.emfActive ? "text-blue-400" : "text-muted-foreground")} />
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">EMF</span>
-          {/* Battery */}
-          <div className="w-8 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+          <Radio className={cn("h-4 w-4 sm:h-5 sm:w-5", equipment.emfActive ? "text-blue-400" : "text-muted-foreground")} />
+          <span className="text-[8px] sm:text-[10px] uppercase font-bold text-muted-foreground">EMF</span>
+          <div className="w-6 h-1 sm:w-8 sm:h-1.5 bg-muted rounded-full overflow-hidden">
             <div 
               className={cn(
                 "h-full transition-all",
@@ -246,7 +243,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
             useFlashlight();
           }}
           className={cn(
-            "flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
+            "flex flex-col items-center gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
             equipment.flashlightActive
               ? "bg-yellow-950/90 border-yellow-500/50"
               : "bg-background/80 border-border/50 hover:bg-background/90",
@@ -254,10 +251,9 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
           )}
           disabled={equipment.flashlightBattery <= 0 || equipment.flashlightCooldown > 0}
         >
-          <Flashlight className={cn("h-5 w-5", equipment.flashlightActive ? "text-yellow-400" : "text-muted-foreground")} />
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">Flash</span>
-          {/* Battery */}
-          <div className="w-8 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+          <Flashlight className={cn("h-4 w-4 sm:h-5 sm:w-5", equipment.flashlightActive ? "text-yellow-400" : "text-muted-foreground")} />
+          <span className="text-[8px] sm:text-[10px] uppercase font-bold text-muted-foreground">Flash</span>
+          <div className="w-6 h-1 sm:w-8 sm:h-1.5 bg-muted rounded-full overflow-hidden">
             <div 
               className={cn(
                 "h-full transition-all",
@@ -268,7 +264,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
           </div>
         </button>
         
-        {/* Ghost Trap - Shoot to capture */}
+        {/* Ghost Trap */}
         <button
           type="button"
           onPointerDown={(e) => {
@@ -276,24 +272,23 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
             fireGhostTrap();
           }}
           className={cn(
-            "flex flex-col items-center gap-1 px-3 py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
+            "flex flex-col items-center gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
             equipment.trapActive
-              ? "bg-green-950/90 border-green-500/50 scale-110"
+              ? "bg-green-950/90 border-green-500/50 scale-105"
               : "bg-background/80 border-border/50 hover:bg-background/90",
             equipment.trapCharges <= 0 && "opacity-50"
           )}
           disabled={equipment.trapCharges <= 0 || equipment.trapActive}
         >
-          <Crosshair className={cn("h-5 w-5", equipment.trapActive ? "text-green-400 animate-pulse" : "text-muted-foreground")} />
-          <span className="text-[10px] uppercase font-bold text-muted-foreground">Trap</span>
-          {/* Charges indicator */}
+          <Crosshair className={cn("h-4 w-4 sm:h-5 sm:w-5", equipment.trapActive ? "text-green-400 animate-pulse" : "text-muted-foreground")} />
+          <span className="text-[8px] sm:text-[10px] uppercase font-bold text-muted-foreground">Trap</span>
           <div className="flex gap-0.5">
             {[1, 2, 3].map((charge) => (
               <div
                 key={charge}
                 className={cn(
-                  "w-2 h-2 rounded-full transition-all",
-                  charge <= equipment.trapCharges ? "bg-green-400" : "bg-gray-700"
+                  "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all",
+                  charge <= equipment.trapCharges ? "bg-green-400" : "bg-muted"
                 )}
               />
             ))}
@@ -301,18 +296,18 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
         </button>
       </div>
       
-      {/* EMF Reading Display (when active) */}
+      {/* EMF Reading Display (when active) - bottom center, above controls */}
       {equipment.emfActive && (
         <div 
-          className="ghost-hunt-ui__emf absolute bottom-32 left-1/2 -translate-x-1/2 pointer-events-none"
+          className="ghost-hunt-ui__emf absolute left-1/2 -translate-x-1/2 pointer-events-none bottom-28 sm:bottom-32"
           style={{ zIndex: 150 }}
         >
-          <div className="bg-blue-950/90 backdrop-blur-md rounded-lg px-4 py-3 border border-blue-500/50">
-            <div className="flex items-center gap-3">
-              <Radio className="h-5 w-5 text-blue-400 animate-pulse" />
+          <div className="bg-blue-950/90 backdrop-blur-md rounded-lg px-3 py-2 sm:px-4 sm:py-3 border border-blue-500/50">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Radio className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400 animate-pulse" />
               <div className="flex flex-col">
-                <span className="text-[10px] uppercase text-blue-300">EMF Reading</span>
-                <span className={cn("font-mono font-bold", emfReading.color)}>
+                <span className="text-[8px] sm:text-[10px] uppercase text-blue-300">EMF</span>
+                <span className={cn("font-mono font-bold text-sm sm:text-base", emfReading.color)}>
                   {emfReading.label}
                 </span>
               </div>
@@ -322,10 +317,10 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
                   <div
                     key={level}
                     className={cn(
-                      "w-2 h-4 rounded-sm transition-all",
+                      "w-1.5 h-3 sm:w-2 sm:h-4 rounded-sm transition-all",
                       level <= emfReading.level
                         ? level <= 2 ? "bg-blue-400" : level <= 4 ? "bg-orange-400" : "bg-red-500"
-                        : "bg-gray-700"
+                        : "bg-muted"
                     )}
                   />
                 ))}

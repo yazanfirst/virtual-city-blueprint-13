@@ -128,35 +128,36 @@ export default function MirrorWorldUI() {
 
   return (
     <>
-      <div className="absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-2" style={{ zIndex: 150 }}>
+      {/* Top HUD - Timer and Messages */}
+      <div className="absolute top-12 sm:top-14 left-1/2 -translate-x-1/2 pointer-events-none flex flex-col items-center gap-1.5 sm:gap-2" style={{ zIndex: 150 }}>
         <div className={cn(
-          'flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md border',
+          'flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg backdrop-blur-md border',
           timeRemaining <= 10 ? 'bg-red-950/90 border-red-500/50 animate-pulse' : 'bg-background/80 border-border/50'
         )}>
-          <Clock className={cn('h-4 w-4', timeRemaining <= 10 ? 'text-red-400' : 'text-muted-foreground')} />
-          <span className={cn('font-mono text-lg font-bold', timeRemaining <= 10 ? 'text-red-400' : 'text-foreground')}>
+          <Clock className={cn('h-3.5 w-3.5 sm:h-4 sm:w-4', timeRemaining <= 10 ? 'text-red-400' : 'text-muted-foreground')} />
+          <span className={cn('font-mono text-base sm:text-lg font-bold', timeRemaining <= 10 ? 'text-red-400' : 'text-foreground')}>
             {formatTime(timeRemaining)}
           </span>
         </div>
         {toastMessage && (
-          <div className="max-w-md text-center bg-emerald-500/95 border border-emerald-200/80 text-white text-base font-bold px-5 py-3 rounded-lg shadow-lg shadow-emerald-500/40">
+          <div className="max-w-[280px] sm:max-w-md text-center bg-emerald-500/95 border border-emerald-200/80 text-white text-sm sm:text-base font-bold px-4 py-2 sm:px-5 sm:py-3 rounded-lg shadow-lg shadow-emerald-500/40">
             {toastMessage}
           </div>
         )}
         {!toastMessage && promptMessage && (
-          <div className="max-w-md text-center bg-purple-900/90 border border-purple-300/70 text-white text-base font-bold px-5 py-3 rounded-lg shadow-lg shadow-purple-500/40">
+          <div className="max-w-[280px] sm:max-w-md text-center bg-purple-900/90 border border-purple-300/70 text-white text-sm sm:text-base font-bold px-4 py-2 sm:px-5 sm:py-3 rounded-lg shadow-lg shadow-purple-500/40">
             {promptMessage}
           </div>
         )}
         {showHint && (
-          <div className="max-w-xs text-center bg-purple-950/80 border border-purple-500/40 text-purple-100 text-xs px-3 py-2 rounded-lg backdrop-blur-md">
+          <div className="max-w-[240px] sm:max-w-xs text-center bg-purple-950/80 border border-purple-500/40 text-purple-100 text-[10px] sm:text-xs px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg backdrop-blur-md">
             Follow the purple dots on the map to rooftop anchors. Look for glowing ladder panels and use Climb, then touch anchors to collect them.
           </div>
         )}
         {canClimb && (
           <button
             type="button"
-            className="pointer-events-auto rounded-full bg-purple-500/90 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-purple-500/40 transition hover:bg-purple-400"
+            className="pointer-events-auto rounded-full bg-purple-500/90 px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-purple-500/40 transition hover:bg-purple-400 active:scale-95 touch-manipulation"
             onClick={() => setPlayerPosition(canClimb.top)}
           >
             Climb
@@ -165,7 +166,7 @@ export default function MirrorWorldUI() {
         {isOnRoof && (
           <button
             type="button"
-            className="pointer-events-auto rounded-full bg-slate-900/80 px-4 py-2 text-xs font-semibold text-white shadow-lg transition hover:bg-slate-800"
+            className="pointer-events-auto rounded-full bg-slate-900/80 px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg transition hover:bg-slate-800 active:scale-95 touch-manipulation"
             onClick={() => {
               const [px, , pz] = playerPosition;
               let nearest = LADDER_POSITIONS[0];
@@ -205,63 +206,65 @@ export default function MirrorWorldUI() {
         </div>
       )}
 
-      <div className="absolute top-28 left-2 md:left-4 flex flex-col gap-2 pointer-events-none" style={{ zIndex: 150 }}>
-        <div className="flex items-center gap-1 bg-background/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50">
+      {/* Left side stats - compact on mobile */}
+      <div className="absolute top-24 sm:top-28 left-1 sm:left-2 flex flex-col gap-1.5 sm:gap-2 pointer-events-none" style={{ zIndex: 150 }}>
+        <div className="flex items-center gap-0.5 bg-background/80 backdrop-blur-md rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-border/50">
           {Array.from({ length: 2 }).map((_, i) => (
             <Heart
               key={i}
-              className={cn('h-4 w-4', i < playerLives ? 'text-red-500 fill-red-500' : 'text-muted-foreground')}
+              className={cn('h-3.5 w-3.5 sm:h-4 sm:w-4', i < playerLives ? 'text-red-500 fill-red-500' : 'text-muted-foreground')}
             />
           ))}
         </div>
-        <div className="bg-background/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50">
-          <div className="flex items-center gap-2 text-xs">
-            <Sparkles className="h-4 w-4 text-purple-300" />
-            <span className="text-muted-foreground">Anchors:</span>
+        <div className="bg-background/80 backdrop-blur-md rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-border/50">
+          <div className="flex items-center gap-1.5 text-[10px] sm:text-xs">
+            <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-300" />
             <span className="font-bold text-foreground">
               {collectedCount}/{requiredAnchors}
             </span>
           </div>
         </div>
         {distanceToShadow < 6 && (
-          <div className="bg-red-950/90 rounded-lg px-3 py-2 border border-red-500/60 text-xs text-red-200 flex items-center gap-2 animate-pulse">
+          <div className="bg-red-950/90 rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-red-500/60 text-[10px] sm:text-xs text-red-200 flex items-center gap-1 sm:gap-2 animate-pulse">
             <AlertTriangle className="h-3 w-3" />
-            Shadow closing in!
+            Shadow!
           </div>
         )}
       </div>
 
-      <div className="absolute top-28 right-2 md:right-4 pointer-events-none flex flex-col gap-3" style={{ zIndex: 150 }}>
-        <div className="bg-background/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50 flex items-center gap-2 text-xs">
-          <Navigation className="h-4 w-4 text-purple-300" style={{ transform: `rotate(${shadowAngle}deg)` }} />
+      {/* Right side - Map (hidden on very small mobile, smaller on mobile) */}
+      <div className="absolute top-24 sm:top-28 right-1 sm:right-2 pointer-events-none flex flex-col gap-2 sm:gap-3" style={{ zIndex: 150 }}>
+        <div className="bg-background/80 backdrop-blur-md rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-border/50 flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs">
+          <Navigation className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-300" style={{ transform: `rotate(${shadowAngle}deg)` }} />
           <span className="text-muted-foreground">Shadow</span>
         </div>
         {promptMessage && (
-          <div className="mt-2 bg-purple-950/90 rounded-lg px-3 py-2 border border-purple-500/50 text-xs text-purple-100 flex flex-col gap-1">
-            <span>{promptMessage}</span>
+          <div className="mt-1 bg-purple-950/90 rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-purple-500/50 text-[10px] sm:text-xs text-purple-100 flex flex-col gap-0.5">
+            <span className="line-clamp-2">{promptMessage}</span>
             {promptKey && (
               <span className="font-bold text-purple-200">Press {promptKey}</span>
             )}
           </div>
         )}
-        <div className="bg-background/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50 text-xs text-muted-foreground">
-          <div className="flex items-center justify-between text-[0.7rem] uppercase tracking-wide text-purple-300">
+        {/* Mini-map - smaller on mobile */}
+        <div className="bg-background/80 backdrop-blur-md rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-border/50 text-[10px] sm:text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-[0.6rem] sm:text-[0.7rem] uppercase tracking-wide text-purple-300">
             <span>Map</span>
             <span>{requiredAnchors - collectedCount} left</span>
           </div>
           <div
-            className="relative mt-2 rounded-md border border-purple-500/40 bg-gradient-to-br from-purple-950/70 to-black/60"
-            style={{ width: MAP_SIZE, height: MAP_SIZE }}
+            className="relative mt-1.5 sm:mt-2 rounded-md border border-purple-500/40 bg-gradient-to-br from-purple-950/70 to-black/60"
+            style={{ width: 100, height: 100 }}
           >
-            <div className="absolute inset-0 opacity-60" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)', backgroundSize: '22px 22px' }} />
+            <div className="absolute inset-0 opacity-60" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
             {mapAnchors.map((anchor) => (
               <div
                 key={anchor.id}
                 className={cn(
-                  'absolute h-2 w-2 rounded-full border',
+                  'absolute h-1.5 w-1.5 rounded-full border',
                   anchor.isCollected
                     ? 'bg-muted-foreground/50 border-muted-foreground/60'
-                    : 'bg-purple-200 border-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.7)]'
+                    : 'bg-purple-200 border-purple-400 shadow-[0_0_6px_rgba(168,85,247,0.7)]'
                 )}
                 style={{ left: `${anchor.left}%`, top: `${anchor.top}%`, transform: 'translate(-50%, -50%)' }}
               />
@@ -274,30 +277,26 @@ export default function MirrorWorldUI() {
                   left: `${ladder.left}%`,
                   top: `${ladder.top}%`,
                   transform: 'translate(-50%, -50%)',
-                  borderLeft: '4px solid transparent',
-                  borderRight: '4px solid transparent',
-                  borderBottom: '7px solid rgba(196, 181, 253, 0.95)',
-                  filter: 'drop-shadow(0 0 4px rgba(196, 181, 253, 0.9))',
+                  borderLeft: '3px solid transparent',
+                  borderRight: '3px solid transparent',
+                  borderBottom: '5px solid rgba(196, 181, 253, 0.95)',
+                  filter: 'drop-shadow(0 0 3px rgba(196, 181, 253, 0.9))',
                 }}
               />
             ))}
             <div
-              className="absolute h-2.5 w-2.5 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(52,211,153,0.9)]"
+              className="absolute h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
               style={{ left: `${mapPlayer.left}%`, top: `${mapPlayer.top}%`, transform: 'translate(-50%, -50%)' }}
             />
           </div>
-          <div className="mt-2 flex items-center gap-3 text-[0.7rem] text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-full bg-emerald-300" />
+          <div className="mt-1.5 flex items-center gap-2 text-[0.6rem] sm:text-[0.7rem] text-muted-foreground">
+            <span className="flex items-center gap-0.5">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-300" />
               You
             </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-full bg-purple-200" />
+            <span className="flex items-center gap-0.5">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-purple-200" />
               Anchor
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-sm bg-purple-200" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }} />
-              Ladder
             </span>
           </div>
         </div>
