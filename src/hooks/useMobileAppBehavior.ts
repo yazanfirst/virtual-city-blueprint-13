@@ -34,19 +34,28 @@ export function useMobileAppBehavior(isGameActive: boolean = false) {
   }, [updateViewportHeight]);
 
   // Prevent zoom gestures and pull-to-refresh when game is active
+  // IMPORTANT: Only block gestures that aren't part of game controls (pinch zoom, double-tap)
+  // Single-finger drags are used for camera rotation and must NOT be blocked
   useEffect(() => {
     if (!isMobile || !isGameActive) return;
 
-    // Prevent pinch zoom
+    // Only prevent pinch zoom (2+ fingers) - single finger drags are for camera rotation
     const handleTouchMove = (e: TouchEvent) => {
+      // Only block multi-touch (pinch zoom) - NOT single touch (camera rotation)
       if (e.touches.length > 1) {
         e.preventDefault();
       }
+      // Do NOT prevent default for single-touch moves - needed for camera rotation
     };
 
-    // Prevent double-tap zoom
+    // Prevent double-tap zoom - but only on non-interactive elements
     let lastTouchEnd = 0;
     const handleTouchEnd = (e: TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      // Allow double-tap on buttons and interactive elements
+      if (target?.closest('button, [role="button"], a, input, [data-control-ignore]')) {
+        return;
+      }
       const now = Date.now();
       if (now - lastTouchEnd <= 300) {
         e.preventDefault();
@@ -54,25 +63,26 @@ export function useMobileAppBehavior(isGameActive: boolean = false) {
       lastTouchEnd = now;
     };
 
-    // Prevent pull-to-refresh
+    // Prevent pull-to-refresh only at very top of screen
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 1) {
         const touch = e.touches[0];
-        // If touching near top of screen, prevent pull-to-refresh
-        if (touch.clientY < 50 && window.scrollY === 0) {
+        // Only prevent if touching very close to top AND scrolled to top
+        if (touch.clientY < 30 && window.scrollY === 0) {
           e.preventDefault();
         }
       }
     };
 
-    // Prevent gesture events (Safari)
+    // Prevent Safari gesture events (pinch/rotate)
     const handleGestureStart = (e: Event) => {
       e.preventDefault();
     };
 
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd, { passive: false });
-    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    // Use capture phase with lower priority so game controls can handle first
+    document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: false });
+    document.addEventListener('touchend', handleTouchEnd, { passive: false, capture: false });
+    document.addEventListener('touchstart', handleTouchStart, { passive: false, capture: false });
     document.addEventListener('gesturestart', handleGestureStart);
     document.addEventListener('gesturechange', handleGestureStart);
 
