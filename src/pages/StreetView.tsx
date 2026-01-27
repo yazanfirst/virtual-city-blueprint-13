@@ -536,6 +536,90 @@ const StreetView = () => {
     handleExitGame();
     navigate("/city-map");
   };
+
+  // Context-aware back behavior:
+  // - If inside a shop or mission: step back to the previous in-game state
+  // - Otherwise: go back to previous route (fallback to /city-map)
+  const navigateBackRoute = () => {
+    // If user opened the street directly (no history), fallback to city map
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/city-map");
+    }
+  };
+
+  const handleSmartBack = () => {
+    // Close transient overlays first
+    if (showJumpScare) {
+      setShowJumpScare(false);
+      return;
+    }
+    if (showFailedModal) {
+      setShowFailedModal(false);
+      return;
+    }
+    if (showQuestionModal) {
+      setShowQuestionModal(false);
+      return;
+    }
+    if (showGhostHuntFailed) {
+      setShowGhostHuntFailed(false);
+      resetToSafeSpawn();
+      ghostHunt.resetMission();
+      return;
+    }
+    if (showGhostHuntComplete) {
+      setShowGhostHuntComplete(false);
+      resetToSafeSpawn();
+      ghostHunt.resetMission();
+      return;
+    }
+
+    // Step out of shop/interactions before leaving the game
+    if (isInsideShop) {
+      handleExitShop();
+      return;
+    }
+    if (showShopModal) {
+      setShowShopModal(false);
+      return;
+    }
+    if (show2DMap) {
+      setShow2DMap(false);
+      return;
+    }
+    if (showMissions) {
+      setShowMissions(false);
+      return;
+    }
+
+    // If any mission is active, exit back to explore mode
+    if (mirrorWorld.isActive && mirrorWorld.phase !== 'inactive') {
+      mirrorWorld.resetMission();
+      resetToSafeSpawn();
+      setIsInsideShop(false);
+      return;
+    }
+    if (ghostHunt.isActive && ghostHunt.phase !== 'inactive') {
+      ghostHunt.resetMission();
+      resetToSafeSpawn();
+      return;
+    }
+    if (mission.isActive && mission.phase !== 'inactive') {
+      handleExitMission();
+      return;
+    }
+
+    // If we're in fullscreen game mode, go back to the street page (pause/minimize)
+    if (isMaximized) {
+      handlePauseGame();
+      return;
+    }
+
+    // Otherwise: go back in navigation history
+    navigateBackRoute();
+  };
   
   const handleQuestionAnswer = (answer: string) => {
     const correct = mission.answerQuestion(answer);
@@ -743,12 +827,13 @@ const StreetView = () => {
                 variant="ghost"
                 size="icon"
                 className="bg-background/80 backdrop-blur-md h-8 w-8 md:h-10 md:w-10"
-                onClick={(event) => {
+                onPointerDown={(event) => {
                   event.stopPropagation();
-                  handleExitToCityMap();
+                  handleSmartBack();
                 }}
                 type="button"
                 aria-label="Back to city map"
+                data-control-ignore="true"
               >
                 <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
               </Button>
@@ -1300,12 +1385,13 @@ const StreetView = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={(event) => {
+            onPointerDown={(event) => {
               event.stopPropagation();
-              handleExitToCityMap();
+              handleSmartBack();
             }}
             type="button"
             aria-label="Back to city map"
+            data-control-ignore="true"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>

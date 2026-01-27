@@ -214,6 +214,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
             e.stopPropagation();
             toggleEMF();
           }}
+          data-control-ignore="true"
           className={cn(
             "flex flex-col items-center gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
             equipment.emfActive
@@ -242,6 +243,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
             e.stopPropagation();
             useFlashlight();
           }}
+          data-control-ignore="true"
           className={cn(
             "flex flex-col items-center gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
             equipment.flashlightActive
@@ -271,6 +273,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
             e.stopPropagation();
             fireGhostTrap();
           }}
+          data-control-ignore="true"
           className={cn(
             "flex flex-col items-center gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
             equipment.trapActive
