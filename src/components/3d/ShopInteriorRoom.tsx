@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, OrbitControls, Text } from "@react-three/drei";
 import * as THREE from "three";
@@ -6,6 +6,7 @@ import { ShopBranding } from "@/hooks/use3DShops";
 import { Button } from "@/components/ui/button";
 import { ShopItem, useShopItems } from "@/hooks/useShopItems";
 import { X, ExternalLink, ChevronLeft, ChevronRight, Package, ShoppingBag } from "lucide-react";
+import { useGhostHuntStore } from "@/stores/ghostHuntStore";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,72 @@ interface ShopInteriorRoomProps {
   onExit: () => void;
   isMissionMode?: boolean; // When true, show mission-specific wall instructions
 }
+
+interface RechargeTypesInShop {
+  emf: boolean;
+  flashlight: boolean;
+  trap: boolean;
+}
+
+interface RechargePickupsProps {
+  rechargeTypesInShop: RechargeTypesInShop;
+  rechargeCollected: { emf: boolean; flashlight: boolean; trap: boolean };
+  onCollectRecharge: (type: 'emf' | 'flashlight' | 'trap') => void;
+}
+
+// Recharge pickup devices rendered inside shops
+const RechargePickups = ({ rechargeTypesInShop, rechargeCollected, onCollectRecharge }: RechargePickupsProps) => {
+  const devices = [
+    { type: 'emf' as const, label: 'EMF Cell', position: [3.2, 0.6, 2.8] as [number, number, number], color: '#10b981' },
+    { type: 'flashlight' as const, label: 'Flash Battery', position: [3.9, 0.6, 2.55] as [number, number, number], color: '#fbbf24' },
+    { type: 'trap' as const, label: 'Trap Charge', position: [3.5, 0.6, 2.25] as [number, number, number], color: '#8b5cf6' },
+  ];
+
+  return (
+    <group>
+      {devices.map((device) => {
+        // Only show if this shop has this type AND not already collected
+        if (!rechargeTypesInShop[device.type]) return null;
+        if (rechargeCollected[device.type]) return null;
+        return (
+          <group key={device.type} position={device.position}>
+            <mesh
+              onPointerDown={(event) => {
+                event.stopPropagation();
+                onCollectRecharge(device.type);
+              }}
+            >
+              <cylinderGeometry args={[0.22, 0.22, 0.45, 16]} />
+              <meshStandardMaterial color={device.color} emissive={device.color} emissiveIntensity={0.6} />
+            </mesh>
+            <mesh position={[0, 0.35, 0]}>
+              <sphereGeometry args={[0.16, 12, 12]} />
+              <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.8} />
+            </mesh>
+            <Html
+              transform
+              position={[0, 0.85, 0]}
+              distanceFactor={6}
+              className="pointer-events-auto"
+            >
+              <button
+                type="button"
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                  onCollectRecharge(device.type);
+                }}
+                className="px-2 py-1 rounded-md bg-black/70 text-white text-[10px] uppercase tracking-wide border border-white/30"
+              >
+                {device.label}
+              </button>
+            </Html>
+            <pointLight position={[0, 0.35, 0]} intensity={0.8} distance={3} color={device.color} />
+          </group>
+        );
+      })}
+    </group>
+  );
+};
 
 interface FrameSpotConfig {
   slot: number;
@@ -244,16 +311,35 @@ const InteriorScene = ({
   selectedSlot,
   onSelectItem,
   isMissionMode = false,
+  showRechargePickup,
+  rechargeTypesInShop,
+  rechargeCollected,
+  onCollectRecharge,
+  onSceneReady,
 }: {
   shop: ShopBranding;
   items: (ShopItem | undefined)[];
   selectedSlot: number | null;
   onSelectItem: (slot: number) => void;
   isMissionMode?: boolean;
+  showRechargePickup: boolean;
+  rechargeTypesInShop: RechargeTypesInShop;
+  rechargeCollected: { emf: boolean; flashlight: boolean; trap: boolean };
+  onCollectRecharge: (type: 'emf' | 'flashlight' | 'trap') => void;
+  onSceneReady: () => void;
 }) => {
   const brickTexture = useBrickTexture();
   const accent = shop.accentColor || "#10B981";
   const primary = shop.primaryColor || "#3B82F6";
+
+  const hasRenderedRef = useRef(false);
+
+  useFrame(() => {
+    if (!hasRenderedRef.current) {
+      hasRenderedRef.current = true;
+      onSceneReady();
+    }
+  });
 
   return (
     <group>
@@ -438,6 +524,14 @@ const InteriorScene = ({
           decay={2}
         />
       </group>
+
+      {showRechargePickup && (
+        <RechargePickups
+          rechargeTypesInShop={rechargeTypesInShop}
+          rechargeCollected={rechargeCollected}
+          onCollectRecharge={onCollectRecharge}
+        />
+      )}
     </group>
   );
 };
@@ -477,7 +571,19 @@ function RoomCameraClamp({
 
 const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorRoomProps) => {
   const { data: items = [], isLoading } = useShopItems(shop.shopId);
+  const {
+    isActive: ghostHuntActive,
+    rechargeShopIds,
+    rechargeCollected,
+    collectRechargePickup,
+  } = useGhostHuntStore();
   const controlsRef = useRef<any>(null);
+  const [canvasReady, setCanvasReady] = useState(false);
+  const [sceneReady, setSceneReady] = useState(false);
+  const [showFallback, setShowFallback] = useState(false);
+  const [forceFallback, setForceFallback] = useState(false);
+  const [webglSupported, setWebglSupported] = useState(true);
+  const [retryNonce, setRetryNonce] = useState(0);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -495,6 +601,60 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
   const primary = shop.primaryColor || "#3B82F6";
   const selectedItem = selectedSlot !== null ? wallItems[selectedSlot] : undefined;
   const filledSlots = wallItems.filter(Boolean);
+
+  // Check which recharge types are available in THIS shop
+  const rechargeTypesInShop = {
+    emf: ghostHuntActive && shop.shopId === rechargeShopIds.emf,
+    flashlight: ghostHuntActive && shop.shopId === rechargeShopIds.flashlight,
+    trap: ghostHuntActive && shop.shopId === rechargeShopIds.trap,
+  };
+  const showRechargePickup = rechargeTypesInShop.emf || rechargeTypesInShop.flashlight || rechargeTypesInShop.trap;
+
+  useEffect(() => {
+    setCanvasReady(false);
+    setSceneReady(false);
+    setShowFallback(false);
+    setForceFallback(false);
+    setRetryNonce(0);
+  }, [shop.shopId]);
+
+  useEffect(() => {
+    if (showRechargePickup) {
+      setForceFallback(true);
+    }
+  }, [showRechargePickup]);
+
+  useEffect(() => {
+    const testCanvas = document.createElement('canvas');
+    const gl =
+      testCanvas.getContext('webgl2') ||
+      testCanvas.getContext('webgl') ||
+      testCanvas.getContext('experimental-webgl');
+    const supported = Boolean(gl);
+    setWebglSupported(supported);
+    if (!supported) {
+      setShowFallback(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showFallback || !webglSupported) return;
+    const timeout = setTimeout(() => {
+      if (!sceneReady) {
+        setShowFallback(true);
+      }
+    }, 2000);
+    return () => clearTimeout(timeout);
+  }, [sceneReady, showFallback, webglSupported]);
+
+  const isFallbackActive = showFallback || forceFallback;
+  const canRetry3d = showFallback && webglSupported;
+
+  const handleCollectRecharge = (type: 'emf' | 'flashlight' | 'trap') => {
+    if (!showRechargePickup || rechargeCollected[type]) return;
+    collectRechargePickup(type);
+    console.debug('[GhostHunt] Recharge pickup collected in shop:', shop.shopId, type);
+  };
   
   const handleFrameClick = (slot: number) => {
     const item = wallItems[slot];
@@ -544,6 +704,27 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
         </div>
         
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button
+            type="button"
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              if (canRetry3d) {
+                setCanvasReady(false);
+                setSceneReady(false);
+                setShowFallback(false);
+                setForceFallback(false);
+                setRetryNonce((prev) => prev + 1);
+                return;
+              }
+              if (!showFallback) {
+                setForceFallback((prev) => !prev);
+              }
+            }}
+            className="h-10 px-3 sm:px-4 rounded-md flex items-center justify-center gap-1.5 bg-transparent border border-border text-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-accent"
+            data-control-ignore="true"
+          >
+            {canRetry3d ? 'Retry 3D' : isFallbackActive ? '3D View' : '2D View'}
+          </button>
           {shop.externalLink && (
             <a 
               href={shop.externalLink} 
@@ -573,38 +754,117 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
       </div>
 
       {/* 3D Canvas */}
-      <Canvas 
-        camera={{ position: [0, 2.2, 4.2], fov: 65 }} 
-        className="flex-1 touch-none"
-        gl={{ antialias: true, powerPreference: "high-performance" }}
-      >
-        <color attach="background" args={["#e8dcc8"]} />
-        <fog attach="fog" args={["#e8dcc8", 15, 30]} />
-        <React.Suspense fallback={null}>
-          <InteriorScene 
-            shop={shop} 
-            items={wallItems} 
-            selectedSlot={selectedSlot}
-            onSelectItem={handleFrameClick}
-            isMissionMode={isMissionMode}
+      {!isFallbackActive ? (
+        <Canvas 
+          key={`${shop.shopId}-${retryNonce}`}
+          camera={{ position: [0, 2.2, 4.2], fov: 65 }} 
+          className="flex-1 touch-none"
+          gl={{ antialias: true, powerPreference: "high-performance" }}
+          onCreated={() => {
+            requestAnimationFrame(() => setCanvasReady(true));
+          }}
+        >
+          <color attach="background" args={["#e8dcc8"]} />
+          <fog attach="fog" args={["#e8dcc8", 15, 30]} />
+          <React.Suspense fallback={null}>
+            <InteriorScene
+              shop={shop}
+              items={wallItems}
+              selectedSlot={selectedSlot}
+              onSelectItem={handleFrameClick}
+              isMissionMode={isMissionMode}
+              showRechargePickup={showRechargePickup}
+              rechargeTypesInShop={rechargeTypesInShop}
+              rechargeCollected={rechargeCollected}
+              onCollectRecharge={handleCollectRecharge}
+              onSceneReady={() => setSceneReady(true)}
+            />
+          </React.Suspense>
+
+          <RoomCameraClamp controlsRef={controlsRef} />
+
+          <OrbitControls
+            ref={controlsRef}
+            enablePan={false}
+            enableDamping
+            dampingFactor={0.08}
+            maxDistance={4.5}
+            minDistance={1.6}
+            target={[0, 2, 0]}
+            maxPolarAngle={Math.PI / 2.05}
+            minPolarAngle={Math.PI / 5}
+            rotateSpeed={0.5}
           />
-        </React.Suspense>
+        </Canvas>
+      ) : (
+        <div className="flex-1 overflow-auto bg-background px-4 pt-20 pb-28">
+          <div className="mx-auto max-w-xl">
+            <div className="mb-4 rounded-lg border border-border/60 bg-card/90 px-4 py-3 text-xs text-muted-foreground shadow-lg">
+              3D view isn’t available right now. Browse the shop items below.
+            </div>
+            {filledSlots.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {filledSlots.map((item) => (
+                  <button
+                    key={item?.id ?? item?.title}
+                    type="button"
+                    onPointerDown={(event) => {
+                      event.stopPropagation();
+                      if (!item) return;
+                      const slotIndex = wallItems.findIndex((slot) => slot?.id === item.id);
+                      if (slotIndex >= 0) {
+                        handleFrameClick(slotIndex);
+                      }
+                    }}
+                    className="rounded-lg border border-border/60 bg-card/80 p-2 text-left text-[10px] text-muted-foreground shadow-sm hover:bg-card"
+                  >
+                    <div className="mb-2 aspect-[4/3] w-full overflow-hidden rounded-md bg-muted/40 flex items-center justify-center">
+                      {item?.image_url ? (
+                        <img src={item.image_url} alt={item.title} className="h-full w-full object-contain" />
+                      ) : (
+                        <Package className="h-6 w-6 text-muted-foreground/40" />
+                      )}
+                    </div>
+                    <div className="font-medium text-foreground truncate">{item?.title ?? 'Item'}</div>
+                    {item?.price != null && (
+                      <div className="text-[10px] text-primary">${Number(item.price).toFixed(2)}</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border/60 bg-card/80 p-6 text-center text-xs text-muted-foreground">
+                No items on display yet.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
-        <RoomCameraClamp controlsRef={controlsRef} />
+      {(!isFallbackActive && (!canvasReady || !sceneReady)) && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/90">
+          <div className="rounded-lg border border-border/60 bg-card/90 px-4 py-3 text-center text-xs text-muted-foreground shadow-lg">
+            Loading shop interior...
+          </div>
+        </div>
+      )}
 
-        <OrbitControls
-          ref={controlsRef}
-          enablePan={false}
-          enableDamping
-          dampingFactor={0.08}
-          maxDistance={4.5}
-          minDistance={1.6}
-          target={[0, 2, 0]}
-          maxPolarAngle={Math.PI / 2.05}
-          minPolarAngle={Math.PI / 5}
-          rotateSpeed={0.5}
-        />
-      </Canvas>
+      {isFallbackActive && (
+        <div className="absolute inset-x-0 bottom-6 z-10 flex items-center justify-center px-6">
+          <button
+            type="button"
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              onExit();
+            }}
+            className="h-10 px-4 rounded-md flex items-center justify-center gap-2 bg-secondary text-secondary-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-secondary/80"
+            data-control-ignore="true"
+          >
+            <X className="h-4 w-4" />
+            Exit Shop
+          </button>
+        </div>
+      )}
 
       {/* Bottom hint panel */}
       <div className="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 landscape:p-1.5 bg-gradient-to-t from-background via-background/95 to-transparent">

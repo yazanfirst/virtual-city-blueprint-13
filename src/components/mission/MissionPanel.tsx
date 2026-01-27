@@ -29,10 +29,13 @@ export default function MissionPanel({
     activateMission,
     resetMission,
     recentlyUsedShopIds,
+    level,
+    unlockedLevel,
+    maxLevel,
+    setLevel,
   } = useMissionStore();
   
   const [canActivate, setCanActivate] = useState(false);
-  
   // Check if mission can be activated
   useEffect(() => {
     const eligible = selectMissionTargetShop(shops, shopItemsMap, recentlyUsedShopIds);
@@ -71,12 +74,35 @@ export default function MissionPanel({
             </h3>
             <p className={`text-muted-foreground ${isCompact ? 'text-[10px]' : 'text-xs'}`}>Night Escape</p>
           </div>
+          <div className="ml-auto flex items-center gap-1 px-2 py-1 rounded bg-primary/20 border border-primary/30">
+            <Target className="h-3 w-3 text-primary" />
+            <span className="text-[10px] text-primary font-bold">LVL {level}/{maxLevel}</span>
+          </div>
         </div>
         
         <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
           Escape the zombies, find the target shop, and remember everything you see. Trust your memory — you may only get one chance.
           Finish before the countdown reaches zero.
         </p>
+        <div className={`bg-emerald-950/20 rounded-lg p-2 mb-3 border border-emerald-500/20 ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span>Unlocked Level {unlockedLevel}/{maxLevel}</span>
+            <span className="text-emerald-300 font-bold">ESCAPE</span>
+          </div>
+        </div>
+        {unlockedLevel > level && (
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              setLevel(unlockedLevel);
+            }}
+            className="w-full mb-2 h-9 rounded-md flex items-center justify-center border border-emerald-500/40 text-emerald-100 hover:bg-emerald-900/40 touch-manipulation select-none active:scale-[0.98] transition-all text-xs font-semibold"
+            data-control-ignore="true"
+          >
+            Switch to Level {unlockedLevel}
+          </button>
+        )}
         {disableActivation && (
           <p className={`text-xs text-yellow-300/90 mb-3 ${isCompact ? '' : 'md:text-sm'}`}>
             Finish your current mission to start another.
@@ -167,27 +193,31 @@ export default function MissionPanel({
   }
   
   if (phase === 'completed') {
+    const allComplete = level >= maxLevel;
     return (
       <div className={`bg-green-950/90 backdrop-blur-md border border-green-500/50 rounded-xl ${isCompact ? 'p-3' : 'p-4'} shadow-xl`}>
         <div className="flex items-center gap-2 mb-2">
           <CheckCircle className="h-5 w-5 text-green-400" />
           <span className={`font-display font-bold uppercase tracking-wider text-green-400 ${isCompact ? 'text-xs' : 'text-sm'}`}>
-            MISSION COMPLETE
+            {allComplete ? 'ALL LEVELS COMPLETE' : 'MISSION COMPLETE'}
           </span>
         </div>
         <p className={`text-green-200 ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
-          Your memory served you well. The zombies have vanished.
+          {allComplete
+            ? 'You finished every Zombie Escape level.'
+            : 'Your memory served you well. The zombies have vanished.'}
         </p>
         <button
           type="button"
           onPointerDown={(e) => {
             e.stopPropagation();
             handleRetry();
+            setLevel(1);
           }}
           className="w-full h-10 rounded-md flex items-center justify-center border border-green-500/50 text-green-300 hover:bg-green-900/50 touch-manipulation select-none active:scale-[0.98] transition-all text-sm font-medium"
           data-control-ignore="true"
         >
-          Play Again
+          {allComplete ? 'Restart from Level 1' : 'Play Again'}
         </button>
       </div>
     );

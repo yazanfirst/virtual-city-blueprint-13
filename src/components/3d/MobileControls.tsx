@@ -37,6 +37,15 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
       return Math.sqrt(dx * dx + dy * dy) <= JOYSTICK_RADIUS;
     };
 
+    const isInteractiveTarget = (target: HTMLElement | null) => {
+      if (!target) return false;
+      return Boolean(
+        target.closest(
+          'button, [role="button"], a, input, textarea, select, [data-control-ignore="true"]'
+        )
+      );
+    };
+
     const handleTouchStart = (e: TouchEvent) => {
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
@@ -56,9 +65,11 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
           continue;
         }
 
-        // Start camera tracking only when touching the 3D canvas (so UI remains interactive)
-        const isCanvasTouch = touchTarget?.closest('canvas');
-        if (isCanvasTouch && cameraTouchIdRef.current === null) {
+        // Start camera tracking when touching NON-interactive areas.
+        // (Some HUD overlays may sit above the canvas; relying on `closest('canvas')`
+        // can fail on mobile. We instead exclude interactive UI.)
+        const isInteractive = isJumpButtonTouch || isControlIgnored || isInteractiveTarget(touchTarget);
+        if (!isInteractive && cameraTouchIdRef.current === null) {
           cameraTouchIdRef.current = identifier;
           lastCameraPosRef.current = { x: clientX, y: clientY };
           cameraDragActiveRef.current = false;

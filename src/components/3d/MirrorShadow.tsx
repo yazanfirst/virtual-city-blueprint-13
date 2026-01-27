@@ -6,7 +6,6 @@ import { usePlayerStore } from '@/stores/playerStore';
 import LowPolyCharacter from './LowPolyCharacter';
 
 const BOUNDS = 70;
-const COLLISION_DISTANCE = 2;
 export default function MirrorShadow() {
   const meshRef = useRef<THREE.Group>(null);
   const lastPlayerPos = useRef<[number, number, number] | null>(null);
@@ -16,6 +15,7 @@ export default function MirrorShadow() {
   const {
     shadowPosition,
     shadowSpeed,
+    collisionDistance,
     isProtected,
     phase,
     updateShadowPosition,
@@ -65,7 +65,7 @@ export default function MirrorShadow() {
     const distZ = playerPosition[2] - nextZ;
     const distanceToPlayer = Math.sqrt(distX * distX + distZ * distZ);
 
-    if (distanceToPlayer < COLLISION_DISTANCE && !isProtected) {
+    if (distanceToPlayer < collisionDistance && !isProtected) {
       hitByShadow();
     }
   });

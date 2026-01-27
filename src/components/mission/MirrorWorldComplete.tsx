@@ -4,9 +4,18 @@ import { useMirrorWorldStore } from '@/stores/mirrorWorldStore';
 interface MirrorWorldCompleteProps {
   isOpen: boolean;
   onContinue: () => void;
+  onExit: () => void;
+  nextLevel: number;
+  currentLevel: number;
 }
 
-export default function MirrorWorldComplete({ isOpen, onContinue }: MirrorWorldCompleteProps) {
+export default function MirrorWorldComplete({
+  isOpen,
+  onContinue,
+  onExit,
+  nextLevel,
+  currentLevel,
+}: MirrorWorldCompleteProps) {
   const { timeRemaining } = useMirrorWorldStore();
 
   if (!isOpen) return null;
@@ -27,16 +36,28 @@ export default function MirrorWorldComplete({ isOpen, onContinue }: MirrorWorldC
           <Trophy className="h-4 w-4 text-purple-300" />
           Time bonus: {Math.floor(timeRemaining * 2)}
         </div>
-        <button
-          type="button"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            onContinue();
-          }}
-          className="w-full py-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold uppercase tracking-wider transition-colors touch-manipulation active:scale-[0.98]"
-        >
-          Continue
-        </button>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onContinue();
+            }}
+            className="w-full py-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold uppercase tracking-wider transition-colors touch-manipulation active:scale-[0.98]"
+          >
+            {nextLevel > currentLevel ? `Continue to Level ${nextLevel}` : `Replay Level ${currentLevel}`}
+          </button>
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onExit();
+            }}
+            className="w-full py-2 rounded-lg border border-purple-400/60 text-purple-100 hover:bg-purple-950/60 transition-colors touch-manipulation active:scale-[0.98]"
+          >
+            Exit to Explore
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { ShopBranding } from '@/hooks/use3DShops';
 import { ShopItem } from '@/hooks/useShopItems';
+import { getZombieLevelConfig } from '@/lib/missionLevels';
 
 export type MissionPhase = 
   | 'inactive' 
@@ -23,6 +24,7 @@ export interface ZombieData {
   position: [number, number, number];
   isActive: boolean;
   behaviorType: 'direct' | 'flanker' | 'ambusher' | 'patrol';
+  speed: number;
 }
 
 export interface TrapData {
@@ -40,6 +42,9 @@ interface MissionState {
   isActive: boolean;
   phase: MissionPhase;
   missionNumber: number;
+  level: number;
+  unlockedLevel: number;
+  maxLevel: number;
 
   // Mission timer
   timeRemaining: number;
@@ -119,11 +124,12 @@ interface MissionState {
   setNotification: (has: boolean) => void;
   getSafeSpawnPosition: () => [number, number, number];
   updateTimer: (delta: number) => void;
+  unlockNextLevel: () => void;
+  setLevel: (level: number) => void;
+  resetProgress: () => void;
 }
 
-// Generate zombie spawn positions with varied behavior types
-function generateZombieSpawns(): ZombieData[] {
-  return [
+const ZOMBIE_SPAWNS: Omit<ZombieData, 'speed'>[] = [
     // Direct chasers - 4 zombies that follow directly
     { id: 'zombie-1', position: [-35, 0.25, -35], isActive: true, behaviorType: 'direct' },
     { id: 'zombie-2', position: [35, 0.25, -35], isActive: true, behaviorType: 'direct' },
@@ -143,7 +149,40 @@ function generateZombieSpawns(): ZombieData[] {
     // Patrollers - 2 zombies that patrol and chase when close
     { id: 'zombie-11', position: [-60, 0.25, 0], isActive: true, behaviorType: 'patrol' },
     { id: 'zombie-12', position: [60, 0.25, 0], isActive: true, behaviorType: 'patrol' },
-  ];
+];
+
+const getSpawnDistance = (position: [number, number, number]) => {
+  const [x, , z] = position;
+  return Math.sqrt(x * x + z * z);
+};
+
+const seededRandom = (seed: number) => {
+  const x = Math.sin(seed) * 10000;
+  return x - Math.floor(x);
+};
+
+// Generate zombie spawn positions with varied behavior types
+function generateZombieSpawns(level: number): ZombieData[] {
+  const config = getZombieLevelConfig(level);
+  const seed = Date.now();
+  const sortedByDistance = [...ZOMBIE_SPAWNS].sort(
+    (a, b) => getSpawnDistance(b.position) - getSpawnDistance(a.position)
+  );
+  const distantPool = sortedByDistance.filter(
+    (spawn) => getSpawnDistance(spawn.position) >= config.minSpawnDistance
+  );
+  const pool = distantPool.length >= config.zombieCount ? distantPool : sortedByDistance;
+  const preferredTypes = level <= 2 ? ['direct', 'flanker'] : ['direct', 'flanker', 'ambusher', 'patrol'];
+  const preferred = pool.filter((spawn) => preferredTypes.includes(spawn.behaviorType));
+  const fallback = pool.filter((spawn) => !preferredTypes.includes(spawn.behaviorType));
+  const shuffled = [...preferred, ...fallback].sort(
+    (a, b) => seededRandom(seed + ZOMBIE_SPAWNS.indexOf(a)) - seededRandom(seed + ZOMBIE_SPAWNS.indexOf(b))
+  );
+  const selected = shuffled.slice(0, Math.min(config.zombieCount, shuffled.length));
+  return selected.map((spawn) => ({
+    ...spawn,
+    speed: config.zombieSpeed,
+  }));
 }
 
 // Generate trap positions (fire pits, swinging axes, and thorns)
@@ -175,16 +214,20 @@ function generateTrapPositions(): TrapData[] {
 
 // Safe spawn position (away from traps)
 const SAFE_SPAWN_POSITION: [number, number, number] = [0, 0.5, 45];
-const ZOMBIE_MISSION_TIME_LIMIT = 90;
+const DEFAULT_ZOMBIE_TIME_LIMIT = 90;
+const MAX_ZOMBIE_LEVEL = 5;
 
 export const useMissionStore = create<MissionState>((set, get) => ({
   // Initial state
   isActive: false,
   phase: 'inactive',
   missionNumber: 1,
+  level: 1,
+  unlockedLevel: 1,
+  maxLevel: MAX_ZOMBIE_LEVEL,
 
-  timeRemaining: ZOMBIE_MISSION_TIME_LIMIT,
-  timeLimit: ZOMBIE_MISSION_TIME_LIMIT,
+  timeRemaining: DEFAULT_ZOMBIE_TIME_LIMIT,
+  timeLimit: DEFAULT_ZOMBIE_TIME_LIMIT,
   
   // Lives
   lives: 3,
@@ -227,6 +270,12 @@ export const useMissionStore = create<MissionState>((set, get) => ({
 
   activateMission: (targetShop, items) => {
     const state = get();
+    const config = getZombieLevelConfig(state.level);
+    const seed = Date.now();
+    const traps = generateTrapPositions();
+    const trapIndices = traps.map((_, index) => index);
+    trapIndices.sort((a, b) => seededRandom(seed + a) - seededRandom(seed + b));
+    const activeTrapIds = new Set(trapIndices.slice(0, Math.min(config.activeTrapCount, traps.length)));
     
     // Clear any existing spawn protection timer
     if (state.spawnProtectionTimer) {
@@ -249,18 +298,22 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       currentQuestionIndex: 0,
       questionsAnswered: 0,
       questionsCorrect: 0,
-      zombies: generateZombieSpawns(),
+      zombies: generateZombieSpawns(state.level),
       zombiesPaused: false,
-      traps: generateTrapPositions(),
+      traps: traps.map((trap, index) => ({
+        ...trap,
+        isActive: activeTrapIds.has(index),
+      })),
       slowedZombieIds: new Set(),
       frozenZombieIds: new Set(),
       isProtected: true, // Start protected
       spawnProtectionTimer: protectionTimer,
       trapTriggered: false,
       deceptiveMessageShown: false,
-      lives: 3,
-      timeRemaining: ZOMBIE_MISSION_TIME_LIMIT,
-      timeLimit: ZOMBIE_MISSION_TIME_LIMIT,
+      lives: config.lives,
+      maxLives: config.lives,
+      timeRemaining: config.timeLimit,
+      timeLimit: config.timeLimit,
       failReason: 'unknown',
       recentlyUsedShopIds: [...state.recentlyUsedShopIds, targetShop.shopId].slice(-5),
     });
@@ -334,8 +387,9 @@ export const useMissionStore = create<MissionState>((set, get) => ({
         phase: 'completed',
         zombies: [],
         zombiesPaused: true,
-        traps: [],
-      });
+      traps: [],
+    });
+      get().unlockNextLevel();
       return true;
     }
     
@@ -423,9 +477,10 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       spawnProtectionTimer: null,
       trapTriggered: false,
       deceptiveMessageShown: false,
-      lives: 3,
-      timeRemaining: ZOMBIE_MISSION_TIME_LIMIT,
-      timeLimit: ZOMBIE_MISSION_TIME_LIMIT,
+      lives: getZombieLevelConfig(state.level).lives,
+      maxLives: getZombieLevelConfig(state.level).lives,
+      timeRemaining: getZombieLevelConfig(state.level).timeLimit,
+      timeLimit: getZombieLevelConfig(state.level).timeLimit,
       failReason: 'unknown',
     });
   },
@@ -511,5 +566,22 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     } else {
       set({ timeRemaining: newTime });
     }
+  },
+
+  unlockNextLevel: () => {
+    const state = get();
+    if (state.unlockedLevel >= state.maxLevel) return;
+    if (state.level !== state.unlockedLevel) return;
+    set({ unlockedLevel: state.unlockedLevel + 1 });
+  },
+
+  setLevel: (level) => {
+    const state = get();
+    const nextLevel = Math.max(1, Math.min(level, state.unlockedLevel));
+    set({ level: nextLevel });
+  },
+
+  resetProgress: () => {
+    set({ level: 1, unlockedLevel: 1 });
   },
 }));

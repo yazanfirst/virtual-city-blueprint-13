@@ -3,17 +3,23 @@ import { Ghost, Trophy, Star, Zap, ArrowRight } from 'lucide-react';
 interface GhostHuntCompleteModalProps {
   capturedCount: number;
   totalGhosts: number;
-  nextDifficulty: number;
+  currentLevel: number;
+  unlockedLevel: number;
+  maxLevel: number;
   timeBonus: number;
   onContinue: () => void;
+  onExit: () => void;
 }
 
 export default function GhostHuntCompleteModal({
   capturedCount,
   totalGhosts,
-  nextDifficulty,
+  currentLevel,
+  unlockedLevel,
+  maxLevel,
   timeBonus,
   onContinue,
+  onExit,
 }: GhostHuntCompleteModalProps) {
   // Calculate stars based on performance
   const getStars = (): number => {
@@ -79,22 +85,35 @@ export default function GhostHuntCompleteModal({
           <div className="flex items-center justify-center gap-2 text-sm">
             <Zap className="h-4 w-4 text-purple-400" />
             <span className="text-muted-foreground">Next hunt difficulty:</span>
-            <span className="text-purple-300 font-bold">Level {nextDifficulty}</span>
+            <span className="text-purple-300 font-bold">Level {Math.min(unlockedLevel, maxLevel)}</span>
           </div>
         </div>
         
-        {/* Continue button */}
-        <button
-          type="button"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            onContinue();
-          }}
-          className="w-full py-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold transition-colors touch-manipulation active:scale-[0.98] flex items-center justify-center gap-2"
-        >
-          Continue
-          <ArrowRight className="h-4 w-4" />
-        </button>
+        <div className="space-y-2">
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onContinue();
+            }}
+            className="w-full py-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold transition-colors touch-manipulation active:scale-[0.98] flex items-center justify-center gap-2"
+          >
+            {unlockedLevel > currentLevel
+              ? `Continue to Level ${Math.min(unlockedLevel, maxLevel)}`
+              : `Replay Level ${currentLevel}`}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              onExit();
+            }}
+            className="w-full py-2 rounded-lg border border-purple-400/60 text-purple-100 hover:bg-purple-950/60 transition-colors touch-manipulation active:scale-[0.98]"
+          >
+            Exit to Explore
+          </button>
+        </div>
       </div>
     </div>
   );

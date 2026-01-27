@@ -1055,6 +1055,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
           key={zombie.id}
           id={zombie.id}
           position={zombie.position}
+          speed={zombie.speed}
           isNight={isNight}
           isPaused={zombiesPaused}
           isSlowed={slowedZombieIds.has(zombie.id)}

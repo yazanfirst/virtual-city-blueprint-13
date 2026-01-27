@@ -14,6 +14,7 @@ import GhostHuntPanel from "@/components/mission/GhostHuntPanel";
 import GhostHuntUI from "@/components/mission/GhostHuntUI";
 import GhostHuntFailedModal from "@/components/mission/GhostHuntFailedModal";
 import GhostHuntCompleteModal from "@/components/mission/GhostHuntCompleteModal";
+import ZombieMissionCompleteModal from "@/components/mission/ZombieMissionCompleteModal";
 import MirrorWorldPanel from "@/components/mission/MirrorWorldPanel";
 import MirrorWorldBriefing from "@/components/mission/MirrorWorldBriefing";
 import MirrorWorldUI from "@/components/mission/MirrorWorldUI";
@@ -35,11 +36,14 @@ import { useMirrorWorldStore } from "@/stores/mirrorWorldStore";
 import { usePlayerStore } from "@/stores/playerStore";
 import { useTutorialProgress } from "@/hooks/useTutorialProgress";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
+import { selectMissionTargetShop } from "@/lib/missionShopSelection";
+import { getEligibleShops } from "@/lib/missionShopSelection";
 import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
 import { useFlashlightReveal } from "@/hooks/useFlashlightReveal";
 import { useGhostTrapCapture } from "@/hooks/useGhostTrapCapture";
 import { useDeviceType } from "@/hooks/useDeviceType";
+import { useMobileAppBehavior } from "@/hooks/useMobileAppBehavior";
 
 // Shop entry distance threshold (in world units)
 const SHOP_ENTRY_DISTANCE = 8;
@@ -99,11 +103,16 @@ const StreetView = () => {
   const mirrorWorld = useMirrorWorldStore();
   const deviceType = useDeviceType();
   const isMobile = deviceType === "mobile";
+  
+  // Mobile app behavior - prevents zoom, fixes viewport, etc.
+  useMobileAppBehavior(isMaximized);
+  
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [showFailedModal, setShowFailedModal] = useState(false);
   const [showJumpScare, setShowJumpScare] = useState(false);
   const [showGhostHuntFailed, setShowGhostHuntFailed] = useState(false);
   const [showGhostHuntComplete, setShowGhostHuntComplete] = useState(false);
+  const [showZombieComplete, setShowZombieComplete] = useState(false);
   const [missionTab, setMissionTab] = useState<'zombie' | 'ghost' | 'mirror'>('zombie');
   const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
   
@@ -121,6 +130,19 @@ const StreetView = () => {
 
   // Transform spots data to shop brandings - MUST be before useEffect that uses it
   const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
+  
+  // Get spot IDs for each recharge type (EMF, Flashlight, Trap) for map highlighting
+  const rechargeSpotIds = useMemo(() => {
+    const ids: { emf: string; flashlight: string; trap: string } = { emf: '', flashlight: '', trap: '' };
+    const shopIds = ghostHunt.rechargeShopIds;
+    if (shopIds.emf) ids.emf = shopBrandings.find((s) => s.shopId === shopIds.emf)?.spotId ?? '';
+    if (shopIds.flashlight) ids.flashlight = shopBrandings.find((s) => s.shopId === shopIds.flashlight)?.spotId ?? '';
+    if (shopIds.trap) ids.trap = shopBrandings.find((s) => s.shopId === shopIds.trap)?.spotId ?? '';
+    return ids;
+  }, [ghostHunt.rechargeShopIds, shopBrandings]);
+  
+  // Check if any recharge pickups are assigned
+  const hasAnyRechargeShop = Boolean(ghostHunt.rechargeShopIds.emf || ghostHunt.rechargeShopIds.flashlight || ghostHunt.rechargeShopIds.trap);
 
   // Track if user has exited a shop for first time (to show mission intro)
   const [hasExitedShopOnce, setHasExitedShopOnce] = useState(false);
@@ -208,6 +230,14 @@ const StreetView = () => {
     }
   }, [isAnyMissionActive, tutorial]);
 
+  useEffect(() => {
+    if (mission.phase === 'completed') {
+      setShowZombieComplete(true);
+    } else {
+      setShowZombieComplete(false);
+    }
+  }, [mission.phase]);
+
   // Resume game when tutorial tooltip is dismissed
   const handleTutorialDismiss = useCallback(() => {
     tutorial.dismissTooltip();
@@ -252,6 +282,35 @@ const StreetView = () => {
     
     fetchAllShopItems();
   }, [shopBrandings.length]); // use length instead of array to avoid infinite loop
+
+  // Select 3 DIFFERENT random shops for EMF, Flashlight, Trap recharges
+  useEffect(() => {
+    if (!ghostHunt.isActive || ghostHunt.phase !== 'briefing') return;
+    // Already assigned
+    if (hasAnyRechargeShop) return;
+    if (!shopBrandings || shopBrandings.length === 0) return;
+
+    const eligible = getEligibleShops(shopBrandings, shopItemsMap, []);
+    if (eligible.length < 3) {
+      console.debug('[GhostHunt] Recharge pickup skipped: not enough eligible shops.');
+      return;
+    }
+
+    // Shuffle eligible shops using current timestamp as seed
+    const seed = Date.now();
+    const shuffled = [...eligible].sort((a, b) => {
+      const hashA = Math.sin(seed + a.shop.spotId.charCodeAt(0)) * 10000;
+      const hashB = Math.sin(seed + b.shop.spotId.charCodeAt(0)) * 10000;
+      return (hashA - Math.floor(hashA)) - (hashB - Math.floor(hashB));
+    });
+
+    const emfShop = shuffled[0]?.shop.shopId ?? null;
+    const flashlightShop = shuffled[1]?.shop.shopId ?? null;
+    const trapShop = shuffled[2]?.shop.shopId ?? null;
+
+    ghostHunt.setRechargePickups({ emf: emfShop, flashlight: flashlightShop, trap: trapShop });
+    console.debug('[GhostHunt] Recharge pickups assigned:', { emf: emfShop, flashlight: flashlightShop, trap: trapShop });
+  }, [ghostHunt.isActive, ghostHunt.phase, hasAnyRechargeShop, ghostHunt.setRechargePickups, shopBrandings, shopItemsMap]);
 
   // Proximity detection - find nearby shop
   useEffect(() => {
@@ -466,13 +525,100 @@ const StreetView = () => {
     resetPlayer();
     resetGame();
     mission.resetMission();
+    mission.resetProgress();
     ghostHunt.resetMission();
+    ghostHunt.resetProgress();
     mirrorWorld.resetMission();
+    mirrorWorld.resetProgress();
   };
 
   const handleExitToCityMap = () => {
     handleExitGame();
     navigate("/city-map");
+  };
+
+  // Context-aware back behavior:
+  // - If inside a shop or mission: step back to the previous in-game state
+  // - Otherwise: go back to previous route (fallback to /city-map)
+  const navigateBackRoute = () => {
+    // If user opened the street directly (no history), fallback to city map
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/city-map");
+    }
+  };
+
+  const handleSmartBack = () => {
+    // Close transient overlays first
+    if (showJumpScare) {
+      setShowJumpScare(false);
+      return;
+    }
+    if (showFailedModal) {
+      setShowFailedModal(false);
+      return;
+    }
+    if (showQuestionModal) {
+      setShowQuestionModal(false);
+      return;
+    }
+    if (showGhostHuntFailed) {
+      setShowGhostHuntFailed(false);
+      resetToSafeSpawn();
+      ghostHunt.resetMission();
+      return;
+    }
+    if (showGhostHuntComplete) {
+      setShowGhostHuntComplete(false);
+      resetToSafeSpawn();
+      ghostHunt.resetMission();
+      return;
+    }
+
+    // Step out of shop/interactions before leaving the game
+    if (isInsideShop) {
+      handleExitShop();
+      return;
+    }
+    if (showShopModal) {
+      setShowShopModal(false);
+      return;
+    }
+    if (show2DMap) {
+      setShow2DMap(false);
+      return;
+    }
+    if (showMissions) {
+      setShowMissions(false);
+      return;
+    }
+
+    // If any mission is active, exit back to explore mode
+    if (mirrorWorld.isActive && mirrorWorld.phase !== 'inactive') {
+      mirrorWorld.resetMission();
+      resetToSafeSpawn();
+      setIsInsideShop(false);
+      return;
+    }
+    if (ghostHunt.isActive && ghostHunt.phase !== 'inactive') {
+      ghostHunt.resetMission();
+      resetToSafeSpawn();
+      return;
+    }
+    if (mission.isActive && mission.phase !== 'inactive') {
+      handleExitMission();
+      return;
+    }
+
+    // If we're in fullscreen game mode, go back to the street page (pause/minimize)
+    if (isMaximized) {
+      handlePauseGame();
+      return;
+    }
+
+    // Otherwise: go back in navigation history
+    navigateBackRoute();
   };
   
   const handleQuestionAnswer = (answer: string) => {
@@ -626,9 +772,9 @@ const StreetView = () => {
     ) : null;
 
     return (
-      <div className="fixed inset-0 z-50 bg-background">
+      <div className={`fixed inset-0 z-50 bg-background ${isMobile ? 'mobile-game-container' : ''}`}>
         {/* Full-screen 3D Scene */}
-        <div className="relative h-full w-full">
+        <div className="relative w-full h-full" style={{ height: 'var(--app-height, 100vh)' }}>
           <CityScene 
             streetId={street.id} 
             timeOfDay={timeOfDay} 
@@ -641,16 +787,16 @@ const StreetView = () => {
             hideMobileControls={hideMobileControls}
           />
           
-          {/* Health Display (Lives) - for both missions */}
+          {/* Health Display (Lives) - for zombie missions */}
           {mission.isActive && (
-            <div className="absolute top-14 left-2 md:left-4 pointer-events-none" style={{ zIndex: 150 }}>
+            <div className={`absolute pointer-events-none ${isMobile ? 'top-12 left-2' : 'top-14 left-4'}`} style={{ zIndex: 150 }}>
               <HealthDisplay />
             </div>
           )}
 
           {/* Zombie Mission Timer */}
           {mission.isActive && (
-            <div className="absolute top-14 left-1/2 -translate-x-1/2 pointer-events-none" style={{ zIndex: 150 }}>
+            <div className={`absolute left-1/2 -translate-x-1/2 pointer-events-none ${isMobile ? 'top-12' : 'top-14'}`} style={{ zIndex: 150 }}>
               <MissionTimer />
             </div>
           )}
@@ -674,19 +820,20 @@ const StreetView = () => {
             />
           )}
           
-          {/* Top Controls Bar - Compact for mobile */}
-          <div className="absolute top-2 md:top-4 left-2 md:left-4 right-2 md:right-4 flex items-center justify-between pointer-events-none" style={{ zIndex: 150 }}>
-            <div className="flex items-center gap-1 md:gap-3 pointer-events-auto">
+          {/* Top Controls Bar - Optimized for mobile */}
+          <div className={`absolute left-1 right-1 flex items-center justify-between pointer-events-none ${isMobile ? 'top-1 safe-area-top' : 'top-4 left-4 right-4'}`} style={{ zIndex: 150 }}>
+            <div className="flex items-center gap-1 pointer-events-auto">
               <Button
                 variant="ghost"
                 size="icon"
                 className="bg-background/80 backdrop-blur-md h-8 w-8 md:h-10 md:w-10"
-                onClick={(event) => {
+                onPointerDown={(event) => {
                   event.stopPropagation();
-                  handleExitToCityMap();
+                  handleSmartBack();
                 }}
                 type="button"
                 aria-label="Back to city map"
+                data-control-ignore="true"
               >
                 <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
               </Button>
@@ -941,7 +1088,6 @@ const StreetView = () => {
                         setShowJumpScare(false);
                         setShowMissions(false);
                       }}
-                      isUnlocked={mission.phase === 'completed'}
                       disableActivation={isMissionBlocking && !ghostHunt.isActive}
                       isCompact
                     />
@@ -951,6 +1097,7 @@ const StreetView = () => {
                       onActivate={() => {
                         mission.resetMission();
                         ghostHunt.resetMission();
+                        resetToSafeSpawn();
                         tutorial.dismissTooltip();
                         setShowQuestionModal(false);
                         setShowFailedModal(false);
@@ -986,7 +1133,21 @@ const StreetView = () => {
 
           <MirrorWorldComplete
             isOpen={mirrorWorld.phase === 'completed'}
-            onContinue={() => mirrorWorld.resetMission()}
+            nextLevel={Math.min(mirrorWorld.maxLevel, mirrorWorld.unlockedLevel)}
+            currentLevel={mirrorWorld.difficultyLevel}
+            onContinue={() => {
+              const nextLevel = Math.min(mirrorWorld.maxLevel, mirrorWorld.unlockedLevel);
+              mirrorWorld.setDifficultyLevel(nextLevel);
+              mirrorWorld.resetMission();
+              resetToSafeSpawn();
+              mirrorWorld.startMission();
+            }}
+            onExit={() => {
+              mirrorWorld.resetMission();
+              resetToSafeSpawn();
+              setIsInsideShop(false);
+              setInteriorShop(null);
+            }}
           />
 
           <MirrorWorldFailed
@@ -995,7 +1156,12 @@ const StreetView = () => {
               mirrorWorld.resetMission();
               mirrorWorld.startMission();
             }}
-            onExit={() => mirrorWorld.resetMission()}
+            onExit={() => {
+              mirrorWorld.resetMission();
+              resetToSafeSpawn();
+              setIsInsideShop(false);
+              setInteriorShop(null);
+            }}
           />
           
           {/* Ghost Hunt Failed Modal */}
@@ -1023,14 +1189,46 @@ const StreetView = () => {
             <GhostHuntCompleteModal
               capturedCount={ghostHunt.capturedCount}
               totalGhosts={ghostHunt.totalGhosts}
-              nextDifficulty={ghostHunt.difficultyLevel}
+              currentLevel={ghostHunt.difficultyLevel}
+              unlockedLevel={ghostHunt.unlockedLevel}
+              maxLevel={ghostHunt.maxLevel}
               timeBonus={Math.floor(ghostHunt.timeRemaining * 2)}
               onContinue={() => {
+                const nextLevel = Math.min(ghostHunt.maxLevel, ghostHunt.unlockedLevel);
+                ghostHunt.resetMission();
+                ghostHunt.setDifficultyLevel(nextLevel);
+                ghostHunt.startMission();
+                setShowGhostHuntComplete(false);
+              }}
+              onExit={() => {
                 setShowGhostHuntComplete(false);
                 ghostHunt.resetMission();
               }}
             />
           )}
+
+          <ZombieMissionCompleteModal
+            isOpen={showZombieComplete}
+            currentLevel={mission.level}
+            unlockedLevel={mission.unlockedLevel}
+            maxLevel={mission.maxLevel}
+            isAllComplete={mission.level >= mission.maxLevel}
+            onContinue={() => {
+              const nextLevel = mission.level >= mission.maxLevel ? 1 : Math.min(mission.maxLevel, mission.unlockedLevel);
+              mission.resetMission();
+              mission.setLevel(nextLevel);
+              const selected = selectMissionTargetShop(shopBrandings, shopItemsMap, mission.recentlyUsedShopIds);
+              if (selected) {
+                mission.activateMission(selected.shop, selected.items);
+                handleMissionActivate();
+              }
+              setShowZombieComplete(false);
+            }}
+            onExit={() => {
+              mission.resetMission();
+              setShowZombieComplete(false);
+            }}
+          />
           
           {/* 2D Map Overlay - Full screen on mobile, positioned on desktop */}
           {show2DMap && spotsWithShops && (
@@ -1068,7 +1266,8 @@ const StreetView = () => {
                       spots={spotsWithShops}
                       selectedSpotId=""
                       onSelectSpot={() => {}}
-                      highlightedSpotId={selectedSpotId}
+                      highlightedSpotId={ghostHunt.isActive && rechargeSpotIds.emf ? rechargeSpotIds.emf : selectedSpotId}
+                      highlightedSpotLabel={ghostHunt.isActive && hasAnyRechargeShop ? 'Recharge Gear (EMF/Flash/Trap)' : undefined}
                     />
                   </div>
                 </div>
@@ -1186,12 +1385,13 @@ const StreetView = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={(event) => {
+            onPointerDown={(event) => {
               event.stopPropagation();
-              handleExitToCityMap();
+              handleSmartBack();
             }}
             type="button"
             aria-label="Back to city map"
+            data-control-ignore="true"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>

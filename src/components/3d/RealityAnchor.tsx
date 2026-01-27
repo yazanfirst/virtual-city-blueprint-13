@@ -16,7 +16,6 @@ interface RealityAnchorProps {
 
 const COLLECT_DISTANCE = 4.5;
 const PROMPT_DISTANCE = 3.2;
-const CHASE_SPEED = 0.35;
 const BOUNDS = 70;
 const SACRIFICE_HOLD = 3;
 const MOVEMENT_THRESHOLD = 0.02;
@@ -46,6 +45,7 @@ export default function RealityAnchor({
     updateAnchorState,
     setPrompt,
     clearPrompt,
+    chaseAnchorSpeed,
   } = useMirrorWorldStore();
 
   const promptMessage = useMemo(() => {
@@ -111,9 +111,9 @@ export default function RealityAnchor({
       const moveZ = position[2] - playerPosition[2];
       const length = Math.sqrt(moveX * moveX + moveZ * moveZ) || 1;
       const nextPosition: [number, number, number] = [
-        clampPosition(position[0] + (moveX / length) * CHASE_SPEED * delta * 60),
+        clampPosition(position[0] + (moveX / length) * chaseAnchorSpeed * delta * 60),
         position[1],
-        clampPosition(position[2] + (moveZ / length) * CHASE_SPEED * delta * 60),
+        clampPosition(position[2] + (moveZ / length) * chaseAnchorSpeed * delta * 60),
       ];
       updateAnchorPosition(id, nextPosition);
     }
