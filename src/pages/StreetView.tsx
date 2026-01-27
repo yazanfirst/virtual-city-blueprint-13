@@ -38,6 +38,7 @@ import { useTutorialProgress } from "@/hooks/useTutorialProgress";
 import { generateMissionQuestions } from "@/lib/missionQuestions";
 import { selectMissionTargetShop } from "@/lib/missionShopSelection";
 import { getEligibleShops } from "@/lib/missionShopSelection";
+import { getGhostHuntLevelConfig, getMirrorWorldLevelConfig, getZombieLevelConfig } from "@/lib/missionLevels";
 import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
 import { supabase } from "@/integrations/supabase/client";
 import { useFlashlightReveal } from "@/hooks/useFlashlightReveal";
@@ -152,26 +153,9 @@ const StreetView = () => {
     (ghostHunt.isActive && ghostHunt.phase !== 'completed' && ghostHunt.phase !== 'failed') ||
     (mirrorWorld.isActive && mirrorWorld.phase !== 'completed' && mirrorWorld.phase !== 'failed');
   const activeMissionTab = mirrorWorld.isActive ? 'mirror' : ghostHunt.isActive ? 'ghost' : mission.isActive ? 'zombie' : 'zombie';
-  const missionBriefings = [
-    {
-      level: 1,
-      title: "Street Scout",
-      description: "Visit 3 fashion shops and mark the best window displays.",
-      reward: "Reward: 100 coins • 25 XP"
-    },
-    {
-      level: 2,
-      title: "Hidden Detail",
-      description: "Find the secret item tucked inside the target boutique.",
-      reward: "Reward: 150 coins • 40 XP"
-    },
-    {
-      level: 3,
-      title: "Style Insider",
-      description: "Meet the NPC stylist and unlock the VIP outfit tip.",
-      reward: "Reward: 250 coins • 60 XP"
-    }
-  ];
+  const zombieConfig = getZombieLevelConfig(mission.level);
+  const ghostConfig = getGhostHuntLevelConfig(ghostHunt.difficultyLevel);
+  const mirrorConfig = getMirrorWorldLevelConfig(mirrorWorld.difficultyLevel);
 
   // Tutorial triggers - IN ORDER:
   // 1. Movement tutorial when game starts
@@ -1435,35 +1419,72 @@ const StreetView = () => {
                   Mission Briefing
                 </div>
                 <div className="space-y-3">
-                  {missionBriefings.map((missionBriefing) => (
-                    <div
-                      key={missionBriefing.level}
-                      className="rounded-xl border border-border/70 bg-background/40 p-3 shadow-[0_0_30px_rgba(45,212,191,0.08)]"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-                          Level {missionBriefing.level}
-                        </span>
-                        <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                          Active
-                        </span>
-                      </div>
-                      <div className="mt-3 space-y-2">
-                        <h4 className="text-sm font-semibold text-foreground">
-                          {missionBriefing.title}
-                        </h4>
-                        <p className="text-xs leading-relaxed text-muted-foreground">
-                          {missionBriefing.description}
-                        </p>
-                        <div className="text-[11px] font-medium text-primary">
-                          {missionBriefing.reward}
-                        </div>
+                  <div className="rounded-xl border border-border/70 bg-background/40 p-3 shadow-[0_0_30px_rgba(45,212,191,0.08)]">
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                        Mission 1
+                      </span>
+                      <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                        Level {mission.level}/{mission.maxLevel}
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <h4 className="text-sm font-semibold text-foreground">
+                        Night Escape
+                      </h4>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        Escape the zombies, find the target shop, and remember everything you see. Finish before the countdown reaches zero.
+                      </p>
+                      <div className="text-[11px] font-medium text-primary">
+                        {zombieConfig.zombieCount} zombies • {zombieConfig.activeTrapCount} traps • {zombieConfig.timeLimit}s • {zombieConfig.lives} lives
                       </div>
                     </div>
-                  ))}
+                  </div>
+                  <div className="rounded-xl border border-border/70 bg-background/40 p-3 shadow-[0_0_30px_rgba(45,212,191,0.08)]">
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                        Mission 2
+                      </span>
+                      <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                        Level {ghostHunt.difficultyLevel}/{ghostHunt.maxLevel}
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <h4 className="text-sm font-semibold text-foreground">
+                        Ghost Hunt
+                      </h4>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        Paranormal activity detected. Use your EMF detector to locate invisible ghosts, reveal them with your flashlight, and capture them before time runs out.
+                      </p>
+                      <div className="text-[11px] font-medium text-primary">
+                        {ghostConfig.requiredCaptures} captures • {ghostConfig.ghostCount} ghosts • {ghostConfig.timeLimit}s • {ghostConfig.playerLives} lives
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border/70 bg-background/40 p-3 shadow-[0_0_30px_rgba(45,212,191,0.08)]">
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                        Mission 3
+                      </span>
+                      <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                        Level {mirrorWorld.difficultyLevel}/{mirrorWorld.maxLevel}
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <h4 className="text-sm font-semibold text-foreground">
+                        Mirror World
+                      </h4>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        Enter the inverted city, clear {mirrorConfig.requiredAnchors} anchor challenges, and outrun your Shadow.
+                      </p>
+                      <div className="text-[11px] font-medium text-primary">
+                        {mirrorConfig.requiredAnchors} anchors • {mirrorConfig.baseTime}s • {mirrorConfig.lives} lives
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Complete each mission to unlock the next level and start the game with a boost.
+                  Complete each mission to unlock the next level.
                 </p>
               </div>
             </PanelBox>
