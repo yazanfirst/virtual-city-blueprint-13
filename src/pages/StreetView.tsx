@@ -152,6 +152,26 @@ const StreetView = () => {
     (ghostHunt.isActive && ghostHunt.phase !== 'completed' && ghostHunt.phase !== 'failed') ||
     (mirrorWorld.isActive && mirrorWorld.phase !== 'completed' && mirrorWorld.phase !== 'failed');
   const activeMissionTab = mirrorWorld.isActive ? 'mirror' : ghostHunt.isActive ? 'ghost' : mission.isActive ? 'zombie' : 'zombie';
+  const missionBriefings = [
+    {
+      level: 1,
+      title: "Street Scout",
+      description: "Visit 3 fashion shops and mark the best window displays.",
+      reward: "Reward: 100 coins • 25 XP"
+    },
+    {
+      level: 2,
+      title: "Hidden Detail",
+      description: "Find the secret item tucked inside the target boutique.",
+      reward: "Reward: 150 coins • 40 XP"
+    },
+    {
+      level: 3,
+      title: "Style Insider",
+      description: "Meet the NPC stylist and unlock the VIP outfit tip.",
+      reward: "Reward: 250 coins • 60 XP"
+    }
+  ];
 
   // Tutorial triggers - IN ORDER:
   // 1. Movement tutorial when game starts
@@ -1410,20 +1430,42 @@ const StreetView = () => {
           {/* Left Column - Missions Panel */}
           <div className="lg:col-span-3">
             <PanelBox title="Missions Panel" icon={Target}>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-muted-foreground">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  Visit 3 shops
-                </li>
-                <li className="flex items-center gap-2 text-muted-foreground">
-                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-                  Find the hidden item
-                </li>
-                <li className="flex items-center gap-2 text-muted-foreground">
-                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-                  Talk to an NPC
-                </li>
-              </ul>
+              <div className="space-y-4">
+                <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs uppercase tracking-[0.2em] text-primary">
+                  Mission Briefing
+                </div>
+                <div className="space-y-3">
+                  {missionBriefings.map((missionBriefing) => (
+                    <div
+                      key={missionBriefing.level}
+                      className="rounded-xl border border-border/70 bg-background/40 p-3 shadow-[0_0_30px_rgba(45,212,191,0.08)]"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                          Level {missionBriefing.level}
+                        </span>
+                        <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                          Active
+                        </span>
+                      </div>
+                      <div className="mt-3 space-y-2">
+                        <h4 className="text-sm font-semibold text-foreground">
+                          {missionBriefing.title}
+                        </h4>
+                        <p className="text-xs leading-relaxed text-muted-foreground">
+                          {missionBriefing.description}
+                        </p>
+                        <div className="text-[11px] font-medium text-primary">
+                          {missionBriefing.reward}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Complete each mission to unlock the next level and start the game with a boost.
+                </p>
+              </div>
             </PanelBox>
           </div>
 
