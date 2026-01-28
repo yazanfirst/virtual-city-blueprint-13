@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Ghost, Sparkles } from "lucide-react";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Ghost, Sparkles, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
@@ -20,6 +20,7 @@ import MirrorWorldBriefing from "@/components/mission/MirrorWorldBriefing";
 import MirrorWorldUI from "@/components/mission/MirrorWorldUI";
 import MirrorWorldComplete from "@/components/mission/MirrorWorldComplete";
 import MirrorWorldFailed from "@/components/mission/MirrorWorldFailed";
+import PauseOverlay from "@/components/mission/PauseOverlay";
 import QuestionModal from "@/components/mission/QuestionModal";
 import HealthDisplay from "@/components/mission/HealthDisplay";
 import MissionFailedModal from "@/components/mission/MissionFailedModal";
@@ -114,6 +115,7 @@ const StreetView = () => {
   const [showGhostHuntFailed, setShowGhostHuntFailed] = useState(false);
   const [showGhostHuntComplete, setShowGhostHuntComplete] = useState(false);
   const [showZombieComplete, setShowZombieComplete] = useState(false);
+  const [showMissionPause, setShowMissionPause] = useState(false);
   const [missionTab, setMissionTab] = useState<'zombie' | 'ghost' | 'mirror'>('zombie');
   const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
   
@@ -212,6 +214,7 @@ const StreetView = () => {
     showJumpScare ||
     showGhostHuntFailed ||
     showGhostHuntComplete ||
+    showMissionPause ||
     ghostHunt.phase === 'briefing' ||
     mirrorWorld.phase === 'briefing' ||
     mirrorWorld.phase === 'completed' ||
@@ -487,14 +490,43 @@ const StreetView = () => {
   };
 
   const handlePauseGame = () => {
+    // If in a mission, show mission pause overlay instead of exiting
+    if (mission.isActive || ghostHunt.isActive || mirrorWorld.isActive) {
+      setShowMissionPause(true);
+      if (mission.isActive && mission.phase === 'escape') {
+        mission.pauseZombies();
+      }
+      if (mirrorWorld.isActive && mirrorWorld.phase === 'hunting') {
+        mirrorWorld.setPaused(true);
+      }
+      return;
+    }
     setIsGamePaused(true);
     setIsMaximized(false);
+  };
+
+  const handleMissionPauseResume = () => {
+    setShowMissionPause(false);
     if (mission.isActive && mission.phase === 'escape') {
-      mission.pauseZombies();
+      mission.resumeZombies();
     }
     if (mirrorWorld.isActive && mirrorWorld.phase === 'hunting') {
-      mirrorWorld.setPaused(true);
+      mirrorWorld.setPaused(false);
     }
+  };
+
+  const handleMissionPauseExit = () => {
+    setShowMissionPause(false);
+    if (mission.isActive) {
+      mission.resetMission();
+    }
+    if (ghostHunt.isActive) {
+      ghostHunt.resetMission();
+    }
+    if (mirrorWorld.isActive) {
+      mirrorWorld.resetMission();
+    }
+    resetToSafeSpawn();
   };
 
   const handleResumeGame = () => {
@@ -1233,6 +1265,29 @@ const StreetView = () => {
               setShowZombieComplete(false);
             }}
           />
+
+          {/* Mission Pause Overlay */}
+          {showMissionPause && (
+            <PauseOverlay
+              missionName={
+                mirrorWorld.isActive ? 'Mirror World' :
+                ghostHunt.isActive ? 'Ghost Hunt' :
+                mission.isActive ? 'Night Escape' : 'Mission'
+              }
+              missionLevel={
+                mirrorWorld.isActive ? mirrorWorld.difficultyLevel :
+                ghostHunt.isActive ? ghostHunt.difficultyLevel :
+                mission.level
+              }
+              timeRemaining={
+                mirrorWorld.isActive ? mirrorWorld.timeRemaining :
+                ghostHunt.isActive ? ghostHunt.timeRemaining :
+                mission.timeRemaining
+              }
+              onResume={handleMissionPauseResume}
+              onExit={handleMissionPauseExit}
+            />
+          )}
           
           {/* 2D Map Overlay - Full screen on mobile, positioned on desktop */}
           {show2DMap && spotsWithShops && (

@@ -1,6 +1,8 @@
-import { Sparkles, Play, Clock, ShieldAlert } from 'lucide-react';
+import { useState } from 'react';
+import { Sparkles, Play, Clock, ShieldAlert, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMirrorWorldStore } from '@/stores/mirrorWorldStore';
+import MissionLevelDetails from './MissionLevelDetails';
 
 interface MirrorWorldPanelProps {
   onActivate: () => void;
@@ -23,6 +25,8 @@ export default function MirrorWorldPanel({
     requiredAnchors,
     setDifficultyLevel,
   } = useMirrorWorldStore();
+
+  const [showDetails, setShowDetails] = useState(false);
 
   const handleActivate = () => {
     startMission();
@@ -107,9 +111,30 @@ export default function MirrorWorldPanel({
         </div>
       </div>
 
-      <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
+      <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-2' : 'text-sm mb-3'}`}>
         Enter the inverted city, clear {requiredAnchors} anchor challenges, and outrun your Shadow.
       </p>
+
+      {/* Expandable Level Details */}
+      <button
+        type="button"
+        className="w-full flex items-center justify-between text-xs text-muted-foreground hover:text-foreground transition-colors mb-2 py-1"
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          setShowDetails(!showDetails);
+        }}
+        data-control-ignore="true"
+      >
+        <span>Level {difficultyLevel} Details</span>
+        {showDetails ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+      </button>
+      
+      {showDetails && (
+        <div className="mb-3">
+          <MissionLevelDetails missionType="mirror" level={difficultyLevel} isCompact={isCompact} />
+        </div>
+      )}
+
       {disableActivation && (
         <p className={`text-xs text-yellow-300/90 mb-3 ${isCompact ? '' : 'md:text-sm'}`}>
           Finish your current mission to start another.
