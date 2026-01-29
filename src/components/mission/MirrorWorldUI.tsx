@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 export default function MirrorWorldUI() {
   const {
     phase,
+    isPaused,
     timeRemaining,
     playerLives,
     collectedCount,
@@ -35,13 +36,14 @@ export default function MirrorWorldUI() {
   const setPlayerPosition = usePlayerStore((state) => state.setPosition);
   const resetToSafeSpawn = usePlayerStore((state) => state.resetToSafeSpawn);
 
+  // Timer logic - respects pause state
   useEffect(() => {
-    if (phase !== 'hunting') return;
+    if (phase !== 'hunting' || isPaused) return;
     const interval = setInterval(() => {
       updateTimer(1);
     }, 1000);
     return () => clearInterval(interval);
-  }, [phase, updateTimer]);
+  }, [phase, isPaused, updateTimer]);
 
   useEffect(() => {
     if (phase !== 'hunting') {

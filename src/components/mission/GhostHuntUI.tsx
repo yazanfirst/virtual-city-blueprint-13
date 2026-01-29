@@ -11,6 +11,7 @@ interface GhostHuntUIProps {
 export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) {
   const {
     phase,
+    isPaused,
     timeRemaining,
     ghosts,
     capturedCount,
@@ -29,27 +30,27 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
     completeBriefing,
   } = useGhostHuntStore();
   
-  // Timer logic
+  // Timer logic - respects pause state
   useEffect(() => {
-    if (phase !== 'hunting') return;
+    if (phase !== 'hunting' || isPaused) return;
     
     const interval = setInterval(() => {
       updateTimer(1);
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [phase, updateTimer]);
+  }, [phase, isPaused, updateTimer]);
   
-  // EMF battery drain while active
+  // EMF battery drain while active - respects pause state
   useEffect(() => {
-    if (phase !== 'hunting' || !equipment.emfActive) return;
+    if (phase !== 'hunting' || !equipment.emfActive || isPaused) return;
     
     const interval = setInterval(() => {
       drainBattery('emf', emfDrainPerSecond);
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [phase, equipment.emfActive, drainBattery, emfDrainPerSecond]);
+  }, [phase, equipment.emfActive, isPaused, drainBattery, emfDrainPerSecond]);
   
   // Track phase changes
   useEffect(() => {

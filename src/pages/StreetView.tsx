@@ -495,6 +495,10 @@ const StreetView = () => {
       setShowMissionPause(true);
       if (mission.isActive && mission.phase === 'escape') {
         mission.pauseZombies();
+        mission.setPaused(true);
+      }
+      if (ghostHunt.isActive && ghostHunt.phase === 'hunting') {
+        ghostHunt.setPaused(true);
       }
       if (mirrorWorld.isActive && mirrorWorld.phase === 'hunting') {
         mirrorWorld.setPaused(true);
@@ -509,6 +513,10 @@ const StreetView = () => {
     setShowMissionPause(false);
     if (mission.isActive && mission.phase === 'escape') {
       mission.resumeZombies();
+      mission.setPaused(false);
+    }
+    if (ghostHunt.isActive && ghostHunt.phase === 'hunting') {
+      ghostHunt.setPaused(false);
     }
     if (mirrorWorld.isActive && mirrorWorld.phase === 'hunting') {
       mirrorWorld.setPaused(false);
@@ -534,6 +542,10 @@ const StreetView = () => {
     setIsMaximized(true);
     if (mission.isActive && mission.phase === 'escape') {
       mission.resumeZombies();
+      mission.setPaused(false);
+    }
+    if (ghostHunt.isActive && ghostHunt.phase === 'hunting') {
+      ghostHunt.setPaused(false);
     }
     if (mirrorWorld.isActive && mirrorWorld.phase === 'hunting') {
       mirrorWorld.setPaused(false);

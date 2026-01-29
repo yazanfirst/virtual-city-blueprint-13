@@ -50,6 +50,9 @@ export interface GhostHuntState {
   isActive: boolean;
   phase: GhostHuntPhase;
   
+  // Pause state
+  isPaused: boolean;
+  
   // Timer
   timeRemaining: number;      // seconds
   startTime: number | null;
@@ -116,6 +119,7 @@ export interface GhostHuntState {
   unlockNextLevel: () => void;
   setDifficultyLevel: (level: number) => void;
   resetProgress: () => void;
+  setPaused: (paused: boolean) => void;
 }
 
 // Ghost spawn locations - spread across the city
@@ -193,6 +197,7 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
   // Initial state
   isActive: false,
   phase: 'inactive',
+  isPaused: false,
   timeRemaining: 90,
   startTime: null,
   ghosts: [],
@@ -296,7 +301,7 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
   
   updateTimer: (delta: number) => {
     const state = get();
-    if (state.phase !== 'hunting') return;
+    if (state.phase !== 'hunting' || state.isPaused) return;
     
     const newTime = state.timeRemaining - delta;
     if (newTime <= 0) {
@@ -490,6 +495,7 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
     set({
       isActive: false,
       phase: 'inactive',
+      isPaused: false,
       timeRemaining: 90,
       startTime: null,
       ghosts: [],
@@ -538,6 +544,8 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
   resetProgress: () => {
     set({ difficultyLevel: 1, unlockedLevel: 1 });
   },
+  
+  setPaused: (paused: boolean) => set({ isPaused: paused }),
 
   setRechargePickups: (shopIds) =>
     set({
