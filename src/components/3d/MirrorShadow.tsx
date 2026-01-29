@@ -18,12 +18,13 @@ export default function MirrorShadow() {
     collisionDistance,
     isProtected,
     phase,
+    isPaused,
     updateShadowPosition,
     hitByShadow,
   } = useMirrorWorldStore();
 
   useFrame((_, delta) => {
-    if (phase !== 'hunting') return;
+    if (phase !== 'hunting' || isPaused) return;
     if (!lastPlayerPos.current) {
       lastPlayerPos.current = [...playerPosition];
       return;
@@ -87,11 +88,12 @@ export default function MirrorShadow() {
         isNight
         isWalking={isWalking}
       />
+      {/* Shadow aura - reduced geometry */}
       <mesh>
-        <sphereGeometry args={[1.5, 16, 16]} />
-        <meshBasicMaterial color="#1A0B24" transparent opacity={0.3} side={THREE.BackSide} />
+        <sphereGeometry args={[1.5, 12, 12]} />
+        <meshStandardMaterial color="#1A0B24" transparent opacity={0.3} side={THREE.BackSide} emissive="#FF0066" emissiveIntensity={0.4} />
       </mesh>
-      <pointLight position={[0, 1.5, 0.3]} intensity={2} distance={5} color="#FF0066" />
+      {/* REMOVED point light for performance - using emissive material instead */}
     </group>
   );
 }

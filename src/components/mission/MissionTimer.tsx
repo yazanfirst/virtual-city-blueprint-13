@@ -10,10 +10,10 @@ const formatTime = (seconds: number): string => {
 };
 
 export default function MissionTimer() {
-  const { isActive, phase, timeRemaining, updateTimer } = useMissionStore();
+  const { isActive, phase, timeRemaining, updateTimer, isPaused } = useMissionStore();
 
   useEffect(() => {
-    if (!isActive || phase !== 'escape') {
+    if (!isActive || phase !== 'escape' || isPaused) {
       return;
     }
 
@@ -22,7 +22,7 @@ export default function MissionTimer() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isActive, phase, updateTimer]);
+  }, [isActive, phase, isPaused, updateTimer]);
 
   if (!isActive || phase !== 'escape') {
     return null;

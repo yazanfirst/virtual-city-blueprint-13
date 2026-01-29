@@ -78,6 +78,7 @@ export default function GhostCharacter({
     hitByGhost,
     equipment, 
     phase,
+    isPaused,
     isProtected,
     ghostSpeedMultiplier,
   } = useGhostHuntStore();
@@ -106,7 +107,7 @@ export default function GhostCharacter({
   }, [isRevealed, material]);
   
   useFrame((state, delta) => {
-    if (isCaptured || phase !== 'hunting') return;
+    if (isCaptured || phase !== 'hunting' || isPaused) return;
     if (!groupRef.current) return;
     
     timeRef.current += delta;
@@ -216,13 +217,13 @@ export default function GhostCharacter({
   
   return (
     <group ref={groupRef} position={position}>
-      {/* Ghost body - ethereal shape */}
+      {/* Ghost body - ethereal shape - reduced geometry segments for performance */}
       <mesh ref={meshRef} material={material}>
-        <capsuleGeometry args={[0.6, 1.2, 8, 16]} />
+        <capsuleGeometry args={[0.6, 1.2, 4, 8]} />
       </mesh>
       
-      {/* Ghost trail/wisps */}
-      {[0, 1, 2].map((i) => (
+      {/* Ghost trail/wisps - reduced to 2 for performance */}
+      {[0, 1].map((i) => (
         <mesh
           key={i}
           position={[
@@ -231,49 +232,41 @@ export default function GhostCharacter({
             Math.cos(i * 2.1) * 0.3,
           ]}
         >
-          <sphereGeometry args={[0.25 - i * 0.05, 8, 8]} />
+          <sphereGeometry args={[0.25 - i * 0.08, 6, 6]} />
           <meshStandardMaterial
             color={config.color}
             emissive={config.emissive}
             emissiveIntensity={isRevealed ? 0.5 : 0}
             transparent
-            opacity={isRevealed ? 0.6 - i * 0.15 : 0}
+            opacity={isRevealed ? 0.6 - i * 0.2 : 0}
           />
         </mesh>
       ))}
       
-      {/* Eyes - only visible when revealed */}
+      {/* Eyes - only visible when revealed, simplified */}
       {isRevealed && (
         <>
           <mesh position={[-0.2, 0.3, 0.5]}>
-            <sphereGeometry args={[0.12, 8, 8]} />
+            <sphereGeometry args={[0.12, 6, 6]} />
             <meshBasicMaterial color="#FFFFFF" />
           </mesh>
           <mesh position={[0.2, 0.3, 0.5]}>
-            <sphereGeometry args={[0.12, 8, 8]} />
+            <sphereGeometry args={[0.12, 6, 6]} />
             <meshBasicMaterial color="#FFFFFF" />
           </mesh>
           {/* Pupils */}
           <mesh position={[-0.2, 0.3, 0.6]}>
-            <sphereGeometry args={[0.06, 8, 8]} />
+            <sphereGeometry args={[0.06, 6, 6]} />
             <meshBasicMaterial color="#000000" />
           </mesh>
           <mesh position={[0.2, 0.3, 0.6]}>
-            <sphereGeometry args={[0.06, 8, 8]} />
+            <sphereGeometry args={[0.06, 6, 6]} />
             <meshBasicMaterial color="#000000" />
           </mesh>
         </>
       )}
       
-      {/* Glow effect when revealed */}
-      {isRevealed && (
-        <pointLight
-          color={config.emissive}
-          intensity={1.5}
-          distance={8}
-          decay={2}
-        />
-      )}
+      {/* REMOVED point light for performance - emissive material provides glow effect instead */}
     </group>
   );
 }

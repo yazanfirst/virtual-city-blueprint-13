@@ -50,6 +50,9 @@ interface MissionState {
   timeRemaining: number;
   timeLimit: number;
   
+  // Pause state
+  isPaused: boolean;
+  
   // Lives system (3 hearts)
   lives: number;
   maxLives: number;
@@ -127,6 +130,7 @@ interface MissionState {
   unlockNextLevel: () => void;
   setLevel: (level: number) => void;
   resetProgress: () => void;
+  setPaused: (paused: boolean) => void;
 }
 
 const ZOMBIE_SPAWNS: Omit<ZombieData, 'speed'>[] = [
@@ -228,6 +232,9 @@ export const useMissionStore = create<MissionState>((set, get) => ({
 
   timeRemaining: DEFAULT_ZOMBIE_TIME_LIMIT,
   timeLimit: DEFAULT_ZOMBIE_TIME_LIMIT,
+  
+  // Pause state
+  isPaused: false,
   
   // Lives
   lives: 3,
@@ -460,6 +467,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     set({
       isActive: false,
       phase: 'inactive',
+      isPaused: false,
       targetShop: null,
       targetShopItems: [],
       shopEntryCount: 0,
@@ -555,7 +563,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
 
   updateTimer: (delta: number) => {
     const state = get();
-    if (!state.isActive || state.phase !== 'escape') {
+    if (!state.isActive || state.phase !== 'escape' || state.isPaused) {
       return;
     }
 
@@ -584,4 +592,6 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   resetProgress: () => {
     set({ level: 1, unlockedLevel: 1 });
   },
+  
+  setPaused: (paused: boolean) => set({ isPaused: paused }),
 }));
