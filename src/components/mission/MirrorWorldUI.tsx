@@ -12,7 +12,7 @@ export default function MirrorWorldUI() {
     playerLives,
     collectedCount,
     requiredAnchors,
-    shadowPosition,
+    shadowPositions,
     anchors,
     promptMessage,
     promptKey,
@@ -55,17 +55,27 @@ export default function MirrorWorldUI() {
     return () => clearTimeout(timeout);
   }, [phase]);
 
-  const distanceToShadow = useMemo(() => {
-    const dx = shadowPosition[0] - playerPosition[0];
-    const dz = shadowPosition[2] - playerPosition[2];
-    return Math.sqrt(dx * dx + dz * dz);
-  }, [shadowPosition, playerPosition]);
+  // Find closest shadow for warning/compass
+  const closestShadow = useMemo(() => {
+    let minDist = Infinity;
+    let closest: [number, number, number] = shadowPositions[0] || [0, 0, 0];
+    shadowPositions.forEach((pos) => {
+      const dx = pos[0] - playerPosition[0];
+      const dz = pos[2] - playerPosition[2];
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = pos;
+      }
+    });
+    return { position: closest, distance: minDist };
+  }, [shadowPositions, playerPosition]);
 
   const shadowAngle = useMemo(() => {
-    const dx = shadowPosition[0] - playerPosition[0];
-    const dz = shadowPosition[2] - playerPosition[2];
+    const dx = closestShadow.position[0] - playerPosition[0];
+    const dz = closestShadow.position[2] - playerPosition[2];
     return Math.atan2(dz, dx) * (180 / Math.PI) + 90;
-  }, [shadowPosition, playerPosition]);
+  }, [closestShadow.position, playerPosition]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -226,7 +236,7 @@ export default function MirrorWorldUI() {
             </span>
           </div>
         </div>
-        {distanceToShadow < 6 && (
+        {closestShadow.distance < 6 && (
           <div className="bg-red-950/90 rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-red-500/60 text-[10px] sm:text-xs text-red-200 flex items-center gap-1 sm:gap-2 animate-pulse">
             <AlertTriangle className="h-3 w-3" />
             Shadow!

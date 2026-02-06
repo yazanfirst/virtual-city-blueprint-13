@@ -22,7 +22,8 @@ interface MirrorWorldState {
   isActive: boolean;
   phase: MirrorWorldPhase;
   timeRemaining: number;
-  shadowPosition: [number, number, number];
+  shadowPositions: [number, number, number][];
+  shadowCount: number;
   shadowSpeed: number;
   collisionDistance: number;
   chaseAnchorSpeed: number;
@@ -45,7 +46,7 @@ interface MirrorWorldState {
   completeBriefing: () => void;
   updateTimer: (delta: number) => void;
   collectAnchor: (anchorId: string) => void;
-  updateShadowPosition: (pos: [number, number, number]) => void;
+  updateShadowPosition: (index: number, pos: [number, number, number]) => void;
   updateAnchorPosition: (anchorId: string, position: [number, number, number]) => void;
   updateAnchorState: (anchorId: string, updates: Partial<RealityAnchor>) => void;
   setPrompt: (anchorId: string, message: string, key?: string | null) => void;
@@ -78,6 +79,13 @@ const MAX_MIRROR_LEVEL = 5;
 const PROTECTION_DURATION = 3000;
 const HIT_INVINCIBILITY = 2000;
 
+// Distributed spawn offsets for multiple shadows (relative to player)
+const SHADOW_SPAWN_OFFSETS: [number, number, number][] = [
+  [-6, 1, -6],   // Primary shadow (SW)
+  [8, 1, 6],    // Second shadow (NE) 
+  [-8, 1, 8],   // Third shadow (NW)
+];
+
 let protectionTimeout: ReturnType<typeof setTimeout> | null = null;
 let hitTimeout: ReturnType<typeof setTimeout> | null = null;
 let toastTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -108,7 +116,8 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
   isActive: false,
   phase: 'inactive',
   timeRemaining: START_TIME,
-  shadowPosition: [0, 8, 30],
+  shadowPositions: [[0, 8, 30]],
+  shadowCount: 1,
   shadowSpeed: BASE_SHADOW_SPEED,
   collisionDistance: DEFAULT_COLLISION_DISTANCE,
   chaseAnchorSpeed: DEFAULT_CHASE_SPEED,
@@ -137,11 +146,23 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       set({ isProtected: false });
     }, PROTECTION_DURATION);
 
+    // Create distributed shadow spawn positions
+    const initialShadowPositions: [number, number, number][] = [];
+    for (let i = 0; i < levelConfig.shadowCount; i++) {
+      const offset = SHADOW_SPAWN_OFFSETS[i] || SHADOW_SPAWN_OFFSETS[0];
+      initialShadowPositions.push([
+        playerPosition[0] + offset[0],
+        playerPosition[1] + offset[1],
+        playerPosition[2] + offset[2],
+      ]);
+    }
+
     set({
       isActive: true,
       phase: 'briefing',
       timeRemaining: levelConfig.baseTime,
-      shadowPosition: [playerPosition[0] - 6, playerPosition[1] + 1, playerPosition[2] - 6],
+      shadowPositions: initialShadowPositions,
+      shadowCount: levelConfig.shadowCount,
       shadowSpeed: levelConfig.shadowSpeed,
       collisionDistance: levelConfig.collisionDistance,
       chaseAnchorSpeed: levelConfig.chaseAnchorSpeed,
@@ -217,7 +238,12 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
     }, 2000);
   },
 
-  updateShadowPosition: (pos) => set({ shadowPosition: pos }),
+  updateShadowPosition: (index, pos) =>
+    set((state) => {
+      const newPositions = [...state.shadowPositions];
+      newPositions[index] = pos;
+      return { shadowPositions: newPositions };
+    }),
 
   updateAnchorPosition: (anchorId, position) =>
     set((state) => ({
@@ -281,7 +307,8 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       isActive: false,
       phase: 'inactive',
       timeRemaining: levelConfig.baseTime,
-      shadowPosition: [0, 8, 30],
+      shadowPositions: [[0, 8, 30]],
+      shadowCount: levelConfig.shadowCount,
       shadowSpeed: levelConfig.shadowSpeed,
       collisionDistance: levelConfig.collisionDistance,
       chaseAnchorSpeed: levelConfig.chaseAnchorSpeed,

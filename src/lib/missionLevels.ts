@@ -28,6 +28,7 @@ export interface MirrorWorldLevelConfig {
   baseTime: number;
   anchorBonus: number;
   shadowSpeed: number;
+  shadowCount: number;
   collisionDistance: number;
   lives: number;
   chaseAnchorSpeed: number;
@@ -50,11 +51,11 @@ export const GHOST_HUNT_LEVELS: GhostHuntLevelConfig[] = [
 ];
 
 export const MIRROR_WORLD_LEVELS: MirrorWorldLevelConfig[] = [
-  { level: 1, requiredAnchors: 2, baseTime: 110, anchorBonus: 10, shadowSpeed: 0.35, collisionDistance: 1.8, lives: 3, chaseAnchorSpeed: 0.08 },
-  { level: 2, requiredAnchors: 3, baseTime: 105, anchorBonus: 9, shadowSpeed: 0.4, collisionDistance: 1.9, lives: 3, chaseAnchorSpeed: 0.1 },
-  { level: 3, requiredAnchors: 4, baseTime: 100, anchorBonus: 8, shadowSpeed: 0.45, collisionDistance: 2, lives: 2, chaseAnchorSpeed: 0.11 },
-  { level: 4, requiredAnchors: 5, baseTime: 95, anchorBonus: 8, shadowSpeed: 0.5, collisionDistance: 2, lives: 2, chaseAnchorSpeed: 0.12 },
-  { level: 5, requiredAnchors: 5, baseTime: 90, anchorBonus: 7, shadowSpeed: 0.55, collisionDistance: 2.1, lives: 2, chaseAnchorSpeed: 0.13 },
+  { level: 1, requiredAnchors: 2, baseTime: 110, anchorBonus: 10, shadowSpeed: 0.35, shadowCount: 1, collisionDistance: 1.8, lives: 3, chaseAnchorSpeed: 0.08 },
+  { level: 2, requiredAnchors: 3, baseTime: 105, anchorBonus: 9, shadowSpeed: 0.4, shadowCount: 2, collisionDistance: 1.9, lives: 3, chaseAnchorSpeed: 0.1 },
+  { level: 3, requiredAnchors: 4, baseTime: 100, anchorBonus: 8, shadowSpeed: 0.45, shadowCount: 2, collisionDistance: 2, lives: 2, chaseAnchorSpeed: 0.11 },
+  { level: 4, requiredAnchors: 5, baseTime: 95, anchorBonus: 8, shadowSpeed: 0.5, shadowCount: 3, collisionDistance: 2, lives: 2, chaseAnchorSpeed: 0.12 },
+  { level: 5, requiredAnchors: 5, baseTime: 90, anchorBonus: 7, shadowSpeed: 0.55, shadowCount: 3, collisionDistance: 2.1, lives: 2, chaseAnchorSpeed: 0.13 },
 ];
 
 export const getZombieLevelConfig = (level: number) =>
