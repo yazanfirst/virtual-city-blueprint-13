@@ -71,6 +71,7 @@ export default function MissionLevelDetails({ missionType, level, isCompact = fa
           <LevelDetail icon={Clock} label="Base Time" value={`${config.baseTime}s`} />
           <LevelDetail icon={Sparkles} label="Anchors" value={`${config.requiredAnchors} required`} highlight />
           <LevelDetail icon={Heart} label="Lives" value={config.lives} />
+          <LevelDetail icon={Skull} label="Shadows" value={config.shadowCount} />
           <LevelDetail icon={Zap} label="Time Bonus" value={`+${config.anchorBonus}s each`} />
         </div>
       </div>
