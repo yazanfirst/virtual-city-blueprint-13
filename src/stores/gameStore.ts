@@ -13,6 +13,7 @@ type GameState = {
   visitShop: (shopId: string) => void;
   collectCoin: (coinId: string) => void;
   resetGame: () => void;
+  loadFromServer: (data: { coins: number; xp: number; level: number }) => void;
 };
 
 const XP_PER_LEVEL = 200;
@@ -63,6 +64,14 @@ export const useGameStore = create<GameState>((set, get) => ({
       level: INITIAL_LEVEL,
       shopsVisited: new Set(),
       coinsCollected: new Set(),
+    });
+  },
+
+  loadFromServer: (data) => {
+    set({
+      coins: data.coins,
+      xp: data.xp,
+      level: data.level,
     });
   },
 }));
