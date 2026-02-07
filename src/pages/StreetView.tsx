@@ -46,6 +46,7 @@ import { useFlashlightReveal } from "@/hooks/useFlashlightReveal";
 import { useGhostTrapCapture } from "@/hooks/useGhostTrapCapture";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { useMobileAppBehavior } from "@/hooks/useMobileAppBehavior";
+import { usePlayerProgress } from "@/hooks/usePlayerProgress";
 
 // Shop entry distance threshold (in world units)
 const SHOP_ENTRY_DISTANCE = 8;
@@ -95,6 +96,12 @@ const StreetView = () => {
 
   // Game state
   const { coins, level, xp, resetGame } = useGameStore();
+  
+  // Player progress persistence
+  const playerProgress = usePlayerProgress();
+  
+  // Track rewards for display in completion modals
+  const [lastReward, setLastReward] = useState<{ coins: number; xp: number }>({ coins: 0, xp: 0 });
   
   // Player state
   const { position: playerPosition, resetToSafeSpawn, resetPlayer, enterShop: playerEnterShop, exitShop: playerExitShop } = usePlayerStore();
@@ -239,6 +246,15 @@ const StreetView = () => {
 
   useEffect(() => {
     if (mission.phase === 'completed') {
+      // Grant rewards for Zombie Escape
+      const coinsReward = 30;
+      const xpReward = level * 50;
+      setLastReward({ coins: coinsReward, xp: xpReward });
+      if (playerProgress.isLoggedIn) {
+        playerProgress.earnCoins(coinsReward);
+        playerProgress.earnXP(xpReward);
+        playerProgress.incrementMissions();
+      }
       setShowZombieComplete(true);
     } else {
       setShowZombieComplete(false);
@@ -419,6 +435,16 @@ const StreetView = () => {
     setInteriorShop(shop);
     setIsInsideShop(true);
     setShowShopModal(false);
+    
+    // Reward first-time shop visit (5 coins)
+    if (shop.shopId && playerProgress.isLoggedIn) {
+      const gameState = useGameStore.getState();
+      if (!gameState.shopsVisited.has(shop.shopId)) {
+        gameState.visitShop(shop.shopId);
+        playerProgress.earnCoins(5);
+        playerProgress.incrementShopsVisited();
+      }
+    }
   };
 
   const handleExitShop = () => {
@@ -1164,7 +1190,18 @@ const StreetView = () => {
           {/* Ghost Hunt UI Overlay */}
           {ghostHunt.isActive && ghostHunt.phase !== 'inactive' && (
             <GhostHuntUI 
-              onComplete={() => setShowGhostHuntComplete(true)}
+              onComplete={() => {
+                // Grant rewards for Ghost Hunt
+                const coinsReward = 15 * ghostHunt.capturedCount;
+                const xpReward = level * 50;
+                setLastReward({ coins: coinsReward, xp: xpReward });
+                if (playerProgress.isLoggedIn) {
+                  playerProgress.earnCoins(coinsReward);
+                  playerProgress.earnXP(xpReward);
+                  playerProgress.incrementMissions();
+                }
+                setShowGhostHuntComplete(true);
+              }}
               onFailed={() => setShowGhostHuntFailed(true)}
             />
           )}
@@ -1183,7 +1220,17 @@ const StreetView = () => {
             isOpen={mirrorWorld.phase === 'completed'}
             nextLevel={Math.min(mirrorWorld.maxLevel, mirrorWorld.unlockedLevel)}
             currentLevel={mirrorWorld.difficultyLevel}
+            coinsEarned={mirrorWorld.phase === 'completed' ? 20 * mirrorWorld.collectedCount : undefined}
+            xpEarned={mirrorWorld.phase === 'completed' ? level * 50 : undefined}
             onContinue={() => {
+              // Grant rewards for Mirror World
+              if (playerProgress.isLoggedIn) {
+                const coinsReward = 20 * mirrorWorld.collectedCount;
+                const xpReward = level * 50;
+                playerProgress.earnCoins(coinsReward);
+                playerProgress.earnXP(xpReward);
+                playerProgress.incrementMissions();
+              }
               const nextLevel = Math.min(mirrorWorld.maxLevel, mirrorWorld.unlockedLevel);
               mirrorWorld.setDifficultyLevel(nextLevel);
               mirrorWorld.resetMission();
@@ -1191,6 +1238,14 @@ const StreetView = () => {
               mirrorWorld.startMission();
             }}
             onExit={() => {
+              // Grant rewards for Mirror World on exit too
+              if (playerProgress.isLoggedIn) {
+                const coinsReward = 20 * mirrorWorld.collectedCount;
+                const xpReward = level * 50;
+                playerProgress.earnCoins(coinsReward);
+                playerProgress.earnXP(xpReward);
+                playerProgress.incrementMissions();
+              }
               mirrorWorld.resetMission();
               resetToSafeSpawn();
               setIsInsideShop(false);
@@ -1241,6 +1296,8 @@ const StreetView = () => {
               unlockedLevel={ghostHunt.unlockedLevel}
               maxLevel={ghostHunt.maxLevel}
               timeBonus={Math.floor(ghostHunt.timeRemaining * 2)}
+              coinsEarned={lastReward.coins}
+              xpEarned={lastReward.xp}
               onContinue={() => {
                 const nextLevel = Math.min(ghostHunt.maxLevel, ghostHunt.unlockedLevel);
                 ghostHunt.resetMission();
@@ -1261,6 +1318,8 @@ const StreetView = () => {
             unlockedLevel={mission.unlockedLevel}
             maxLevel={mission.maxLevel}
             isAllComplete={mission.level >= mission.maxLevel}
+            coinsEarned={lastReward.coins}
+            xpEarned={lastReward.xp}
             onContinue={() => {
               const nextLevel = mission.level >= mission.maxLevel ? 1 : Math.min(mission.maxLevel, mission.unlockedLevel);
               mission.resetMission();
