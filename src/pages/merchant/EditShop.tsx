@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import BrandingEditor from "@/components/merchant/BrandingEditor";
 import ShopPreview from "@/components/merchant/ShopPreview";
 import ShopShowcaseWall from "@/components/merchant/ShopShowcaseWall";
+import OfferManagement from "@/components/merchant/OfferManagement";
 import { validateShopData } from "@/lib/validation";
 import {
   AlertDialog,
@@ -341,6 +342,16 @@ const EditShop = () => {
                 brandColor={formData.primaryColor}
                 accentColor={formData.accentColor}
               />
+            </div>
+          )}
+
+          {shopId && (
+            <div>
+              <h2 className="font-display text-xl font-bold mb-4">Discount Offers</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Create offers that players can claim by spending their earned coins.
+              </p>
+              <OfferManagement shopId={shopId} />
             </div>
           )}
         </div>
