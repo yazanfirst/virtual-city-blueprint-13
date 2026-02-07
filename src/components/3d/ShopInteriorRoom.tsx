@@ -6,6 +6,7 @@ import { ShopBranding } from "@/hooks/use3DShops";
 import { Button } from "@/components/ui/button";
 import { ShopItem, useShopItems } from "@/hooks/useShopItems";
 import { X, ExternalLink, ChevronLeft, ChevronRight, Package, ShoppingBag } from "lucide-react";
+import ShopOffersSection from "@/components/3d/ShopOffersSection";
 import { useGhostHuntStore } from "@/stores/ghostHuntStore";
 import {
   Dialog,
@@ -837,6 +838,11 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
                 No items on display yet.
               </div>
             )}
+
+            {/* Offers section in 2D fallback */}
+            <div className="mt-4">
+              <ShopOffersSection shopId={shop.shopId} externalLink={shop.externalLink} />
+            </div>
           </div>
         </div>
       )}
