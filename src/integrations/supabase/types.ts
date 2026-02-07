@@ -14,6 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
+      merchant_offers: {
+        Row: {
+          coin_price: number
+          created_at: string
+          daily_limit: number
+          description: string | null
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          min_order_value: number | null
+          min_player_level: number
+          per_player_limit: number
+          shop_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          coin_price: number
+          created_at?: string
+          daily_limit?: number
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          min_order_value?: number | null
+          min_player_level?: number
+          per_player_limit?: number
+          shop_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          coin_price?: number
+          created_at?: string
+          daily_limit?: number
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          min_order_value?: number | null
+          min_player_level?: number
+          per_player_limit?: number
+          shop_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_offers_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -44,6 +106,83 @@ export type Database = {
           title?: string
           type?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      offer_redemptions: {
+        Row: {
+          coins_spent: number
+          created_at: string
+          expires_at: string
+          id: string
+          offer_id: string
+          player_id: string
+          redemption_code: string
+          status: string
+        }
+        Insert: {
+          coins_spent: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          offer_id: string
+          player_id: string
+          redemption_code: string
+          status?: string
+        }
+        Update: {
+          coins_spent?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          offer_id?: string
+          player_id?: string
+          redemption_code?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_redemptions_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "merchant_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_progress: {
+        Row: {
+          coins: number
+          created_at: string
+          id: string
+          level: number
+          missions_completed: number
+          shops_visited: number
+          updated_at: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          coins?: number
+          created_at?: string
+          id?: string
+          level?: number
+          missions_completed?: number
+          shops_visited?: number
+          updated_at?: string
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          coins?: number
+          created_at?: string
+          id?: string
+          level?: number
+          missions_completed?: number
+          shops_visited?: number
+          updated_at?: string
+          user_id?: string
+          xp?: number
         }
         Relationships: []
       }
