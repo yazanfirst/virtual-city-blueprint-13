@@ -95,7 +95,7 @@ const StreetView = () => {
   const [nearbyShop, setNearbyShop] = useState<ShopBranding | null>(null);
 
   // Game state
-  const { coins, level, xp, resetGame } = useGameStore();
+  const { coins, level, xp, resetSession } = useGameStore();
   
   // Player progress persistence
   const playerProgress = usePlayerProgress();
@@ -601,7 +601,7 @@ const StreetView = () => {
     setNearbyShop(null);
     playerExitShop();
     resetPlayer();
-    resetGame();
+    resetSession();
     mission.resetMission();
     mission.resetProgress();
     ghostHunt.resetMission();
