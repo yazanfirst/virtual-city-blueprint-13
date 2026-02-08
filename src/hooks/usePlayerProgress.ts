@@ -212,31 +212,31 @@ export function usePlayerProgress() {
     ): Promise<MissionRewardResult> => {
       if (!user) return { coinsEarned: 0, xpEarned: 0, isFirstClear: false };
 
-      // Check if this level was already completed
-      const { data: existing } = await supabase
+      // Try to insert — unique constraint (user_id, mission_type, level)
+      // will reject duplicates, just like the shop visit pattern.
+      const { error } = await supabase
         .from('mission_completions')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('mission_type', missionType)
-        .eq('level', level)
-        .maybeSingle();
+        .insert({
+          user_id: user.id,
+          mission_type: missionType,
+          level,
+          coins_earned: baseCoins,
+          xp_earned: baseXP,
+        });
 
-      if (existing) {
-        // Replay — small XP only, no coins
-        await earnXP(REPLAY_XP);
-        await incrementMissions();
-        return { coinsEarned: 0, xpEarned: REPLAY_XP, isFirstClear: false };
+      if (error) {
+        // 23505 = unique_violation → already completed this level
+        if (error.code === '23505') {
+          await earnXP(REPLAY_XP);
+          await incrementMissions();
+          return { coinsEarned: 0, xpEarned: REPLAY_XP, isFirstClear: false };
+        }
+        console.error('Failed to record mission completion:', error);
+        // Deny rewards on unexpected errors to prevent exploits
+        return { coinsEarned: 0, xpEarned: 0, isFirstClear: false };
       }
 
-      // First clear — insert record and grant full rewards
-      await supabase.from('mission_completions').insert({
-        user_id: user.id,
-        mission_type: missionType,
-        level,
-        coins_earned: baseCoins,
-        xp_earned: baseXP,
-      });
-
+      // First clear — grant full rewards
       await earnCoins(baseCoins);
       await earnXP(baseXP);
       await incrementMissions();
