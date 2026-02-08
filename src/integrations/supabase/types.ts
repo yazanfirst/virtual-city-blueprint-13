@@ -76,6 +76,36 @@ export type Database = {
           },
         ]
       }
+      mission_completions: {
+        Row: {
+          coins_earned: number
+          completed_at: string
+          id: string
+          level: number
+          mission_type: string
+          user_id: string
+          xp_earned: number
+        }
+        Insert: {
+          coins_earned?: number
+          completed_at?: string
+          id?: string
+          level: number
+          mission_type: string
+          user_id: string
+          xp_earned?: number
+        }
+        Update: {
+          coins_earned?: number
+          completed_at?: string
+          id?: string
+          level?: number
+          mission_type?: string
+          user_id?: string
+          xp_earned?: number
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -183,6 +213,27 @@ export type Database = {
           updated_at?: string
           user_id?: string
           xp?: number
+        }
+        Relationships: []
+      }
+      player_shop_visits: {
+        Row: {
+          created_at: string
+          id: string
+          shop_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          shop_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          shop_id?: string
+          user_id?: string
         }
         Relationships: []
       }
