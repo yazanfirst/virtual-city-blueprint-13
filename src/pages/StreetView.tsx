@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Ghost, Sparkles, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -244,8 +244,11 @@ const StreetView = () => {
     }
   }, [isAnyMissionActive, tutorial]);
 
+  // Track zombie mission completion - use ref to prevent duplicate reward grants
+  const zombieRewardedRef = useRef(false);
   useEffect(() => {
-    if (mission.phase === 'completed') {
+    if (mission.phase === 'completed' && !zombieRewardedRef.current) {
+      zombieRewardedRef.current = true;
       // Grant rewards for Zombie Escape
       const coinsReward = 30;
       const xpReward = mission.level * 50;
@@ -256,7 +259,8 @@ const StreetView = () => {
         playerProgress.incrementMissions();
       }
       setShowZombieComplete(true);
-    } else {
+    } else if (mission.phase !== 'completed') {
+      zombieRewardedRef.current = false;
       setShowZombieComplete(false);
     }
   }, [mission.phase]);

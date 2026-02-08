@@ -64,7 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId);
 
       if (error) {
-        console.error('Error fetching user roles:', error);
+        // Don't log CORS / network errors as they can flood the console
+        if (!String(error.message).includes('Failed to fetch')) {
+          console.error('Error fetching user roles:', error);
+        }
         return;
       }
 
@@ -80,7 +83,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (err) {
-      console.error('Error fetching user roles:', err);
+      // Silently catch network/CORS errors to prevent unhandled exceptions
+      // This can happen when the app runs on a domain not configured in Supabase
+      console.warn('Could not fetch user roles (network issue):', err);
     }
   };
 
