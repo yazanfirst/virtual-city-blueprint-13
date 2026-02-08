@@ -151,16 +151,6 @@ export default function MirrorWorldUI() {
             {formatTime(timeRemaining)}
           </span>
         </div>
-        {toastMessage && (
-          <div className="max-w-[280px] sm:max-w-md text-center bg-emerald-500/95 border border-emerald-200/80 text-white text-sm sm:text-base font-bold px-4 py-2 sm:px-5 sm:py-3 rounded-lg shadow-lg shadow-emerald-500/40">
-            {toastMessage}
-          </div>
-        )}
-        {!toastMessage && promptMessage && (
-          <div className="max-w-[280px] sm:max-w-md text-center bg-purple-900/90 border border-purple-300/70 text-white text-sm sm:text-base font-bold px-4 py-2 sm:px-5 sm:py-3 rounded-lg shadow-lg shadow-purple-500/40">
-            {promptMessage}
-          </div>
-        )}
         {showHint && (
           <div className="max-w-[240px] sm:max-w-xs text-center bg-purple-950/80 border border-purple-500/40 text-purple-100 text-[10px] sm:text-xs px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg backdrop-blur-md">
             Follow the purple dots on the map to rooftop anchors. Look for glowing ladder panels and use Climb, then touch anchors to collect them.
@@ -256,14 +246,6 @@ export default function MirrorWorldUI() {
           <Navigation className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-300" style={{ transform: `rotate(${shadowAngle}deg)` }} />
           <span className="text-muted-foreground">Shadow</span>
         </div>
-        {promptMessage && (
-          <div className="mt-1 bg-purple-950/90 rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-purple-500/50 text-[10px] sm:text-xs text-purple-100 flex flex-col gap-0.5">
-            <span className="line-clamp-2">{promptMessage}</span>
-            {promptKey && (
-              <span className="font-bold text-purple-200">Press {promptKey}</span>
-            )}
-          </div>
-        )}
         {/* Mini-map - smaller on mobile */}
         <div className="bg-background/80 backdrop-blur-md rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-border/50 text-[10px] sm:text-xs text-muted-foreground">
           <div className="flex items-center justify-between text-[0.6rem] sm:text-[0.7rem] uppercase tracking-wide text-purple-300">

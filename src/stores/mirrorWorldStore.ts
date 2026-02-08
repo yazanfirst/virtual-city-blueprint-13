@@ -259,8 +259,12 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       ),
     })),
 
-  setPrompt: (anchorId, message, key = null) =>
-    set({ promptAnchorId: anchorId, promptMessage: message, promptKey: key }),
+  setPrompt: (anchorId, message, key = null) => {
+    const state = get();
+    // Avoid unnecessary state updates when prompt is already set to the same values
+    if (state.promptAnchorId === anchorId && state.promptMessage === message && state.promptKey === key) return;
+    set({ promptAnchorId: anchorId, promptMessage: message, promptKey: key });
+  },
 
   clearPrompt: (anchorId) =>
     set((state) => {

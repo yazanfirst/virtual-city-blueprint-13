@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { HelpCircle, AlertTriangle, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,15 +26,18 @@ export default function QuestionModal({
 }: QuestionModalProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [hasAnswered, setHasAnswered] = useState(false);
+  const isSubmittingRef = useRef(false);
   
   const handleConfirm = () => {
-    if (selectedOption) {
+    if (selectedOption && !isSubmittingRef.current) {
+      isSubmittingRef.current = true;
       setHasAnswered(true);
       onAnswer(selectedOption);
       // Reset for next question
       setTimeout(() => {
         setSelectedOption(null);
         setHasAnswered(false);
+        isSubmittingRef.current = false;
       }, 500);
     }
   };
