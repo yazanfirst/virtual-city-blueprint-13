@@ -1,105 +1,115 @@
 
 
-# Fix Reward System Exploits
+# Merchant Coupon Code System + Auto-Expire Filtering
 
-## What's Being Fixed
+## Summary
 
-Two exploits that let players farm unlimited coins and XP:
+Transition from platform-generated random codes to **merchant-defined coupon codes** that work on real merchant websites. Add **automatic expiry filtering** so expired offers never appear to players. The platform's value is gating access behind gameplay (coins, levels, limits) rather than generating codes.
 
-1. **Shop visit farming** -- Players earn 5 coins every time they visit a shop after a page refresh, because the "already visited" check is only stored in browser memory (resets on refresh).
-2. **Mission replay farming** -- Players earn full rewards (coins + XP) every time they replay any mission level, even easy ones they've already beaten.
+## What Changes
 
-## How It Will Work After the Fix
+### 1. Database Migration
 
-| Action | First Time | Replay |
-|--------|-----------|--------|
-| Complete a mission level | Full coins + Full XP | 0 coins + 10 XP |
-| Visit a shop | 5 coins | Nothing (server blocks it) |
+Add two new columns to the `merchant_offers` table:
 
-Replay XP (10 per run) is intentionally small -- it lets dedicated players still progress slowly, but removes the ability to farm coins (which have real-world value via merchant discounts).
+- `coupon_code` (text, nullable) -- the merchant's real website coupon code (e.g., "SUMMER20")
+- `code_type` (text, default `'shared'`) -- future-ready field for supporting `'pool'` (CSV upload) or `'api'` (external integration) models later
 
----
+Existing offers without a coupon code will continue to work but won't reveal a code to players.
 
-## Step 1: Database -- Two New Tables
+### 2. Edge Function Update (`redeem-offer`)
 
-### Table: `player_shop_visits`
-Tracks which shops each player has visited. The UNIQUE constraint on (user_id, shop_id) prevents duplicate entries at the database level.
+- After successful validation (coins, level, limits), return the merchant's `coupon_code` from the offer record
+- Still generate and store a unique `redemption_code` internally for tracking/analytics
+- Return both `coupon_code` (what the player uses on the merchant website) and `redemption_code` (internal tracking) in the response
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid | Primary key |
-| user_id | uuid | NOT NULL |
-| shop_id | uuid | NOT NULL |
-| created_at | timestamptz | Default now() |
-| | | UNIQUE(user_id, shop_id) |
+### 3. Merchant Offer Form Update
 
-RLS: Players can only insert and read their own rows.
+Add a prominent **"Coupon Code"** input field to the `OfferManagement.tsx` form:
 
-### Table: `mission_completions`
-Records the first time a player beats each mission level. The UNIQUE constraint on (user_id, mission_type, level) ensures only one record per level per player.
+- Required text field with placeholder "e.g., SUMMER20"
+- Helper text: "Enter the coupon code customers will use on your website"
+- Uppercase-forced input for consistency
+- Included in both create and edit flows
+- Pre-filled when editing an existing offer
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid | Primary key |
-| user_id | uuid | NOT NULL |
-| mission_type | text | 'zombie', 'ghost_hunt', 'mirror_world' |
-| level | integer | The mission difficulty level |
-| coins_earned | integer | Coins granted on first clear |
-| xp_earned | integer | XP granted on first clear |
-| completed_at | timestamptz | Default now() |
-| | | UNIQUE(user_id, mission_type, level) |
+### 4. Auto-Expire Filtering (Client-Side)
 
-RLS: Players can only insert and read their own rows.
+Add expiry filtering in two places:
 
----
+- `useAllActiveOffers.ts` -- filter out offers where `expires_at` is in the past before returning results to the "Offers For You" panel
+- `useMerchantOffers.ts` (`useShopOffers`) -- same filter for individual shop offer views
 
-## Step 2: Update usePlayerProgress Hook
+This ensures expired offers are automatically hidden without any manual intervention.
 
-Add two new server-backed methods:
+### 5. Redemption Modal Update
 
-**`recordShopVisit(shopId)`** -- Tries to insert into `player_shop_visits`. If the row already exists (unique constraint violation), it returns false (no reward). If it succeeds, it grants 5 coins and returns true.
+Update `RedemptionCodeModal.tsx` to:
 
-**`completeMission(type, level, baseCoins, baseXP)`** -- Checks `mission_completions` for an existing row with the same (user, type, level). If found, this is a replay: grant 0 coins and 10 XP. If not found, insert the completion record and grant full rewards. Returns `{ coinsEarned, xpEarned, isFirstClear }` so the UI can show the correct amounts.
+- Accept and display a `couponCode` prop (the merchant's real code) prominently
+- Show a smaller "Tracking ID" label for the internal redemption code
+- The copy button copies the merchant's coupon code
+- Keep the existing "Visit Shop Website" button for outbound clicks
 
-Also load visited shop IDs from `player_shop_visits` on login to pre-populate the client-side Set (prevents the "first visit" prompt from showing for already-visited shops).
+### 6. Data Flow Updates
 
----
+Update these files to pass the `coupon_code` through the claim flow:
 
-## Step 3: Update gameStore
+- `useRedemptions.ts` -- add `coupon_code` to the `ClaimResult` interface and extract it from the edge function response
+- `EligibleOffersPanel.tsx` -- pass `coupon_code` to the redemption modal after claiming
+- `ShopOffersSection.tsx` -- same pass-through for the shop interior view
+- `useMerchantOffers.ts` -- add `coupon_code` and `code_type` to the `MerchantOffer` and `CreateOfferInput` interfaces
 
-Add a `loadVisitedShops(shopIds)` action that populates the `shopsVisited` Set from server data on login. This ensures the client-side check stays in sync with the database.
+## Data Flow Diagram
 
----
+```text
+MERCHANT CREATES OFFER
+  Enters title, discount, coin price, AND coupon code "SUMMER20"
+  Stored in merchant_offers.coupon_code
 
-## Step 4: Update StreetView Reward Logic
+PLAYER BROWSING (auto-filtered)
+  Expired offers (expires_at < now) hidden automatically
+  Only eligible offers shown (coins, level, not already claimed)
 
-### Shop Visits (handleEnterShop)
-Replace the current client-only check with the new `recordShopVisit()` call. The server decides if this is truly a first visit.
+PLAYER CLAIMS OFFER
+  Edge function validates: coins, level, per-player limit, daily limit
+  Deducts coins from player_progress
+  Creates offer_redemptions record (internal tracking code)
+  Returns merchant's coupon_code "SUMMER20" to player
 
-### Zombie Escape (useEffect watching mission.phase)
-Replace direct `earnCoins(30)` + `earnXP(level*50)` with `completeMission('zombie', level, 30, level*50)`. Use the returned amounts for the completion modal.
+PLAYER SEES MODAL
+  "SUMMER20" displayed as the code to copy
+  "Visit Shop Website" opens merchant's site
+  Player uses code at checkout on merchant's website
+```
 
-### Ghost Hunt (onComplete callback)
-Replace direct rewards with `completeMission('ghost_hunt', level, 15*captured, level*50)`. Use returned amounts.
+## Anti-Abuse Protections (Unchanged)
 
-### Mirror World (onContinue and onExit callbacks)
-Replace direct rewards with `completeMission('mirror_world', level, 20*anchors, level*50)`. Use returned amounts. Also fix the current bug where Mirror World grants rewards twice (once on Continue AND once on the next action) by using a ref guard similar to the zombie mission fix.
+- Coin-gating: players must spend earned coins to reveal the code
+- Per-player claim limits: enforced by edge function
+- Daily global claim limits: enforced by edge function
+- Level requirements: enforced by edge function
+- All redemptions tracked in `offer_redemptions` for merchant analytics
 
----
+## Files Modified
 
-## Step 5: Update Completion Modals
+| File | Change |
+|------|--------|
+| Database migration | Add `coupon_code` and `code_type` columns |
+| `supabase/functions/redeem-offer/index.ts` | Return `coupon_code` from offer |
+| `src/hooks/useMerchantOffers.ts` | Add fields to interfaces |
+| `src/hooks/useAllActiveOffers.ts` | Add expiry filter |
+| `src/hooks/useRedemptions.ts` | Add `coupon_code` to ClaimResult |
+| `src/components/merchant/OfferManagement.tsx` | Add coupon code input field |
+| `src/components/3d/EligibleOffersPanel.tsx` | Pass coupon code to modal |
+| `src/components/3d/ShopOffersSection.tsx` | Pass coupon code to modal |
+| `src/components/mission/RedemptionCodeModal.tsx` | Display merchant coupon code |
 
-The three completion modals (`ZombieMissionCompleteModal`, `GhostHuntCompleteModal`, `MirrorWorldComplete`) already accept `coinsEarned` and `xpEarned` props. They will now naturally show "0" coins and "+10 XP" for replays, and full amounts for first clears. No structural changes needed -- just ensure the correct values are passed from StreetView.
+## Future Extensibility
 
----
+The `code_type` column enables these future upgrades without schema changes:
 
-## File Change Summary
-
-| Action | File |
-|--------|------|
-| Create (migration) | `player_shop_visits` table + RLS |
-| Create (migration) | `mission_completions` table + RLS |
-| Modify | `src/hooks/usePlayerProgress.ts` -- add `recordShopVisit`, `completeMission`, load visited shops |
-| Modify | `src/stores/gameStore.ts` -- add `loadVisitedShops` action |
-| Modify | `src/pages/StreetView.tsx` -- replace all reward calls with server-validated versions, fix Mirror World double-reward bug |
+- `'shared'` (current MVP) -- single merchant code shown to all claimants
+- `'pool'` (future) -- merchant uploads CSV of unique codes, one distributed per claim
+- `'api'` (future) -- platform calls merchant API to generate/validate codes at redemption time
 
