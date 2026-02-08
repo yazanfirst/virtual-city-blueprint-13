@@ -39,6 +39,7 @@ const EMPTY_FORM: Omit<CreateOfferInput, "shop_id"> = {
   discount_type: "percentage",
   discount_value: 10,
   coin_price: 50,
+  coupon_code: "",
   min_player_level: 1,
   daily_limit: 10,
   per_player_limit: 1,
@@ -70,6 +71,7 @@ const OfferManagement = ({ shopId }: OfferManagementProps) => {
       discount_type: offer.discount_type,
       discount_value: offer.discount_value,
       coin_price: offer.coin_price,
+      coupon_code: offer.coupon_code || "",
       min_player_level: offer.min_player_level,
       daily_limit: offer.daily_limit,
       per_player_limit: offer.per_player_limit,
@@ -81,12 +83,13 @@ const OfferManagement = ({ shopId }: OfferManagementProps) => {
   };
 
   const handleSubmit = () => {
-    if (!form.title.trim() || form.discount_value <= 0 || form.coin_price <= 0) return;
+    if (!form.title.trim() || form.discount_value <= 0 || form.coin_price <= 0 || !form.coupon_code?.trim()) return;
 
     const payload = {
       ...form,
       title: form.title.trim(),
       description: form.description?.trim() || undefined,
+      coupon_code: form.coupon_code?.trim().toUpperCase() || undefined,
       min_order_value: form.min_order_value || null,
       expires_at: form.expires_at ? new Date(form.expires_at).toISOString() : null,
     };
@@ -207,6 +210,20 @@ const OfferManagement = ({ shopId }: OfferManagementProps) => {
             </div>
 
             <div className="space-y-2 sm:col-span-2">
+              <Label>Coupon Code *</Label>
+              <Input
+                value={form.coupon_code || ""}
+                onChange={(e) => setForm((f) => ({ ...f, coupon_code: e.target.value.toUpperCase() }))}
+                placeholder="e.g. SUMMER20"
+                className="bg-muted font-mono uppercase tracking-wider"
+                maxLength={50}
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Enter the coupon code customers will use on your website.
+              </p>
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
               <Label>Description</Label>
               <Input
                 value={form.description || ""}
@@ -319,7 +336,7 @@ const OfferManagement = ({ shopId }: OfferManagementProps) => {
           </div>
 
           <div className="flex items-center gap-2 pt-2">
-            <Button onClick={handleSubmit} disabled={!form.title.trim() || form.discount_value <= 0 || form.coin_price <= 0}>
+            <Button onClick={handleSubmit} disabled={!form.title.trim() || form.discount_value <= 0 || form.coin_price <= 0 || !form.coupon_code?.trim()}>
               <Save className="h-4 w-4 mr-1" />
               {editingId ? "Save Changes" : "Create Offer"}
             </Button>

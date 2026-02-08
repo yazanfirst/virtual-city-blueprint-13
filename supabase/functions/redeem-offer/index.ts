@@ -218,6 +218,7 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       redemption_code: redemptionCode,
+      coupon_code: offer.coupon_code || null,
       coins_spent: offer.coin_price,
       coins_remaining: progress.coins - offer.coin_price,
       expires_at: expiresAt.toISOString(),

@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 interface RedemptionCodeModalProps {
   isOpen: boolean;
   code: string;
+  couponCode?: string | null;
   coinsSpent: number;
   expiresAt: string;
   externalLink?: string | null;
@@ -14,6 +15,7 @@ interface RedemptionCodeModalProps {
 export default function RedemptionCodeModal({
   isOpen,
   code,
+  couponCode,
   coinsSpent,
   expiresAt,
   externalLink,
@@ -23,15 +25,16 @@ export default function RedemptionCodeModal({
 
   if (!isOpen) return null;
 
+  const displayCode = couponCode || code;
+
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(code);
+      await navigator.clipboard.writeText(displayCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback
       const el = document.createElement('textarea');
-      el.value = code;
+      el.value = displayCode;
       document.body.appendChild(el);
       el.select();
       document.execCommand('copy');
@@ -71,8 +74,10 @@ export default function RedemptionCodeModal({
 
         {/* Code display */}
         <div className="bg-muted rounded-lg p-4 space-y-2">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Your Coupon Code</p>
-          <p className="font-mono text-2xl font-bold text-foreground tracking-[0.2em]">{code}</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
+            {couponCode ? 'Your Coupon Code' : 'Your Redemption Code'}
+          </p>
+          <p className="font-mono text-2xl font-bold text-foreground tracking-[0.2em]">{displayCode}</p>
           <button
             type="button"
             onPointerDown={(e) => {
@@ -94,6 +99,12 @@ export default function RedemptionCodeModal({
             )}
           </button>
         </div>
+
+        {couponCode && (
+          <p className="text-[10px] text-muted-foreground">
+            Tracking ID: <span className="font-mono">{code}</span>
+          </p>
+        )}
 
         <p className="text-[10px] text-muted-foreground">
           Expires: {format(new Date(expiresAt), 'MMM d, yyyy')}

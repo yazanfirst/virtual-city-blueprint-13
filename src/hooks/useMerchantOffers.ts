@@ -17,6 +17,8 @@ export interface MerchantOffer {
   min_order_value: number | null;
   is_active: boolean;
   expires_at: string | null;
+  coupon_code: string | null;
+  code_type: string;
   created_at: string;
   updated_at: string;
 }
@@ -33,6 +35,7 @@ export interface CreateOfferInput {
   per_player_limit?: number;
   min_order_value?: number | null;
   expires_at?: string | null;
+  coupon_code?: string;
 }
 
 // Fetch active offers for a shop (player view)
@@ -49,7 +52,10 @@ export function useShopOffers(shopId: string | undefined) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data ?? []) as MerchantOffer[];
+      const now = new Date();
+      return ((data ?? []) as MerchantOffer[]).filter(
+        (o) => !o.expires_at || new Date(o.expires_at) > now
+      );
     },
     enabled: !!shopId,
   });

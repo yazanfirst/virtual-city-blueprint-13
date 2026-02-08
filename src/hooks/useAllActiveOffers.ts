@@ -34,16 +34,19 @@ export function useAllActiveOffers(shopMap: Map<string, { name: string; logoUrl:
 
       if (error) throw error;
 
-      // Enrich with shop info from the pre-loaded brandings
-      return ((data ?? []) as MerchantOffer[]).map((offer) => {
-        const shop = shopMap.get(offer.shop_id);
-        return {
-          ...offer,
-          shop_name: shop?.name ?? 'Unknown Shop',
-          shop_logo_url: shop?.logoUrl ?? null,
-          shop_external_link: shop?.externalLink ?? null,
-        } as OfferWithShop;
-      });
+      // Filter out expired offers and enrich with shop info
+      const now = new Date();
+      return ((data ?? []) as MerchantOffer[])
+        .filter((o) => !o.expires_at || new Date(o.expires_at) > now)
+        .map((offer) => {
+          const shop = shopMap.get(offer.shop_id);
+          return {
+            ...offer,
+            shop_name: shop?.name ?? 'Unknown Shop',
+            shop_logo_url: shop?.logoUrl ?? null,
+            shop_external_link: shop?.externalLink ?? null,
+          } as OfferWithShop;
+        });
     },
     enabled: !!user && shopMap.size > 0,
   });
