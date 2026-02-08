@@ -296,18 +296,17 @@ export default function CityScene({
 
   const showMirrorWorld = mirrorWorld.isActive && mirrorWorld.phase !== 'inactive' && !mission.isActive && !ghostHunt.isActive;
   const mirrorWorldActive = mirrorWorld.isActive && mirrorWorld.phase === 'hunting' && !mission.isActive && !ghostHunt.isActive;
-  const cameraUp: [number, number, number] = mirrorWorldActive ? [0, -1, 0] : [0, 1, 0];
 
   return (
     <div className="relative h-full w-full">
       <Canvas
-        key={mirrorWorldActive ? 'mirror-world' : 'default-world'}
         className={`h-full w-full ${mirrorWorldActive ? 'mirror-world-canvas' : ''}`}
         style={{ touchAction: "none" }}
-        camera={{ position: [0, 10, 50], fov: 50, up: cameraUp }}
+        camera={{ position: [0, 10, 50], fov: 50 }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
       >
         <Suspense fallback={null}>
+          <CameraUpController mirrorWorldActive={mirrorWorldActive} />
           <SceneInner 
             timeOfDay={effectiveTimeOfDay} 
             cameraView={cameraView}
@@ -881,6 +880,16 @@ function MirrorWorldLadders() {
       ))}
     </group>
   );
+}
+
+// Dynamically update camera up vector for mirror world (avoids Canvas key remount)
+function CameraUpController({ mirrorWorldActive }: { mirrorWorldActive: boolean }) {
+  const { camera } = useThree();
+  useEffect(() => {
+    camera.up.set(0, mirrorWorldActive ? -1 : 1, 0);
+    camera.updateProjectionMatrix();
+  }, [mirrorWorldActive, camera]);
+  return null;
 }
 
 function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer, mirrorWorldActive }: InnerProps) {
