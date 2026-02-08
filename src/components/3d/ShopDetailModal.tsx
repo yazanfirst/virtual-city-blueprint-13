@@ -90,9 +90,13 @@ const ShopDetailModal = ({ shop, onClose, onEnterShop }: ShopDetailModalProps) =
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6"
       style={{ touchAction: 'manipulation' }}
       data-control-ignore="true"
-      onPointerDown={(e) => e.stopPropagation()}
+      onPointerDown={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+        e.stopPropagation();
+      }}
       onTouchStart={(e) => e.stopPropagation()}
-      onClick={onClose}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-background/60 backdrop-blur-sm" />
@@ -102,7 +106,6 @@ const ShopDetailModal = ({ shop, onClose, onEnterShop }: ShopDetailModalProps) =
         className="relative w-full max-w-md max-h-[90vh] bg-background border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         onPointerDown={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
         style={{
           borderColor: shop.hasShop ? shop.primaryColor : undefined,
           boxShadow: shop.hasShop 
