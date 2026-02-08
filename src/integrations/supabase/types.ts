@@ -16,7 +16,9 @@ export type Database = {
     Tables: {
       merchant_offers: {
         Row: {
+          code_type: string
           coin_price: number
+          coupon_code: string | null
           created_at: string
           daily_limit: number
           description: string | null
@@ -33,7 +35,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          code_type?: string
           coin_price: number
+          coupon_code?: string | null
           created_at?: string
           daily_limit?: number
           description?: string | null
@@ -50,7 +54,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          code_type?: string
           coin_price?: number
+          coupon_code?: string | null
           created_at?: string
           daily_limit?: number
           description?: string | null

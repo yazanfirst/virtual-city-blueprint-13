@@ -23,6 +23,7 @@ export default function ShopOffersSection({ shopId, externalLink }: ShopOffersSe
 
   const [redemptionModal, setRedemptionModal] = useState<{
     code: string;
+    couponCode?: string | null;
     coinsSpent: number;
     expiresAt: string;
   } | null>(null);
@@ -36,6 +37,7 @@ export default function ShopOffersSection({ shopId, externalLink }: ShopOffersSe
     if (result.success && result.redemption_code) {
       setRedemptionModal({
         code: result.redemption_code,
+        couponCode: result.coupon_code,
         coinsSpent: result.coins_spent ?? 0,
         expiresAt: result.expires_at ?? new Date().toISOString(),
       });
@@ -69,6 +71,7 @@ export default function ShopOffersSection({ shopId, externalLink }: ShopOffersSe
       <RedemptionCodeModal
         isOpen={!!redemptionModal}
         code={redemptionModal?.code ?? ""}
+        couponCode={redemptionModal?.couponCode}
         coinsSpent={redemptionModal?.coinsSpent ?? 0}
         expiresAt={redemptionModal?.expiresAt ?? new Date().toISOString()}
         externalLink={externalLink}

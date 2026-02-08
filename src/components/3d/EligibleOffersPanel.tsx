@@ -23,6 +23,7 @@ export default function EligibleOffersPanel({
   const [expanded, setExpanded] = useState(true);
   const [redemptionModal, setRedemptionModal] = useState<{
     code: string;
+    couponCode?: string | null;
     coinsSpent: number;
     expiresAt: string;
     externalLink?: string | null;
@@ -64,6 +65,7 @@ export default function EligibleOffersPanel({
     if (result.success && result.redemption_code) {
       setRedemptionModal({
         code: result.redemption_code,
+        couponCode: result.coupon_code,
         coinsSpent: result.coins_spent ?? 0,
         expiresAt: result.expires_at ?? new Date().toISOString(),
         externalLink: offer.shop_external_link,
@@ -158,6 +160,7 @@ export default function EligibleOffersPanel({
       <RedemptionCodeModal
         isOpen={!!redemptionModal}
         code={redemptionModal?.code ?? ''}
+        couponCode={redemptionModal?.couponCode}
         coinsSpent={redemptionModal?.coinsSpent ?? 0}
         expiresAt={redemptionModal?.expiresAt ?? new Date().toISOString()}
         externalLink={redemptionModal?.externalLink}

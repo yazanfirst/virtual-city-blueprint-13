@@ -18,6 +18,7 @@ export interface Redemption {
 interface ClaimResult {
   success: boolean;
   redemption_code?: string;
+  coupon_code?: string | null;
   coins_spent?: number;
   coins_remaining?: number;
   expires_at?: string;
@@ -116,6 +117,7 @@ export function useClaimOffer() {
         return {
           success: true,
           redemption_code: result.redemption_code,
+          coupon_code: result.coupon_code || null,
           coins_spent: result.coins_spent,
           coins_remaining: result.coins_remaining,
           expires_at: result.expires_at,
