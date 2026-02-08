@@ -297,13 +297,44 @@ export default function CityScene({
   const showMirrorWorld = mirrorWorld.isActive && mirrorWorld.phase !== 'inactive' && !mission.isActive && !ghostHunt.isActive;
   const mirrorWorldActive = mirrorWorld.isActive && mirrorWorld.phase === 'hunting' && !mission.isActive && !ghostHunt.isActive;
 
+  // WebGL context loss recovery
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [contextLost, setContextLost] = useState(false);
+
+  const handleCreated = useCallback((state: any) => {
+    const canvas = state.gl.domElement as HTMLCanvasElement;
+    canvasRef.current = canvas;
+
+    const onLost = (e: Event) => {
+      e.preventDefault();
+      console.warn('[CityScene] WebGL context lost – waiting for restore…');
+      setContextLost(true);
+    };
+    const onRestored = () => {
+      console.info('[CityScene] WebGL context restored');
+      setContextLost(false);
+    };
+
+    canvas.addEventListener('webglcontextlost', onLost);
+    canvas.addEventListener('webglcontextrestored', onRestored);
+  }, []);
+
   return (
     <div className="relative h-full w-full">
+      {contextLost && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm">
+          <div className="text-center p-6">
+            <p className="text-foreground font-bold text-lg mb-2">Recovering Graphics…</p>
+            <p className="text-muted-foreground text-sm">The GPU context was lost. Restoring automatically.</p>
+          </div>
+        </div>
+      )}
       <Canvas
         className={`h-full w-full ${mirrorWorldActive ? 'mirror-world-canvas' : ''}`}
         style={{ touchAction: "none" }}
         camera={{ position: [0, 10, 50], fov: 50 }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
+        onCreated={handleCreated}
       >
         <Suspense fallback={null}>
           <CameraUpController mirrorWorldActive={mirrorWorldActive} />

@@ -855,7 +855,7 @@ const StreetView = () => {
             cameraView={cameraView}
             shopBrandings={shopBrandings}
             onShopClick={handleShopClick}
-            forcedTimeOfDay={(mission.isActive && mission.phase !== 'completed') || (ghostHunt.isActive && ghostHunt.phase === 'hunting') || (mirrorWorld.isActive && mirrorWorld.phase === 'hunting') ? "night" : null}
+            forcedTimeOfDay={(mission.isActive && mission.phase !== 'completed' && mission.phase !== 'inactive') || (ghostHunt.isActive && ghostHunt.phase !== 'inactive') || (mirrorWorld.isActive && mirrorWorld.phase !== 'inactive') ? "night" : null}
             onZombieTouchPlayer={handleZombieTouchPlayer}
             onTrapHitPlayer={handleTrapHitPlayer}
             hideMobileControls={hideMobileControls}
@@ -1233,9 +1233,8 @@ const StreetView = () => {
               }
               const nextLevel = Math.min(mirrorWorld.maxLevel, mirrorWorld.unlockedLevel);
               mirrorWorld.setDifficultyLevel(nextLevel);
-              mirrorWorld.resetMission();
               resetToSafeSpawn();
-              mirrorWorld.startMission();
+              mirrorWorld.startMission(); // startMission resets state internally
             }}
             onExit={() => {
               // Grant rewards for Mirror World on exit too
@@ -1300,10 +1299,9 @@ const StreetView = () => {
               xpEarned={lastReward.xp}
               onContinue={() => {
                 const nextLevel = Math.min(ghostHunt.maxLevel, ghostHunt.unlockedLevel);
-                ghostHunt.resetMission();
-                ghostHunt.setDifficultyLevel(nextLevel);
-                ghostHunt.startMission();
                 setShowGhostHuntComplete(false);
+                ghostHunt.setDifficultyLevel(nextLevel);
+                ghostHunt.startMission(); // startMission already resets state internally
               }}
               onExit={() => {
                 setShowGhostHuntComplete(false);
@@ -1322,12 +1320,14 @@ const StreetView = () => {
             xpEarned={lastReward.xp}
             onContinue={() => {
               const nextLevel = mission.level >= mission.maxLevel ? 1 : Math.min(mission.maxLevel, mission.unlockedLevel);
-              mission.resetMission();
+              const recentShopIds = mission.recentlyUsedShopIds;
               mission.setLevel(nextLevel);
-              const selected = selectMissionTargetShop(shopBrandings, shopItemsMap, mission.recentlyUsedShopIds);
+              const selected = selectMissionTargetShop(shopBrandings, shopItemsMap, recentShopIds);
               if (selected) {
                 mission.activateMission(selected.shop, selected.items);
                 handleMissionActivate();
+              } else {
+                mission.resetMission();
               }
               setShowZombieComplete(false);
             }}
@@ -1725,7 +1725,7 @@ const StreetView = () => {
                     cameraView={cameraView} 
                     shopBrandings={shopBrandings}
                     onShopClick={handleShopClick}
-                    forcedTimeOfDay={(mission.isActive && mission.phase !== 'completed') || (ghostHunt.isActive && ghostHunt.phase === 'hunting') || (mirrorWorld.isActive && mirrorWorld.phase === 'hunting') ? "night" : null}
+                    forcedTimeOfDay={(mission.isActive && mission.phase !== 'completed' && mission.phase !== 'inactive') || (ghostHunt.isActive && ghostHunt.phase !== 'inactive') || (mirrorWorld.isActive && mirrorWorld.phase !== 'inactive') ? "night" : null}
                     onZombieTouchPlayer={handleZombieTouchPlayer}
                     onTrapHitPlayer={handleTrapHitPlayer}
                     hideMobileControls={hideMobileControls}
