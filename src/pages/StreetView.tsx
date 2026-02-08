@@ -248,7 +248,7 @@ const StreetView = () => {
     if (mission.phase === 'completed') {
       // Grant rewards for Zombie Escape
       const coinsReward = 30;
-      const xpReward = level * 50;
+      const xpReward = mission.level * 50;
       setLastReward({ coins: coinsReward, xp: xpReward });
       if (playerProgress.isLoggedIn) {
         playerProgress.earnCoins(coinsReward);
@@ -1193,7 +1193,7 @@ const StreetView = () => {
               onComplete={() => {
                 // Grant rewards for Ghost Hunt
                 const coinsReward = 15 * ghostHunt.capturedCount;
-                const xpReward = level * 50;
+                const xpReward = ghostHunt.difficultyLevel * 50;
                 setLastReward({ coins: coinsReward, xp: xpReward });
                 if (playerProgress.isLoggedIn) {
                   playerProgress.earnCoins(coinsReward);
@@ -1221,12 +1221,12 @@ const StreetView = () => {
             nextLevel={Math.min(mirrorWorld.maxLevel, mirrorWorld.unlockedLevel)}
             currentLevel={mirrorWorld.difficultyLevel}
             coinsEarned={mirrorWorld.phase === 'completed' ? 20 * mirrorWorld.collectedCount : undefined}
-            xpEarned={mirrorWorld.phase === 'completed' ? level * 50 : undefined}
+            xpEarned={mirrorWorld.phase === 'completed' ? mirrorWorld.difficultyLevel * 50 : undefined}
             onContinue={() => {
               // Grant rewards for Mirror World
               if (playerProgress.isLoggedIn) {
                 const coinsReward = 20 * mirrorWorld.collectedCount;
-                const xpReward = level * 50;
+                const xpReward = mirrorWorld.difficultyLevel * 50;
                 playerProgress.earnCoins(coinsReward);
                 playerProgress.earnXP(xpReward);
                 playerProgress.incrementMissions();
@@ -1241,7 +1241,7 @@ const StreetView = () => {
               // Grant rewards for Mirror World on exit too
               if (playerProgress.isLoggedIn) {
                 const coinsReward = 20 * mirrorWorld.collectedCount;
-                const xpReward = level * 50;
+                const xpReward = mirrorWorld.difficultyLevel * 50;
                 playerProgress.earnCoins(coinsReward);
                 playerProgress.earnXP(xpReward);
                 playerProgress.incrementMissions();
