@@ -737,21 +737,23 @@ const StreetView = () => {
   };
   
   const handleQuestionAnswer = (answer: string) => {
-    const correct = mission.answerQuestion(answer);
+    // answerQuestion returns a deterministic status ('wrong' | 'next' | 'completed')
+    // instead of relying on mission.phase which would be stale in the same render tick.
+    const status = mission.answerQuestion(answer);
     
     // Freeze ALL zombies for 3 seconds after any question closes
     // This gives player a fair chance to escape even if zombies were close
     mission.freezeAllZombies(3000);
     
-    if (!correct) {
+    if (status === 'wrong') {
       // Wrong answer - close modal, show deceptive message, play notification
       playSounds.notification();
       setShowQuestionModal(false);
-    } else if (mission.phase === 'completed') {
-      // All correct - mission complete
+    } else if (status === 'completed') {
+      // All correct - mission complete, close modal immediately
       setShowQuestionModal(false);
     }
-    // Otherwise, next question will show automatically
+    // status === 'next' — next question will show automatically via store update
   };
 
   // shopBrandings already declared above

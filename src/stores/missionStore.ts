@@ -109,7 +109,8 @@ interface MissionState {
   setPhase: (phase: MissionPhase) => void;
   enterShop: () => void;
   exitShop: (questions: MissionQuestion[]) => void;
-  answerQuestion: (selectedAnswer: string) => boolean;
+  // Returns deterministic status to avoid stale-phase race conditions in callers
+  answerQuestion: (selectedAnswer: string) => 'wrong' | 'next' | 'completed';
   triggerTrap: () => void;
   hitByTrap: (trapType?: 'firepit' | 'axe' | 'thorns') => void;
   failMission: (reason?: MissionFailReason) => void;
@@ -361,11 +362,13 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     });
   },
 
+  // Returns a deterministic status string so callers don't need to read
+  // mission.phase in the same tick (which would be stale in React).
   answerQuestion: (selectedAnswer) => {
     const state = get();
     const currentQuestion = state.questions[state.currentQuestionIndex];
     
-    if (!currentQuestion) return false;
+    if (!currentQuestion) return 'wrong';
     
     const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
     
@@ -383,7 +386,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
         deceptiveMessageShown: true,
         hasNotification: true, // Notify user to check mission panel
       });
-      return false;
+      return 'wrong';
     }
     
     if (nextIndex >= state.questions.length) {
@@ -394,10 +397,10 @@ export const useMissionStore = create<MissionState>((set, get) => ({
         phase: 'completed',
         zombies: [],
         zombiesPaused: true,
-      traps: [],
-    });
+        traps: [],
+      });
       get().unlockNextLevel();
-      return true;
+      return 'completed';
     }
     
     // Move to next question
@@ -407,7 +410,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       currentQuestionIndex: nextIndex,
     });
     
-    return true;
+    return 'next';
   },
 
   triggerTrap: () => {
