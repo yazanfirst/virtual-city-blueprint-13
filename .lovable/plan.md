@@ -1,115 +1,129 @@
 
 
-# Merchant Coupon Code System + Auto-Expire Filtering
+# UI Interaction Audit Report: Button & Modal Layering
 
-## Summary
+## Executive Summary
 
-Transition from platform-generated random codes to **merchant-defined coupon codes** that work on real merchant websites. Add **automatic expiry filtering** so expired offers never appear to players. The platform's value is gating access behind gameplay (coins, levels, limits) rather than generating codes.
+After reviewing all 30+ interactive components across the game HUD, modals, mission panels, shop UI, and mobile controls, the codebase is **largely well-implemented** with consistent use of `onPointerDown` + `stopPropagation` + `touch-manipulation`. However, there are **7 specific issues** that can cause buttons to not respond on the first click.
 
-## What Changes
+---
 
-### 1. Database Migration
-
-Add two new columns to the `merchant_offers` table:
-
-- `coupon_code` (text, nullable) -- the merchant's real website coupon code (e.g., "SUMMER20")
-- `code_type` (text, default `'shared'`) -- future-ready field for supporting `'pool'` (CSV upload) or `'api'` (external integration) models later
-
-Existing offers without a coupon code will continue to work but won't reveal a code to players.
-
-### 2. Edge Function Update (`redeem-offer`)
-
-- After successful validation (coins, level, limits), return the merchant's `coupon_code` from the offer record
-- Still generate and store a unique `redemption_code` internally for tracking/analytics
-- Return both `coupon_code` (what the player uses on the merchant website) and `redemption_code` (internal tracking) in the response
-
-### 3. Merchant Offer Form Update
-
-Add a prominent **"Coupon Code"** input field to the `OfferManagement.tsx` form:
-
-- Required text field with placeholder "e.g., SUMMER20"
-- Helper text: "Enter the coupon code customers will use on your website"
-- Uppercase-forced input for consistency
-- Included in both create and edit flows
-- Pre-filled when editing an existing offer
-
-### 4. Auto-Expire Filtering (Client-Side)
-
-Add expiry filtering in two places:
-
-- `useAllActiveOffers.ts` -- filter out offers where `expires_at` is in the past before returning results to the "Offers For You" panel
-- `useMerchantOffers.ts` (`useShopOffers`) -- same filter for individual shop offer views
-
-This ensures expired offers are automatically hidden without any manual intervention.
-
-### 5. Redemption Modal Update
-
-Update `RedemptionCodeModal.tsx` to:
-
-- Accept and display a `couponCode` prop (the merchant's real code) prominently
-- Show a smaller "Tracking ID" label for the internal redemption code
-- The copy button copies the merchant's coupon code
-- Keep the existing "Visit Shop Website" button for outbound clicks
-
-### 6. Data Flow Updates
-
-Update these files to pass the `coupon_code` through the claim flow:
-
-- `useRedemptions.ts` -- add `coupon_code` to the `ClaimResult` interface and extract it from the edge function response
-- `EligibleOffersPanel.tsx` -- pass `coupon_code` to the redemption modal after claiming
-- `ShopOffersSection.tsx` -- same pass-through for the shop interior view
-- `useMerchantOffers.ts` -- add `coupon_code` and `code_type` to the `MerchantOffer` and `CreateOfferInput` interfaces
-
-## Data Flow Diagram
+## Z-Index Layer Map (Current State)
 
 ```text
-MERCHANT CREATES OFFER
-  Enters title, discount, coin price, AND coupon code "SUMMER20"
-  Stored in merchant_offers.coupon_code
-
-PLAYER BROWSING (auto-filtered)
-  Expired offers (expires_at < now) hidden automatically
-  Only eligible offers shown (coins, level, not already claimed)
-
-PLAYER CLAIMS OFFER
-  Edge function validates: coins, level, per-player limit, daily limit
-  Deducts coins from player_progress
-  Creates offer_redemptions record (internal tracking code)
-  Returns merchant's coupon_code "SUMMER20" to player
-
-PLAYER SEES MODAL
-  "SUMMER20" displayed as the code to copy
-  "Visit Shop Website" opens merchant's site
-  Player uses code at checkout on merchant's website
+Layer 1000  Dialog overlay (Radix UI default)
+Layer  400  JumpScareModal
+Layer  300  RedemptionCodeModal, PauseOverlay, MissionFailedModal,
+            GhostHuntFailedModal, GhostHuntCompleteModal,
+            ShopProximityIndicator
+Layer  250  ShopInteriorRoom, TrapHitFeedback
+Layer  240  ZombieMissionCompleteModal
+Layer  220  MirrorWorldBriefing, MirrorWorldComplete, MirrorWorldFailed
+Layer  200  GhostHuntUI (briefing), TutorialTooltip, MissionPopup, 2DMapOverlay
+Layer  160  MirrorWorldUI toast/prompt overlays, Map toggle button
+Layer  150  HUD elements (timer, health, stats, equipment, side panels, top bar)
+Layer  100  ShopDetailModal, Toast notifications
+Layer   50  Game container (fixed inset-0)
+Layer   10  Canvas loading overlay
 ```
 
-## Anti-Abuse Protections (Unchanged)
+---
 
-- Coin-gating: players must spend earned coins to reveal the code
-- Per-player claim limits: enforced by edge function
-- Daily global claim limits: enforced by edge function
-- Level requirements: enforced by edge function
-- All redemptions tracked in `offer_redemptions` for merchant analytics
+## Issues Found
 
-## Files Modified
+### ISSUE 1: MirrorWorldUI "Climb" and "Drop Down" buttons use `onClick` instead of `onPointerDown`
+**File:** `src/components/mission/MirrorWorldUI.tsx` (lines 170-203)
+**Severity:** High (Mobile)
+**Problem:** The "Climb" (line 173) and "Drop Down" (line 182) buttons use `onClick` instead of `onPointerDown`. On mobile, `onClick` fires with a ~300ms delay and can be intercepted by the camera touch handler in MobileControls. These buttons also lack `data-control-ignore="true"`, so the camera system may consume the touch before the click event fires.
+**Fix:** Change both buttons to use `onPointerDown` with `e.stopPropagation()` and add `data-control-ignore="true"`.
 
-| File | Change |
-|------|--------|
-| Database migration | Add `coupon_code` and `code_type` columns |
-| `supabase/functions/redeem-offer/index.ts` | Return `coupon_code` from offer |
-| `src/hooks/useMerchantOffers.ts` | Add fields to interfaces |
-| `src/hooks/useAllActiveOffers.ts` | Add expiry filter |
-| `src/hooks/useRedemptions.ts` | Add `coupon_code` to ClaimResult |
-| `src/components/merchant/OfferManagement.tsx` | Add coupon code input field |
-| `src/components/3d/EligibleOffersPanel.tsx` | Pass coupon code to modal |
-| `src/components/3d/ShopOffersSection.tsx` | Pass coupon code to modal |
-| `src/components/mission/RedemptionCodeModal.tsx` | Display merchant coupon code |
+### ISSUE 2: MirrorWorldBriefing, MirrorWorldComplete, and MirrorWorldFailed lack touch event blocking
+**Files:** `MirrorWorldBriefing.tsx`, `MirrorWorldComplete.tsx`, `MirrorWorldFailed.tsx`
+**Severity:** Medium (Mobile)
+**Problem:** These three modals at z-index 220 do NOT have `onPointerDown`, `onTouchStart`, or `onClick` event handlers with `stopPropagation()` on their backdrop container. This means touches on these modals can propagate through to the game canvas/MobileControls behind them, potentially causing camera movement or joystick activation while interacting with modal buttons. Other modals at the same or higher z-level (like GhostHuntFailedModal, MissionFailedModal, JumpScareModal) all correctly block these events.
+**Fix:** Add `onPointerDown={(e) => e.stopPropagation()}` and `onTouchStart={(e) => e.stopPropagation()}` to the backdrop container of all three modals.
 
-## Future Extensibility
+### ISSUE 3: ZombieMissionCompleteModal missing touch event blocking
+**File:** `src/components/mission/ZombieMissionCompleteModal.tsx`
+**Severity:** Medium (Mobile)
+**Problem:** Same issue as Issue 2 -- the modal container at z-[240] lacks `onPointerDown` and `onTouchStart` handlers with `stopPropagation()`. Touch events can propagate to game controls behind it.
+**Fix:** Add event blocking handlers to the backdrop container.
 
-The `code_type` column enables these future upgrades without schema changes:
+### ISSUE 4: QuestionModal radio options use both `onPointerDown` and `onClick` creating double-fire risk
+**File:** `src/components/mission/QuestionModal.tsx` (lines 84-89)
+**Severity:** Low (Desktop + Mobile)
+**Problem:** Each question option button has BOTH `onPointerDown` and `onClick` handlers that both call `setSelectedOption(option)`. While harmless for selection (idempotent), this pattern can cause subtle timing issues where the selected state appears to "not register" on fast taps because `onPointerDown` fires, then `onClick` fires again slightly later, potentially interfering with React batching. More importantly, the `onPointerDown` handler does not call `e.stopPropagation()`, which could allow the event to bubble up to the Dialog overlay.
+**Fix:** Remove the `onClick` handler (keep `onPointerDown` only with `e.stopPropagation()`), matching the pattern used by all other interactive elements in the codebase.
 
-- `'shared'` (current MVP) -- single merchant code shown to all claimants
-- `'pool'` (future) -- merchant uploads CSV of unique codes, one distributed per claim
-- `'api'` (future) -- platform calls merchant API to generate/validate codes at redemption time
+### ISSUE 5: TrapHitFeedback overlay at z-[250] blocks clicks on ShopInteriorRoom buttons
+**File:** `src/components/mission/TrapHitFeedback.tsx`
+**Severity:** Low (Edge case)
+**Problem:** When a trap hit triggers, the TrapHitFeedback overlay renders at z-[250] with `pointer-events-none` which is correct. However, the red flash overlay (`bg-red-500/30 animate-pulse`) inside it covers the entire screen. While `pointer-events-none` prevents click interception, during the 800ms animation, the visual flash can make users think their click failed, leading to a perceived "button not working" experience. This is cosmetic but contributes to the reported issue perception.
+**Fix:** No code change needed -- this is working correctly with `pointer-events-none`. Document for awareness.
+
+### ISSUE 6: ShopDetailModal backdrop uses `onClick` for close instead of `onPointerDown`
+**File:** `src/components/3d/ShopDetailModal.tsx` (line 96)
+**Severity:** Medium (Desktop + Mobile)
+**Problem:** The backdrop container uses `onClick={onClose}` to close the modal when clicking outside. On mobile, `onClick` fires ~300ms after the touch, during which time a user might also be touching a button inside the modal. The inner modal card has `onClick={(e) => e.stopPropagation()}` which is also `onClick`-based. If a user taps a button fast, the `onPointerDown` on the button fires first and processes the action, but then the `onClick` on the backdrop fires and closes the modal prematurely -- causing the "button didn't work" perception (the action executed but the modal closed immediately). Other modals (MissionPopup, 2DMap) use `onClick` on backdrop for close AND `onClick` + `stopPropagation` on inner content, which is the same pattern. But ShopDetailModal is unique because its inner buttons use `onPointerDown` while the backdrop uses `onClick`, creating a timing mismatch.
+**Fix:** Change the backdrop from `onClick={onClose}` to `onPointerDown={onClose}`. Also change the inner card `onClick={(e) => e.stopPropagation()}` to `onPointerDown={(e) => e.stopPropagation()}` (it already has this, so just remove the redundant `onClick`).
+
+### ISSUE 7: RedemptionCodeModal lacks `data-control-ignore="true"` on backdrop
+**File:** `src/components/mission/RedemptionCodeModal.tsx`
+**Severity:** Low (Mobile during gameplay)
+**Problem:** While the modal at z-[300] correctly stops pointer propagation, it does not have `data-control-ignore="true"` on its container. The MobileControls touch handler checks for this attribute to determine whether to start camera tracking. Without it, when the modal opens, any new touches that start on the modal (before propagation is stopped) could briefly be captured by the MobileControls window-level touchstart listener before the modal's onPointerDown handler fires.
+**Fix:** Add `data-control-ignore="true"` to the modal container.
+
+---
+
+## What Is Already Working Well
+
+- All major modals (MissionFailedModal, GhostHuntFailedModal, JumpScareModal, PauseOverlay) have comprehensive event blocking with `onPointerDown`, `onTouchStart`, and `onClick` propagation stops.
+- All HUD buttons consistently use `onPointerDown` + `stopPropagation` + `data-control-ignore="true"`.
+- MobileControls correctly checks for `data-control-ignore`, button/link elements, and joystick bounds before starting camera tracking.
+- The ShopProximityIndicator uses elevated z-index (300) with both `onPointerDown` and `onTouchEnd` handlers.
+- GameStartScreen uses `onPointerDown` with `data-control-ignore`.
+- ShopOfferCard and EligibleOffersPanel use `onPointerDown` with stopPropagation.
+
+---
+
+## Implementation Plan
+
+### Step 1: Fix MirrorWorldUI buttons (Issue 1)
+Change "Climb" and "Drop Down" buttons from `onClick` to `onPointerDown` with `e.stopPropagation()` and add `data-control-ignore="true"`.
+
+### Step 2: Add event blocking to Mirror World modals (Issue 2)
+Add `onPointerDown` and `onTouchStart` with `stopPropagation` to:
+- `MirrorWorldBriefing.tsx` backdrop
+- `MirrorWorldComplete.tsx` backdrop
+- `MirrorWorldFailed.tsx` backdrop
+
+### Step 3: Add event blocking to ZombieMissionCompleteModal (Issue 3)
+Add `onPointerDown` and `onTouchStart` with `stopPropagation` to the backdrop container.
+
+### Step 4: Fix QuestionModal option handlers (Issue 4)
+Remove `onClick` from option buttons, keep `onPointerDown` only with `stopPropagation`.
+
+### Step 5: Fix ShopDetailModal event type mismatch (Issue 6)
+Change backdrop from `onClick` to `onPointerDown` for closing.
+
+### Step 6: Add data-control-ignore to RedemptionCodeModal (Issue 7)
+Add `data-control-ignore="true"` and `style={{ touchAction: 'manipulation' }}` to the modal container.
+
+---
+
+## Device-Specific Notes
+
+### PC (Desktop)
+- Most interactions work reliably due to mouse events having no delay.
+- Issue 4 (QuestionModal double handler) is the most likely cause of perceived "click not working" on desktop -- when both handlers fire, React state updates may batch unpredictably.
+- Issue 6 (ShopDetailModal) can cause premature modal close on fast clicks.
+
+### Mobile (Touch)
+- Issues 1-3 are the primary causes of "button not responding" on mobile.
+- The MobileControls system attaches window-level touch listeners that run BEFORE component-level handlers. Without `data-control-ignore` and `stopPropagation`, touches on game overlays can be consumed by the camera rotation system.
+- The 300ms `onClick` delay on mobile is the root cause of most perceived interaction failures -- the codebase correctly uses `onPointerDown` in most places, but the 7 identified locations still use `onClick`.
+
+### Tablet
+- Same issues as mobile, but less severe due to larger touch targets.
+- Landscape orientation works correctly due to landscape-specific Tailwind classes.
 
