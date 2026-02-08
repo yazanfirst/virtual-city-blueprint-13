@@ -249,21 +249,44 @@ const StreetView = () => {
   useEffect(() => {
     if (mission.phase === 'completed' && !zombieRewardedRef.current) {
       zombieRewardedRef.current = true;
-      // Grant rewards for Zombie Escape
-      const coinsReward = 30;
-      const xpReward = mission.level * 50;
-      setLastReward({ coins: coinsReward, xp: xpReward });
+      // Grant rewards via server-validated completeMission
       if (playerProgress.isLoggedIn) {
-        playerProgress.earnCoins(coinsReward);
-        playerProgress.earnXP(xpReward);
-        playerProgress.incrementMissions();
+        playerProgress
+          .completeMission('zombie', mission.level, 30, mission.level * 50)
+          .then((result) => {
+            setLastReward({ coins: result.coinsEarned, xp: result.xpEarned });
+            setShowZombieComplete(true);
+          });
+      } else {
+        setLastReward({ coins: 0, xp: 0 });
+        setShowZombieComplete(true);
       }
-      setShowZombieComplete(true);
     } else if (mission.phase !== 'completed') {
       zombieRewardedRef.current = false;
       setShowZombieComplete(false);
     }
   }, [mission.phase]);
+
+  // Track Mirror World completion - use ref to prevent duplicate reward grants
+  const mirrorRewardedRef = useRef(false);
+  useEffect(() => {
+    if (mirrorWorld.phase === 'completed' && !mirrorRewardedRef.current) {
+      mirrorRewardedRef.current = true;
+      if (playerProgress.isLoggedIn) {
+        const baseCoins = 20 * mirrorWorld.collectedCount;
+        const baseXP = mirrorWorld.difficultyLevel * 50;
+        playerProgress
+          .completeMission('mirror_world', mirrorWorld.difficultyLevel, baseCoins, baseXP)
+          .then((result) => {
+            setLastReward({ coins: result.coinsEarned, xp: result.xpEarned });
+          });
+      } else {
+        setLastReward({ coins: 0, xp: 0 });
+      }
+    } else if (mirrorWorld.phase !== 'completed') {
+      mirrorRewardedRef.current = false;
+    }
+  }, [mirrorWorld.phase]);
 
   // Resume game when tutorial tooltip is dismissed
   const handleTutorialDismiss = useCallback(() => {
@@ -440,14 +463,9 @@ const StreetView = () => {
     setIsInsideShop(true);
     setShowShopModal(false);
     
-    // Reward first-time shop visit (5 coins)
+    // Reward first-time shop visit (5 coins) — server validates uniqueness
     if (shop.shopId && playerProgress.isLoggedIn) {
-      const gameState = useGameStore.getState();
-      if (!gameState.shopsVisited.has(shop.shopId)) {
-        gameState.visitShop(shop.shopId);
-        playerProgress.earnCoins(5);
-        playerProgress.incrementShopsVisited();
-      }
+      playerProgress.recordShopVisit(shop.shopId);
     }
   };
 
@@ -1195,16 +1213,20 @@ const StreetView = () => {
           {ghostHunt.isActive && ghostHunt.phase !== 'inactive' && (
             <GhostHuntUI 
               onComplete={() => {
-                // Grant rewards for Ghost Hunt
-                const coinsReward = 15 * ghostHunt.capturedCount;
-                const xpReward = ghostHunt.difficultyLevel * 50;
-                setLastReward({ coins: coinsReward, xp: xpReward });
+                // Grant rewards via server-validated completeMission
+                const baseCoins = 15 * ghostHunt.capturedCount;
+                const baseXP = ghostHunt.difficultyLevel * 50;
                 if (playerProgress.isLoggedIn) {
-                  playerProgress.earnCoins(coinsReward);
-                  playerProgress.earnXP(xpReward);
-                  playerProgress.incrementMissions();
+                  playerProgress
+                    .completeMission('ghost_hunt', ghostHunt.difficultyLevel, baseCoins, baseXP)
+                    .then((result) => {
+                      setLastReward({ coins: result.coinsEarned, xp: result.xpEarned });
+                      setShowGhostHuntComplete(true);
+                    });
+                } else {
+                  setLastReward({ coins: 0, xp: 0 });
+                  setShowGhostHuntComplete(true);
                 }
-                setShowGhostHuntComplete(true);
               }}
               onFailed={() => setShowGhostHuntFailed(true)}
             />
@@ -1224,31 +1246,15 @@ const StreetView = () => {
             isOpen={mirrorWorld.phase === 'completed'}
             nextLevel={Math.min(mirrorWorld.maxLevel, mirrorWorld.unlockedLevel)}
             currentLevel={mirrorWorld.difficultyLevel}
-            coinsEarned={mirrorWorld.phase === 'completed' ? 20 * mirrorWorld.collectedCount : undefined}
-            xpEarned={mirrorWorld.phase === 'completed' ? mirrorWorld.difficultyLevel * 50 : undefined}
+            coinsEarned={lastReward.coins}
+            xpEarned={lastReward.xp}
             onContinue={() => {
-              // Grant rewards for Mirror World
-              if (playerProgress.isLoggedIn) {
-                const coinsReward = 20 * mirrorWorld.collectedCount;
-                const xpReward = mirrorWorld.difficultyLevel * 50;
-                playerProgress.earnCoins(coinsReward);
-                playerProgress.earnXP(xpReward);
-                playerProgress.incrementMissions();
-              }
               const nextLevel = Math.min(mirrorWorld.maxLevel, mirrorWorld.unlockedLevel);
               mirrorWorld.setDifficultyLevel(nextLevel);
               resetToSafeSpawn();
-              mirrorWorld.startMission(); // startMission resets state internally
+              mirrorWorld.startMission();
             }}
             onExit={() => {
-              // Grant rewards for Mirror World on exit too
-              if (playerProgress.isLoggedIn) {
-                const coinsReward = 20 * mirrorWorld.collectedCount;
-                const xpReward = mirrorWorld.difficultyLevel * 50;
-                playerProgress.earnCoins(coinsReward);
-                playerProgress.earnXP(xpReward);
-                playerProgress.incrementMissions();
-              }
               mirrorWorld.resetMission();
               resetToSafeSpawn();
               setIsInsideShop(false);

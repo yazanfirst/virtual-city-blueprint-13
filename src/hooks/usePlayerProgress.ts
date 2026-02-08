@@ -12,9 +12,18 @@ interface PlayerProgress {
   shops_visited: number;
 }
 
+export interface MissionRewardResult {
+  coinsEarned: number;
+  xpEarned: number;
+  isFirstClear: boolean;
+}
+
+const REPLAY_XP = 10;
+
 export function usePlayerProgress() {
   const { user } = useAuth();
   const loadFromServer = useGameStore((s) => s.loadFromServer);
+  const loadVisitedShops = useGameStore((s) => s.loadVisitedShops);
   const addCoins = useGameStore((s) => s.addCoins);
   const addXP = useGameStore((s) => s.addXP);
   const loadedRef = useRef(false);
@@ -65,10 +74,20 @@ export function usePlayerProgress() {
         }
         loadedRef.current = true;
       }
+
+      // Load visited shop IDs to pre-populate the client-side Set
+      const { data: visits } = await supabase
+        .from('player_shop_visits')
+        .select('shop_id')
+        .eq('user_id', user.id);
+
+      if (visits && visits.length > 0) {
+        loadVisitedShops(visits.map((v) => v.shop_id));
+      }
     };
 
     loadProgress();
-  }, [user, loadFromServer]);
+  }, [user, loadFromServer, loadVisitedShops]);
 
   // Reset loaded state on logout
   useEffect(() => {
@@ -150,6 +169,82 @@ export function usePlayerProgress() {
     }
   }, [user, updateServer]);
 
+  /**
+   * Records a shop visit server-side. Returns true if this was a first visit
+   * (coins granted), false if already visited (no reward).
+   */
+  const recordShopVisit = useCallback(
+    async (shopId: string): Promise<boolean> => {
+      if (!user) return false;
+
+      // Try to insert — unique constraint will reject duplicates
+      const { error } = await supabase
+        .from('player_shop_visits')
+        .insert({ user_id: user.id, shop_id: shopId });
+
+      if (error) {
+        // 23505 = unique_violation → already visited
+        if (error.code === '23505') return false;
+        console.error('Failed to record shop visit:', error);
+        return false;
+      }
+
+      // First visit — grant reward
+      const gameState = useGameStore.getState();
+      gameState.visitShop(shopId);
+      await earnCoins(5);
+      await incrementShopsVisited();
+      return true;
+    },
+    [user, earnCoins, incrementShopsVisited]
+  );
+
+  /**
+   * Records a mission completion with server-side first-clear detection.
+   * First clear: full rewards. Replay: 0 coins + 10 XP.
+   */
+  const completeMission = useCallback(
+    async (
+      missionType: 'zombie' | 'ghost_hunt' | 'mirror_world',
+      level: number,
+      baseCoins: number,
+      baseXP: number
+    ): Promise<MissionRewardResult> => {
+      if (!user) return { coinsEarned: 0, xpEarned: 0, isFirstClear: false };
+
+      // Check if this level was already completed
+      const { data: existing } = await supabase
+        .from('mission_completions')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('mission_type', missionType)
+        .eq('level', level)
+        .maybeSingle();
+
+      if (existing) {
+        // Replay — small XP only, no coins
+        await earnXP(REPLAY_XP);
+        await incrementMissions();
+        return { coinsEarned: 0, xpEarned: REPLAY_XP, isFirstClear: false };
+      }
+
+      // First clear — insert record and grant full rewards
+      await supabase.from('mission_completions').insert({
+        user_id: user.id,
+        mission_type: missionType,
+        level,
+        coins_earned: baseCoins,
+        xp_earned: baseXP,
+      });
+
+      await earnCoins(baseCoins);
+      await earnXP(baseXP);
+      await incrementMissions();
+      return { coinsEarned: baseCoins, xpEarned: baseXP, isFirstClear: true };
+    },
+    [user, earnCoins, earnXP, incrementMissions]
+  );
+
   return {
     isLoggedIn: !!user,
     earnCoins,
@@ -157,5 +252,7 @@ export function usePlayerProgress() {
     earnXP,
     incrementMissions,
     incrementShopsVisited,
+    recordShopVisit,
+    completeMission,
   };
 }
