@@ -47,7 +47,10 @@ export default function RedemptionCodeModal({
   return (
     <div
       className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      data-control-ignore="true"
+      style={{ touchAction: 'manipulation' }}
       onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
     >
       <div className="bg-card border border-border rounded-xl p-6 max-w-sm mx-4 shadow-2xl text-center space-y-4">
         {/* Close */}

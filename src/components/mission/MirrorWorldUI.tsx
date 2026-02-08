@@ -167,10 +167,14 @@ export default function MirrorWorldUI() {
           </div>
         )}
         {canClimb && (
-          <button
+        <button
             type="button"
             className="pointer-events-auto rounded-full bg-purple-500/90 px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-purple-500/40 transition hover:bg-purple-400 active:scale-95 touch-manipulation"
-            onClick={() => setPlayerPosition(canClimb.top)}
+            data-control-ignore="true"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              setPlayerPosition(canClimb.top);
+            }}
           >
             Climb
           </button>
@@ -179,7 +183,9 @@ export default function MirrorWorldUI() {
           <button
             type="button"
             className="pointer-events-auto rounded-full bg-slate-900/80 px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg transition hover:bg-slate-800 active:scale-95 touch-manipulation"
-            onClick={() => {
+            data-control-ignore="true"
+            onPointerDown={(e) => {
+              e.stopPropagation();
               const [px, , pz] = playerPosition;
               let nearest = LADDER_POSITIONS[0];
               let nearestDist = Number.POSITIVE_INFINITY;

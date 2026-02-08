@@ -25,7 +25,12 @@ export default function MirrorWorldComplete({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-[220] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      data-control-ignore="true"
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+    >
       <div className="bg-slate-950/95 border border-purple-500/40 rounded-xl p-6 max-w-sm mx-4 shadow-2xl text-center">
         <div className="flex items-center justify-center gap-2 mb-3">
           <Sparkles className="h-6 w-6 text-purple-300" />

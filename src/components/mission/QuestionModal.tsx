@@ -81,10 +81,8 @@ export default function QuestionModal({
             {question.options.map((option, index) => (
               <button
                 key={index}
-                onPointerDown={() => {
-                  if (!hasAnswered) setSelectedOption(option);
-                }}
-                onClick={() => {
+                onPointerDown={(e) => {
+                  e.stopPropagation();
                   if (!hasAnswered) setSelectedOption(option);
                 }}
                 disabled={hasAnswered}
