@@ -1768,15 +1768,15 @@ const StreetView = () => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Level</span>
-                  <span className="text-foreground">1</span>
+                  <span className="text-foreground">{level}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Coins</span>
-                  <span className="text-primary">500</span>
+                  <span className="text-primary">{coins}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>XP</span>
-                  <span className="text-foreground">0 / 100</span>
+                  <span className="text-foreground">{xp % 200} / 200</span>
                 </div>
               </div>
             </PanelBox>
