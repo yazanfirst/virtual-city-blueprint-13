@@ -29,11 +29,13 @@ export default function QuestionModal({
   const isSubmittingRef = useRef(false);
   
   const handleConfirm = () => {
+    // Guard against double-submit race: isSubmittingRef blocks re-entry until
+    // the reset timeout fires, preventing the final question from being processed twice.
     if (selectedOption && !isSubmittingRef.current) {
       isSubmittingRef.current = true;
       setHasAnswered(true);
       onAnswer(selectedOption);
-      // Reset for next question
+      // Reset for next question (or cleanup after modal closes on completion)
       setTimeout(() => {
         setSelectedOption(null);
         setHasAnswered(false);
