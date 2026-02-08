@@ -47,6 +47,8 @@ import { useGhostTrapCapture } from "@/hooks/useGhostTrapCapture";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { useMobileAppBehavior } from "@/hooks/useMobileAppBehavior";
 import { usePlayerProgress } from "@/hooks/usePlayerProgress";
+import { useAllActiveOffers } from "@/hooks/useAllActiveOffers";
+import EligibleOffersPanel from "@/components/3d/EligibleOffersPanel";
 
 // Shop entry distance threshold (in world units)
 const SHOP_ENTRY_DISTANCE = 8;
@@ -140,6 +142,23 @@ const StreetView = () => {
 
   // Transform spots data to shop brandings - MUST be before useEffect that uses it
   const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
+
+  // Build shop map for eligible offers lookup
+  const shopMapForOffers = useMemo(() => {
+    const map = new Map<string, { name: string; logoUrl: string | null; externalLink: string | null }>();
+    for (const sb of shopBrandings) {
+      if (sb.hasShop && sb.shopId) {
+        map.set(sb.shopId, {
+          name: sb.shopName ?? 'Shop',
+          logoUrl: sb.logoUrl ?? null,
+          externalLink: sb.externalLink ?? null,
+        });
+      }
+    }
+    return map;
+  }, [shopBrandings]);
+
+  const { data: allActiveOffers = [], isLoading: offersLoading } = useAllActiveOffers(shopMapForOffers);
   
   // Get spot IDs for each recharge type (EMF, Flashlight, Trap) for map highlighting
   const rechargeSpotIds = useMemo(() => {
@@ -1815,6 +1834,14 @@ const StreetView = () => {
                 <p>Click on a shop in the 3D scene to view details here.</p>
               )}
             </PanelBox>
+
+            {/* Eligible Offers Panel */}
+            <EligibleOffersPanel
+              offers={allActiveOffers}
+              playerCoins={coins}
+              playerLevel={level}
+              loading={offersLoading}
+            />
           </div>
         </div>
         </div>
