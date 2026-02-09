@@ -242,13 +242,17 @@
 
 @media (max-width: 900px) and (orientation: landscape) {
   .mission-modal-overlay {
+    --mission-modal-padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+    --mission-modal-padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
     align-items: flex-start;
-    padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
-    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    padding-top: var(--mission-modal-padding-top);
+    padding-bottom: var(--mission-modal-padding-bottom);
   }
 
   .mission-modal-panel {
-    max-height: min(96svh, 96dvh);
+    max-height: calc(
+      min(100svh, 100dvh) - var(--mission-modal-padding-top) - var(--mission-modal-padding-bottom)
+    );
   }
 }
 
