@@ -23,8 +23,8 @@ export default function PauseOverlay({
   };
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-md">
-      <div className="bg-card/95 border border-primary/30 rounded-2xl p-6 md:p-8 max-w-md w-full mx-4 shadow-2xl">
+    <div className="mission-modal-overlay fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-md">
+      <div className="mission-modal-panel bg-card/95 border border-primary/30 rounded-2xl p-6 md:p-8 max-w-md w-full mx-4 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-center gap-3 mb-6">
           <div className="h-12 w-12 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center">

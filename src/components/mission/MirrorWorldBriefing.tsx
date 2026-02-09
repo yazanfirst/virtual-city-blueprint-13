@@ -6,12 +6,12 @@ export default function MirrorWorldBriefing() {
 
   return (
     <div
-      className="fixed inset-0 z-[220] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="mission-modal-overlay fixed inset-0 z-[220] flex items-center justify-center bg-black/80 backdrop-blur-sm"
       data-control-ignore="true"
       onPointerDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
     >
-      <div className="bg-slate-950/95 border border-purple-500/40 rounded-xl p-6 max-w-lg mx-4 shadow-2xl">
+      <div className="mission-modal-panel bg-slate-950/95 border border-purple-500/40 rounded-xl p-6 max-w-lg mx-4 shadow-2xl">
         <div className="flex items-center gap-3 mb-4">
           <Sparkles className="h-8 w-8 text-purple-300" />
           <h2 className="font-display text-xl font-bold text-purple-200 uppercase tracking-wider">

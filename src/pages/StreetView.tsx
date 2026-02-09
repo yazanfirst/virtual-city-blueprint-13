@@ -1086,7 +1086,7 @@ const StreetView = () => {
           {/* Mission Popup */}
           {showMissions && (
             <div 
-              className="absolute inset-0 flex items-center justify-center pointer-events-auto"
+              className="mission-modal-overlay absolute inset-0 flex items-center justify-center pointer-events-auto"
               style={{ zIndex: 200, touchAction: 'manipulation' }}
               data-control-ignore="true"
               onPointerDown={(e) => e.stopPropagation()}
@@ -1101,7 +1101,7 @@ const StreetView = () => {
               }}
             >
               <div 
-                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md max-h-[80vh] overflow-auto"
+                className="mission-modal-panel bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md max-h-[80vh] overflow-auto"
                 onPointerDown={(e) => e.stopPropagation()}
                 onTouchStart={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}

@@ -17,12 +17,12 @@ export default function GhostHuntFailedModal({
 }: GhostHuntFailedModalProps) {
   return (
     <div 
-      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="mission-modal-overlay fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm"
       style={{ touchAction: 'manipulation' }}
       onPointerDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
     >
-      <div className="bg-background/95 border border-red-500/50 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+      <div className="mission-modal-panel bg-background/95 border border-red-500/50 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-center gap-3 mb-4">
           {reason === 'time' ? (

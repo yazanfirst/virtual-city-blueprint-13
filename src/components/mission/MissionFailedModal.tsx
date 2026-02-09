@@ -80,14 +80,14 @@ export default function MissionFailedModal({
   
   return (
     <div 
-      className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      className="mission-modal-overlay fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       style={{ touchAction: 'manipulation' }}
       data-control-ignore="true"
       onPointerDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className={`bg-gradient-to-b ${bgColor} to-black border-2 ${borderColor} rounded-2xl p-5 sm:p-8 shadow-2xl max-w-md w-full text-center animate-in zoom-in-95 duration-300`}>
+      <div className={`mission-modal-panel bg-gradient-to-b ${bgColor} to-black border-2 ${borderColor} rounded-2xl p-5 sm:p-8 shadow-2xl max-w-md w-full text-center animate-in zoom-in-95 duration-300`}>
         {/* Icon */}
         <div className={`mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-black/50 border-2 ${borderColor} flex items-center justify-center mb-4 sm:mb-6`}>
           <Icon className={`h-8 w-8 sm:h-10 sm:w-10 ${iconColor}`} />

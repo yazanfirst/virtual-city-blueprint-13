@@ -31,12 +31,12 @@ export default function ZombieMissionCompleteModal({
 
   return (
     <div
-      className="fixed inset-0 z-[240] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="mission-modal-overlay fixed inset-0 z-[240] flex items-center justify-center bg-black/80 backdrop-blur-sm"
       data-control-ignore="true"
       onPointerDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
     >
-      <div className="bg-emerald-950/95 border border-emerald-400/40 rounded-xl p-6 max-w-sm mx-4 shadow-2xl text-center">
+      <div className="mission-modal-panel bg-emerald-950/95 border border-emerald-400/40 rounded-xl p-6 max-w-sm mx-4 shadow-2xl text-center">
         <div className="flex items-center justify-center gap-2 mb-3">
           <Trophy className="h-6 w-6 text-emerald-300" />
           <h2 className="font-display text-lg font-bold text-emerald-200 uppercase tracking-wider">

@@ -95,10 +95,10 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
   if (phase === 'briefing') {
     return (
       <div 
-        className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+        className="mission-modal-overlay fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm"
         style={{ touchAction: 'manipulation' }}
       >
-        <div className="ghost-hunt-briefing bg-background/95 border border-purple-500/50 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+        <div className="ghost-hunt-briefing mission-modal-panel bg-background/95 border border-purple-500/50 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
           <div className="flex items-center gap-3 mb-4">
             <Ghost className="h-8 w-8 text-purple-400" />
             <h2 className="font-display text-xl font-bold text-purple-400 uppercase tracking-wider">
