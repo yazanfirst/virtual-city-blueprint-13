@@ -228,12 +228,16 @@
 
 .mission-modal-overlay {
   padding: 1rem;
+  isolation: isolate;
 }
 
 .mission-modal-panel {
+  position: relative;
+  z-index: 1;
   width: min(100%, 42rem);
   max-height: min(90svh, 90dvh);
   overflow-y: auto;
+  pointer-events: auto;
 }
 
 @media (max-width: 900px) and (orientation: landscape) {

@@ -38,6 +38,7 @@ export default function GhostHuntCompleteModal({
   return (
     <div 
       className="mission-modal-overlay fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      data-control-ignore="true"
       style={{ touchAction: 'manipulation' }}
       onPointerDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}

@@ -1087,7 +1087,7 @@ const StreetView = () => {
           {showMissions && (
             <div 
               className="mission-modal-overlay absolute inset-0 flex items-center justify-center pointer-events-auto"
-              style={{ zIndex: 200, touchAction: 'manipulation' }}
+              style={{ zIndex: 320, touchAction: 'manipulation' }}
               data-control-ignore="true"
               onPointerDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
@@ -1395,7 +1395,7 @@ const StreetView = () => {
           {show2DMap && spotsWithShops && (
             <div 
               className="absolute inset-0 md:inset-auto md:top-16 md:left-4 flex items-center justify-center md:block pointer-events-auto"
-              style={{ zIndex: 200, touchAction: 'manipulation' }}
+              style={{ zIndex: 310, touchAction: 'manipulation' }}
               data-control-ignore="true"
               onPointerDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
@@ -1849,8 +1849,8 @@ const StreetView = () => {
         </div>
       </div>
       {isGamePaused && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="cyber-card w-[90vw] max-w-md p-6 text-center space-y-5">
+        <div className="mission-modal-overlay fixed inset-0 z-[330] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="mission-modal-panel cyber-card w-[90vw] max-w-md p-6 text-center space-y-5">
             <div className="space-y-2">
               <h2 className="font-display text-2xl font-bold text-foreground">Game Paused</h2>
               <p className="text-sm text-muted-foreground">
