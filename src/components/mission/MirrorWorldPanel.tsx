@@ -172,6 +172,7 @@ export default function MirrorWorldPanel({
           }
         }}
         disabled={disableActivation}
+        data-control-ignore="true"
       >
         <Play className="h-4 w-4 mr-2" />
         {disableActivation ? 'Finish Current Mission' : 'Enter Mirror World'}

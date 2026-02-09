@@ -140,6 +140,7 @@ export default function MissionPanel({
             if (!activationDisabled) handleActivate();
           }}
           disabled={activationDisabled}
+          data-control-ignore="true"
         >
           <Play className="h-4 w-4 mr-2" />
           {activationLabel}

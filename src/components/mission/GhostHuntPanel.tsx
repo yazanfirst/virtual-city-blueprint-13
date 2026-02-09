@@ -124,6 +124,7 @@ export default function GhostHuntPanel({
             }
           }}
           disabled={activationDisabled}
+          data-control-ignore="true"
         >
           <Play className="h-4 w-4 mr-2" />
           {activationLabel}

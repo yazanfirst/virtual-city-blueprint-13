@@ -23,7 +23,11 @@ export default function PauseOverlay({
   };
 
   return (
-    <div className="mission-modal-overlay fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-md">
+    <div className="mission-modal-overlay fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-md"
+      data-control-ignore="true"
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+    >
       <div className="mission-modal-panel bg-card/95 border border-primary/30 rounded-2xl p-6 md:p-8 max-w-md w-full mx-4 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-center gap-3 mb-6">
@@ -64,6 +68,7 @@ export default function PauseOverlay({
               e.stopPropagation();
               onResume();
             }}
+            data-control-ignore="true"
           >
             <Play className="h-5 w-5 mr-3" />
             Resume Game
@@ -77,6 +82,7 @@ export default function PauseOverlay({
               e.stopPropagation();
               onExit();
             }}
+            data-control-ignore="true"
           >
             <DoorOpen className="h-5 w-5 mr-2" />
             Exit Mission
