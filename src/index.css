@@ -248,7 +248,9 @@
   }
 
   .mission-modal-panel {
-    max-height: min(96svh, 96dvh);
+    max-height: calc(
+      min(100svh, 100dvh) - max(0.75rem, env(safe-area-inset-top, 0px)) - max(0.75rem, env(safe-area-inset-bottom, 0px))
+    );
   }
 }
 

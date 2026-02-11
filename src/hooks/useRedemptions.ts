@@ -75,6 +75,11 @@ export function useClaimOffer() {
     async (offerId: string): Promise<ClaimResult> => {
       setLoading(true);
       try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        if (!supabaseUrl) {
+          return { success: false, error: 'App configuration error. Missing Supabase URL.' };
+        }
+
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData.session?.access_token;
         if (!token) {
@@ -82,13 +87,12 @@ export function useClaimOffer() {
         }
 
         const response = await fetch(
-          `https://kqytjcwfxrcptugctwdb.supabase.co/functions/v1/redeem-offer`,
+          `${supabaseUrl}/functions/v1/redeem-offer`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`,
-              apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXRqY3dmeHJjcHR1Z2N0d2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyOTc4MjEsImV4cCI6MjA4MDg3MzgyMX0.HIjWz59FEps-ZZSEdKaWIwioGQlxnsN8ukKz2XbtLBQ',
             },
             body: JSON.stringify({ offer_id: offerId }),
           }

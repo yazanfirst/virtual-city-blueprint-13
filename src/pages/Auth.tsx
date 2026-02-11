@@ -104,11 +104,6 @@ const Auth = () => {
             description: message,
             variant: "destructive",
           });
-        } else {
-          toast({
-            title: "Account Created!",
-            description: "Please check your email to confirm your account. You may need to disable email confirmation in Supabase for testing.",
-          });
         }
       } else {
         // Validate sign in
