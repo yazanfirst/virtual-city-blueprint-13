@@ -82,13 +82,13 @@ export function useClaimOffer() {
         }
 
         const response = await fetch(
-          `https://kqytjcwfxrcptugctwdb.supabase.co/functions/v1/redeem-offer`,
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/redeem-offer`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${token}`,
-              apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxeXRqY3dmeHJjcHR1Z2N0d2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyOTc4MjEsImV4cCI6MjA4MDg3MzgyMX0.HIjWz59FEps-ZZSEdKaWIwioGQlxnsN8ukKz2XbtLBQ',
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             },
             body: JSON.stringify({ offer_id: offerId }),
           }
