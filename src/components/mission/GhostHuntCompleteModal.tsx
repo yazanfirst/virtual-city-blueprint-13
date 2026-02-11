@@ -1,4 +1,4 @@
-import { Ghost, Trophy, Star, Zap, ArrowRight } from 'lucide-react';
+import { Ghost, Trophy, Star, Zap, ArrowRight, Coins } from 'lucide-react';
 
 interface GhostHuntCompleteModalProps {
   capturedCount: number;
@@ -7,6 +7,8 @@ interface GhostHuntCompleteModalProps {
   unlockedLevel: number;
   maxLevel: number;
   timeBonus: number;
+  coinsEarned?: number;
+  xpEarned?: number;
   onContinue: () => void;
   onExit: () => void;
 }
@@ -18,6 +20,8 @@ export default function GhostHuntCompleteModal({
   unlockedLevel,
   maxLevel,
   timeBonus,
+  coinsEarned,
+  xpEarned,
   onContinue,
   onExit,
 }: GhostHuntCompleteModalProps) {
@@ -76,6 +80,21 @@ export default function GhostHuntCompleteModal({
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Time Bonus:</span>
               <span className="text-green-400 font-bold">+{timeBonus} XP</span>
+            </div>
+          )}
+          {coinsEarned != null && coinsEarned > 0 && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground flex items-center gap-2">
+                <Coins className="h-4 w-4 text-yellow-400" />
+                Coins Earned:
+              </span>
+              <span className="text-yellow-400 font-bold">+{coinsEarned}</span>
+            </div>
+          )}
+          {xpEarned != null && xpEarned > 0 && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">XP Earned:</span>
+              <span className="text-purple-400 font-bold">+{xpEarned}</span>
             </div>
           )}
         </div>

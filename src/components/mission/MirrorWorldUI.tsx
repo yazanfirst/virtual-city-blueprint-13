@@ -7,11 +7,12 @@ import { cn } from '@/lib/utils';
 export default function MirrorWorldUI() {
   const {
     phase,
+    isPaused,
     timeRemaining,
     playerLives,
     collectedCount,
     requiredAnchors,
-    shadowPosition,
+    shadowPositions,
     anchors,
     promptMessage,
     promptKey,
@@ -35,13 +36,14 @@ export default function MirrorWorldUI() {
   const setPlayerPosition = usePlayerStore((state) => state.setPosition);
   const resetToSafeSpawn = usePlayerStore((state) => state.resetToSafeSpawn);
 
+  // Timer logic - respects pause state
   useEffect(() => {
-    if (phase !== 'hunting') return;
+    if (phase !== 'hunting' || isPaused) return;
     const interval = setInterval(() => {
       updateTimer(1);
     }, 1000);
     return () => clearInterval(interval);
-  }, [phase, updateTimer]);
+  }, [phase, isPaused, updateTimer]);
 
   useEffect(() => {
     if (phase !== 'hunting') {
@@ -53,17 +55,27 @@ export default function MirrorWorldUI() {
     return () => clearTimeout(timeout);
   }, [phase]);
 
-  const distanceToShadow = useMemo(() => {
-    const dx = shadowPosition[0] - playerPosition[0];
-    const dz = shadowPosition[2] - playerPosition[2];
-    return Math.sqrt(dx * dx + dz * dz);
-  }, [shadowPosition, playerPosition]);
+  // Find closest shadow for warning/compass
+  const closestShadow = useMemo(() => {
+    let minDist = Infinity;
+    let closest: [number, number, number] = shadowPositions[0] || [0, 0, 0];
+    shadowPositions.forEach((pos) => {
+      const dx = pos[0] - playerPosition[0];
+      const dz = pos[2] - playerPosition[2];
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = pos;
+      }
+    });
+    return { position: closest, distance: minDist };
+  }, [shadowPositions, playerPosition]);
 
   const shadowAngle = useMemo(() => {
-    const dx = shadowPosition[0] - playerPosition[0];
-    const dz = shadowPosition[2] - playerPosition[2];
+    const dx = closestShadow.position[0] - playerPosition[0];
+    const dz = closestShadow.position[2] - playerPosition[2];
     return Math.atan2(dz, dx) * (180 / Math.PI) + 90;
-  }, [shadowPosition, playerPosition]);
+  }, [closestShadow.position, playerPosition]);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -139,26 +151,20 @@ export default function MirrorWorldUI() {
             {formatTime(timeRemaining)}
           </span>
         </div>
-        {toastMessage && (
-          <div className="max-w-[280px] sm:max-w-md text-center bg-emerald-500/95 border border-emerald-200/80 text-white text-sm sm:text-base font-bold px-4 py-2 sm:px-5 sm:py-3 rounded-lg shadow-lg shadow-emerald-500/40">
-            {toastMessage}
-          </div>
-        )}
-        {!toastMessage && promptMessage && (
-          <div className="max-w-[280px] sm:max-w-md text-center bg-purple-900/90 border border-purple-300/70 text-white text-sm sm:text-base font-bold px-4 py-2 sm:px-5 sm:py-3 rounded-lg shadow-lg shadow-purple-500/40">
-            {promptMessage}
-          </div>
-        )}
         {showHint && (
           <div className="max-w-[240px] sm:max-w-xs text-center bg-purple-950/80 border border-purple-500/40 text-purple-100 text-[10px] sm:text-xs px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg backdrop-blur-md">
             Follow the purple dots on the map to rooftop anchors. Look for glowing ladder panels and use Climb, then touch anchors to collect them.
           </div>
         )}
         {canClimb && (
-          <button
+        <button
             type="button"
             className="pointer-events-auto rounded-full bg-purple-500/90 px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg shadow-purple-500/40 transition hover:bg-purple-400 active:scale-95 touch-manipulation"
-            onClick={() => setPlayerPosition(canClimb.top)}
+            data-control-ignore="true"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              setPlayerPosition(canClimb.top);
+            }}
           >
             Climb
           </button>
@@ -167,7 +173,9 @@ export default function MirrorWorldUI() {
           <button
             type="button"
             className="pointer-events-auto rounded-full bg-slate-900/80 px-3 py-1.5 sm:px-4 sm:py-2 text-xs font-semibold text-white shadow-lg transition hover:bg-slate-800 active:scale-95 touch-manipulation"
-            onClick={() => {
+            data-control-ignore="true"
+            onPointerDown={(e) => {
+              e.stopPropagation();
               const [px, , pz] = playerPosition;
               let nearest = LADDER_POSITIONS[0];
               let nearestDist = Number.POSITIVE_INFINITY;
@@ -224,7 +232,7 @@ export default function MirrorWorldUI() {
             </span>
           </div>
         </div>
-        {distanceToShadow < 6 && (
+        {closestShadow.distance < 6 && (
           <div className="bg-red-950/90 rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-red-500/60 text-[10px] sm:text-xs text-red-200 flex items-center gap-1 sm:gap-2 animate-pulse">
             <AlertTriangle className="h-3 w-3" />
             Shadow!
@@ -238,14 +246,6 @@ export default function MirrorWorldUI() {
           <Navigation className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-300" style={{ transform: `rotate(${shadowAngle}deg)` }} />
           <span className="text-muted-foreground">Shadow</span>
         </div>
-        {promptMessage && (
-          <div className="mt-1 bg-purple-950/90 rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-purple-500/50 text-[10px] sm:text-xs text-purple-100 flex flex-col gap-0.5">
-            <span className="line-clamp-2">{promptMessage}</span>
-            {promptKey && (
-              <span className="font-bold text-purple-200">Press {promptKey}</span>
-            )}
-          </div>
-        )}
         {/* Mini-map - smaller on mobile */}
         <div className="bg-background/80 backdrop-blur-md rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-border/50 text-[10px] sm:text-xs text-muted-foreground">
           <div className="flex items-center justify-between text-[0.6rem] sm:text-[0.7rem] uppercase tracking-wide text-purple-300">

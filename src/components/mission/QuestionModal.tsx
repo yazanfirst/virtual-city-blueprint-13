@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { HelpCircle, AlertTriangle, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,15 +26,20 @@ export default function QuestionModal({
 }: QuestionModalProps) {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [hasAnswered, setHasAnswered] = useState(false);
+  const isSubmittingRef = useRef(false);
   
   const handleConfirm = () => {
-    if (selectedOption) {
+    // Guard against double-submit race: isSubmittingRef blocks re-entry until
+    // the reset timeout fires, preventing the final question from being processed twice.
+    if (selectedOption && !isSubmittingRef.current) {
+      isSubmittingRef.current = true;
       setHasAnswered(true);
       onAnswer(selectedOption);
-      // Reset for next question
+      // Reset for next question (or cleanup after modal closes on completion)
       setTimeout(() => {
         setSelectedOption(null);
         setHasAnswered(false);
+        isSubmittingRef.current = false;
       }, 500);
     }
   };
@@ -81,10 +86,8 @@ export default function QuestionModal({
             {question.options.map((option, index) => (
               <button
                 key={index}
-                onPointerDown={() => {
-                  if (!hasAnswered) setSelectedOption(option);
-                }}
-                onClick={() => {
+                onPointerDown={(e) => {
+                  e.stopPropagation();
                   if (!hasAnswered) setSelectedOption(option);
                 }}
                 disabled={hasAnswered}

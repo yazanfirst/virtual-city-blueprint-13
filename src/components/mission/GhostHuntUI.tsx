@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Radio, Flashlight, Ghost, Clock, Heart, Zap, AlertTriangle, Crosshair } from 'lucide-react';
 import { useGhostHuntStore } from '@/stores/ghostHuntStore';
 import { cn } from '@/lib/utils';
@@ -11,6 +11,7 @@ interface GhostHuntUIProps {
 export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) {
   const {
     phase,
+    isPaused,
     timeRemaining,
     ghosts,
     capturedCount,
@@ -29,34 +30,40 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
     completeBriefing,
   } = useGhostHuntStore();
   
-  // Timer logic
+  // Timer logic - respects pause state
   useEffect(() => {
-    if (phase !== 'hunting') return;
+    if (phase !== 'hunting' || isPaused) return;
     
     const interval = setInterval(() => {
       updateTimer(1);
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [phase, updateTimer]);
+  }, [phase, isPaused, updateTimer]);
   
-  // EMF battery drain while active
+  // EMF battery drain while active - respects pause state
   useEffect(() => {
-    if (phase !== 'hunting' || !equipment.emfActive) return;
+    if (phase !== 'hunting' || !equipment.emfActive || isPaused) return;
     
     const interval = setInterval(() => {
       drainBattery('emf', emfDrainPerSecond);
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [phase, equipment.emfActive, drainBattery, emfDrainPerSecond]);
+  }, [phase, equipment.emfActive, isPaused, drainBattery, emfDrainPerSecond]);
   
-  // Track phase changes
+  // Track phase changes - use ref to prevent infinite re-trigger
+  // (onComplete/onFailed are inline functions that change reference every render)
+  const handledPhaseRef = useRef<string | null>(null);
   useEffect(() => {
-    if (phase === 'completed') {
+    if (phase === 'completed' && handledPhaseRef.current !== 'completed') {
+      handledPhaseRef.current = 'completed';
       onComplete?.();
-    } else if (phase === 'failed') {
+    } else if (phase === 'failed' && handledPhaseRef.current !== 'failed') {
+      handledPhaseRef.current = 'failed';
       onFailed?.();
+    } else if (phase !== 'completed' && phase !== 'failed') {
+      handledPhaseRef.current = null;
     }
   }, [phase, onComplete, onFailed]);
   

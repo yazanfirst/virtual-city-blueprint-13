@@ -251,14 +251,14 @@ export default function ZombieCharacter({
         <meshLambertMaterial color="#2A2A1A" />
       </mesh>
       
-      {/* Eyes */}
+      {/* Eyes - use emissive for glow without point light */}
       <mesh position={[-0.07, 1.2, 0.14]}>
         <boxGeometry args={[0.05, 0.05, 0.02]} />
-        <meshBasicMaterial color={eyeColor} />
+        <meshStandardMaterial color={eyeColor} emissive="#FF0000" emissiveIntensity={0.8} />
       </mesh>
       <mesh position={[0.07, 1.2, 0.14]}>
         <boxGeometry args={[0.05, 0.05, 0.02]} />
-        <meshBasicMaterial color={eyeColor} />
+        <meshStandardMaterial color={eyeColor} emissive="#FF0000" emissiveIntensity={0.8} />
       </mesh>
       
       {/* Arms */}
@@ -281,14 +281,7 @@ export default function ZombieCharacter({
         <meshLambertMaterial color={clothingColor} />
       </mesh>
 
-      {/* Reduced glow for performance - only eye glow */}
-      <pointLight 
-        position={[0, 1.2, 0.2]} 
-        intensity={0.3} 
-        distance={2} 
-        color="#FF4444" 
-        decay={2}
-      />
+      {/* REMOVED point light for performance - emissive eyes provide glow effect instead */}
     </group>
   );
 }

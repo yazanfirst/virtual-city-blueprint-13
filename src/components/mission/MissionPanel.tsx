@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Target, Skull, AlertTriangle, CheckCircle, X, Play } from 'lucide-react';
+import { Target, Skull, AlertTriangle, CheckCircle, X, Play, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useMissionStore } from '@/stores/missionStore';
 import { ShopBranding } from '@/hooks/use3DShops';
 import { ShopItem } from '@/hooks/useShopItems';
 import { selectMissionTargetShop } from '@/lib/missionShopSelection';
+import MissionLevelDetails from './MissionLevelDetails';
 
 interface MissionPanelProps {
   shops: ShopBranding[];
@@ -36,6 +37,8 @@ export default function MissionPanel({
   } = useMissionStore();
   
   const [canActivate, setCanActivate] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+
   // Check if mission can be activated
   useEffect(() => {
     const eligible = selectMissionTargetShop(shops, shopItemsMap, recentlyUsedShopIds);
@@ -80,10 +83,30 @@ export default function MissionPanel({
           </div>
         </div>
         
-        <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-3' : 'text-sm mb-4'}`}>
+        <p className={`text-muted-foreground ${isCompact ? 'text-xs mb-2' : 'text-sm mb-3'}`}>
           Escape the zombies, find the target shop, and remember everything you see. Trust your memory — you may only get one chance.
-          Finish before the countdown reaches zero.
         </p>
+
+        {/* Expandable Level Details */}
+        <button
+          type="button"
+          className="w-full flex items-center justify-between text-xs text-muted-foreground hover:text-foreground transition-colors mb-2 py-1"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            setShowDetails(!showDetails);
+          }}
+          data-control-ignore="true"
+        >
+          <span>Level {level} Details</span>
+          {showDetails ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        </button>
+        
+        {showDetails && (
+          <div className="mb-3">
+            <MissionLevelDetails missionType="zombie" level={level} isCompact={isCompact} />
+          </div>
+        )}
+
         <div className={`bg-emerald-950/20 rounded-lg p-2 mb-3 border border-emerald-500/20 ${isCompact ? 'text-[10px]' : 'text-xs'}`}>
           <div className="flex items-center justify-between text-muted-foreground">
             <span>Unlocked Level {unlockedLevel}/{maxLevel}</span>

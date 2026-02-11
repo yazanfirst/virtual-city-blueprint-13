@@ -50,6 +50,9 @@ interface MissionState {
   timeRemaining: number;
   timeLimit: number;
   
+  // Pause state
+  isPaused: boolean;
+  
   // Lives system (3 hearts)
   lives: number;
   maxLives: number;
@@ -106,7 +109,8 @@ interface MissionState {
   setPhase: (phase: MissionPhase) => void;
   enterShop: () => void;
   exitShop: (questions: MissionQuestion[]) => void;
-  answerQuestion: (selectedAnswer: string) => boolean;
+  // Returns deterministic status to avoid stale-phase race conditions in callers
+  answerQuestion: (selectedAnswer: string) => 'wrong' | 'next' | 'completed';
   triggerTrap: () => void;
   hitByTrap: (trapType?: 'firepit' | 'axe' | 'thorns') => void;
   failMission: (reason?: MissionFailReason) => void;
@@ -127,6 +131,7 @@ interface MissionState {
   unlockNextLevel: () => void;
   setLevel: (level: number) => void;
   resetProgress: () => void;
+  setPaused: (paused: boolean) => void;
 }
 
 const ZOMBIE_SPAWNS: Omit<ZombieData, 'speed'>[] = [
@@ -228,6 +233,9 @@ export const useMissionStore = create<MissionState>((set, get) => ({
 
   timeRemaining: DEFAULT_ZOMBIE_TIME_LIMIT,
   timeLimit: DEFAULT_ZOMBIE_TIME_LIMIT,
+  
+  // Pause state
+  isPaused: false,
   
   // Lives
   lives: 3,
@@ -354,11 +362,13 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     });
   },
 
+  // Returns a deterministic status string so callers don't need to read
+  // mission.phase in the same tick (which would be stale in React).
   answerQuestion: (selectedAnswer) => {
     const state = get();
     const currentQuestion = state.questions[state.currentQuestionIndex];
     
-    if (!currentQuestion) return false;
+    if (!currentQuestion) return 'wrong';
     
     const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
     
@@ -376,7 +386,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
         deceptiveMessageShown: true,
         hasNotification: true, // Notify user to check mission panel
       });
-      return false;
+      return 'wrong';
     }
     
     if (nextIndex >= state.questions.length) {
@@ -387,10 +397,10 @@ export const useMissionStore = create<MissionState>((set, get) => ({
         phase: 'completed',
         zombies: [],
         zombiesPaused: true,
-      traps: [],
-    });
+        traps: [],
+      });
       get().unlockNextLevel();
-      return true;
+      return 'completed';
     }
     
     // Move to next question
@@ -400,7 +410,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
       currentQuestionIndex: nextIndex,
     });
     
-    return true;
+    return 'next';
   },
 
   triggerTrap: () => {
@@ -460,6 +470,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
     set({
       isActive: false,
       phase: 'inactive',
+      isPaused: false,
       targetShop: null,
       targetShopItems: [],
       shopEntryCount: 0,
@@ -555,7 +566,7 @@ export const useMissionStore = create<MissionState>((set, get) => ({
 
   updateTimer: (delta: number) => {
     const state = get();
-    if (!state.isActive || state.phase !== 'escape') {
+    if (!state.isActive || state.phase !== 'escape' || state.isPaused) {
       return;
     }
 
@@ -584,4 +595,6 @@ export const useMissionStore = create<MissionState>((set, get) => ({
   resetProgress: () => {
     set({ level: 1, unlockedLevel: 1 });
   },
+  
+  setPaused: (paused: boolean) => set({ isPaused: paused }),
 }));

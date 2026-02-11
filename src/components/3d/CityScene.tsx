@@ -296,18 +296,48 @@ export default function CityScene({
 
   const showMirrorWorld = mirrorWorld.isActive && mirrorWorld.phase !== 'inactive' && !mission.isActive && !ghostHunt.isActive;
   const mirrorWorldActive = mirrorWorld.isActive && mirrorWorld.phase === 'hunting' && !mission.isActive && !ghostHunt.isActive;
-  const cameraUp: [number, number, number] = mirrorWorldActive ? [0, -1, 0] : [0, 1, 0];
+
+  // WebGL context loss recovery
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [contextLost, setContextLost] = useState(false);
+
+  const handleCreated = useCallback((state: any) => {
+    const canvas = state.gl.domElement as HTMLCanvasElement;
+    canvasRef.current = canvas;
+
+    const onLost = (e: Event) => {
+      e.preventDefault();
+      console.warn('[CityScene] WebGL context lost – waiting for restore…');
+      setContextLost(true);
+    };
+    const onRestored = () => {
+      console.info('[CityScene] WebGL context restored');
+      setContextLost(false);
+    };
+
+    canvas.addEventListener('webglcontextlost', onLost);
+    canvas.addEventListener('webglcontextrestored', onRestored);
+  }, []);
 
   return (
     <div className="relative h-full w-full">
+      {contextLost && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm">
+          <div className="text-center p-6">
+            <p className="text-foreground font-bold text-lg mb-2">Recovering Graphics…</p>
+            <p className="text-muted-foreground text-sm">The GPU context was lost. Restoring automatically.</p>
+          </div>
+        </div>
+      )}
       <Canvas
-        key={mirrorWorldActive ? 'mirror-world' : 'default-world'}
         className={`h-full w-full ${mirrorWorldActive ? 'mirror-world-canvas' : ''}`}
         style={{ touchAction: "none" }}
-        camera={{ position: [0, 10, 50], fov: 50, up: cameraUp }}
+        camera={{ position: [0, 10, 50], fov: 50 }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
+        onCreated={handleCreated}
       >
         <Suspense fallback={null}>
+          <CameraUpController mirrorWorldActive={mirrorWorldActive} />
           <SceneInner 
             timeOfDay={effectiveTimeOfDay} 
             cameraView={cameraView}
@@ -840,26 +870,28 @@ function MirrorWorldLadders() {
   ];
   const ladderHeight = 8.6;
   const railOffset = 0.35;
-  const rungCount = 10;
+  const rungCount = 8; // Reduced from 10 for performance
   const rungSpacing = ladderHeight / (rungCount + 1);
 
   return (
     <group>
       {ladderSets.map((ladder, ladderIndex) => (
         <group key={`mirror-ladder-${ladderIndex}`} position={ladder.position} rotation={[0, ladder.rotation, 0]}>
+          {/* Rails - use lower segment count */}
           <mesh position={[-railOffset, ladderHeight / 2, 0]}>
-            <cylinderGeometry args={[0.07, 0.07, ladderHeight, 8]} />
+            <cylinderGeometry args={[0.07, 0.07, ladderHeight, 6]} />
             <meshStandardMaterial color="#5A30A3" emissive="#2A1244" emissiveIntensity={0.7} />
           </mesh>
           <mesh position={[railOffset, ladderHeight / 2, 0]}>
-            <cylinderGeometry args={[0.07, 0.07, ladderHeight, 8]} />
+            <cylinderGeometry args={[0.07, 0.07, ladderHeight, 6]} />
             <meshStandardMaterial color="#5A30A3" emissive="#2A1244" emissiveIntensity={0.7} />
           </mesh>
+          {/* Portal - emissive provides glow, no point light needed */}
           <mesh position={[0, 1.4, 0.5]}>
             <planeGeometry args={[1.1, 2.2]} />
             <meshStandardMaterial color="#A78BFA" emissive="#7C3AED" emissiveIntensity={1.4} />
           </mesh>
-          <pointLight position={[0, 1.4, 0.6]} intensity={1.2} distance={6} color="#C4B5FD" />
+          {/* REMOVED point light for performance */}
           {Array.from({ length: rungCount }).map((_, rungIndex) => (
             <mesh
               key={`mirror-rung-${ladderIndex}-${rungIndex}`}
@@ -869,15 +901,26 @@ function MirrorWorldLadders() {
               <meshStandardMaterial color="#8B5CF6" emissive="#4C1D95" emissiveIntensity={0.9} />
             </mesh>
           ))}
+          {/* Top ornament - reduced segments */}
           <mesh position={[0, ladderHeight + 0.8, 0]}>
-            <cylinderGeometry args={[0.25, 0.35, 1.6, 8]} />
+            <cylinderGeometry args={[0.25, 0.35, 1.6, 6]} />
             <meshStandardMaterial color="#B992FF" emissive="#8B5CF6" emissiveIntensity={1.2} />
           </mesh>
-          <pointLight position={[0, ladderHeight + 1.2, 0]} intensity={1.4} distance={12} color="#C4B5FD" />
+          {/* REMOVED point light for performance */}
         </group>
       ))}
     </group>
   );
+}
+
+// Dynamically update camera up vector for mirror world (avoids Canvas key remount)
+function CameraUpController({ mirrorWorldActive }: { mirrorWorldActive: boolean }) {
+  const { camera } = useThree();
+  useEffect(() => {
+    camera.up.set(0, mirrorWorldActive ? -1 : 1, 0);
+    camera.updateProjectionMatrix();
+  }, [mirrorWorldActive, camera]);
+  return null;
 }
 
 function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer, mirrorWorldActive }: InnerProps) {

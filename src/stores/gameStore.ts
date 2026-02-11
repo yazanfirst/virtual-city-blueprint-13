@@ -12,7 +12,10 @@ type GameState = {
   addXP: (amount: number) => void;
   visitShop: (shopId: string) => void;
   collectCoin: (coinId: string) => void;
+  resetSession: () => void;
   resetGame: () => void;
+  loadFromServer: (data: { coins: number; xp: number; level: number }) => void;
+  loadVisitedShops: (shopIds: string[]) => void;
 };
 
 const XP_PER_LEVEL = 200;
@@ -56,6 +59,15 @@ export const useGameStore = create<GameState>((set, get) => ({
     }
   },
 
+  // Reset only per-session state (collectibles, visited shops) — NOT coins/XP/level
+  resetSession: () => {
+    set({
+      shopsVisited: new Set(),
+      coinsCollected: new Set(),
+    });
+  },
+
+  // Full reset including economy (only for account-level reset)
   resetGame: () => {
     set({
       coins: INITIAL_COINS,
@@ -64,5 +76,17 @@ export const useGameStore = create<GameState>((set, get) => ({
       shopsVisited: new Set(),
       coinsCollected: new Set(),
     });
+  },
+
+  loadFromServer: (data) => {
+    set({
+      coins: data.coins,
+      xp: data.xp,
+      level: data.level,
+    });
+  },
+
+  loadVisitedShops: (shopIds) => {
+    set({ shopsVisited: new Set(shopIds) });
   },
 }));

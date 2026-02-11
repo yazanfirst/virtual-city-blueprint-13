@@ -492,14 +492,63 @@ const PlayerController = ({
       const horizontalDist = cameraDistance * Math.cos(verticalAngle * 0.5);
       const verticalDist = cameraHeight + cameraDistance * Math.sin(verticalAngle);
       
-      const offsetX = Math.sin(cameraRotation.azimuth) * horizontalDist;
-      const offsetZ = Math.cos(cameraRotation.azimuth) * horizontalDist;
+      let offsetX = Math.sin(cameraRotation.azimuth) * horizontalDist;
+      let offsetZ = Math.cos(cameraRotation.azimuth) * horizontalDist;
+      
+      // Calculate target camera position
+      let camX = playerPos.x + offsetX;
+      let camY = playerPos.y + verticalDist;
+      let camZ = playerPos.z + offsetZ;
+      
+      // Camera collision check - prevent going through buildings/roofs
+      // Check if camera position is inside a building collision box
+      const checkCameraCollision = (x: number, z: number, y: number): boolean => {
+        const BUILDING_HEIGHT = 10; // Most buildings are ~10 units tall
+        for (const box of COLLISION_BOXES) {
+          if (
+            x > box.minX &&
+            x < box.maxX &&
+            z > box.minZ &&
+            z < box.maxZ &&
+            y < BUILDING_HEIGHT // Only block if camera is below building height
+          ) {
+            return true;
+          }
+        }
+        return false;
+      };
+      
+      // If camera would be inside a building, pull it closer to player
+      if (checkCameraCollision(camX, camZ, camY)) {
+        // Binary search for valid camera distance
+        let minDist = 0;
+        let maxDist = horizontalDist;
+        let safeDist = 0;
+        
+        for (let i = 0; i < 5; i++) {
+          const testDist = (minDist + maxDist) / 2;
+          const testX = playerPos.x + Math.sin(cameraRotation.azimuth) * testDist;
+          const testZ = playerPos.z + Math.cos(cameraRotation.azimuth) * testDist;
+          const testY = playerPos.y + cameraHeight + testDist * Math.sin(verticalAngle);
+          
+          if (!checkCameraCollision(testX, testZ, testY)) {
+            safeDist = testDist;
+            minDist = testDist;
+          } else {
+            maxDist = testDist;
+          }
+        }
+        
+        // Use safe distance (minimum 1 unit to keep camera visible)
+        const finalDist = Math.max(1, safeDist);
+        offsetX = Math.sin(cameraRotation.azimuth) * finalDist;
+        offsetZ = Math.cos(cameraRotation.azimuth) * finalDist;
+        camX = playerPos.x + offsetX;
+        camY = playerPos.y + cameraHeight + finalDist * Math.sin(verticalAngle);
+        camZ = playerPos.z + offsetZ;
+      }
 
-      camera.position.set(
-        playerPos.x + offsetX,
-        playerPos.y + verticalDist,
-        playerPos.z + offsetZ
-      );
+      camera.position.set(camX, camY, camZ);
       // Look at player upper body, not feet
       camera.lookAt(playerPos.x, playerPos.y + 1.8, playerPos.z);
     }

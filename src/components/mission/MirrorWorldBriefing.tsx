@@ -2,10 +2,15 @@ import { Sparkles, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useMirrorWorldStore } from '@/stores/mirrorWorldStore';
 
 export default function MirrorWorldBriefing() {
-  const { requiredAnchors, completeBriefing } = useMirrorWorldStore();
+  const { requiredAnchors, shadowCount, completeBriefing } = useMirrorWorldStore();
 
   return (
-    <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-[220] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      data-control-ignore="true"
+      onPointerDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+    >
       <div className="bg-slate-950/95 border border-purple-500/40 rounded-xl p-6 max-w-lg mx-4 shadow-2xl">
         <div className="flex items-center gap-3 mb-4">
           <Sparkles className="h-8 w-8 text-purple-300" />
@@ -34,7 +39,10 @@ export default function MirrorWorldBriefing() {
               Warning
             </h3>
             <p className="text-xs text-red-200">
-              Stand still and it still moves. If it touches you twice, the Mirror World wins.
+              {shadowCount > 1 
+                ? `${shadowCount} Shadows are hunting you! They move in different directions. If they touch you twice, the Mirror World wins.`
+                : 'Stand still and it still moves. If it touches you twice, the Mirror World wins.'
+              }
             </p>
           </div>
         </div>
