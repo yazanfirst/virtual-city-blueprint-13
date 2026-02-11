@@ -104,11 +104,6 @@ const Auth = () => {
             description: message,
             variant: "destructive",
           });
-        } else {
-          toast({
-            title: "Account Created!",
-            description: "Please check your email and click the confirmation link to activate your account.",
-          });
         }
       } else {
         // Validate sign in
