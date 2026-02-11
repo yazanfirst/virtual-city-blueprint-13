@@ -64,7 +64,7 @@ export default function JumpScareModal({
   
   return (
     <div 
-      className="fixed inset-0 z-[400] flex items-center justify-center bg-black"
+      className="mission-modal-overlay fixed inset-0 z-[400] flex items-center justify-center bg-black"
       style={{ touchAction: 'manipulation' }}
       data-control-ignore="true"
       onPointerDown={(e) => e.stopPropagation()}
@@ -95,7 +95,7 @@ export default function JumpScareModal({
       
       {/* Message after jump scare video */}
       {showMessage && (
-        <div className="bg-gradient-to-b from-red-950 to-black border-2 border-red-500/50 rounded-2xl p-5 sm:p-8 shadow-2xl max-w-md w-[92vw] sm:w-[90vw] text-center animate-in fade-in-0 duration-500 mx-4">
+        <div className="mission-modal-panel bg-gradient-to-b from-red-950 to-black border-2 border-red-500/50 rounded-2xl p-5 sm:p-8 shadow-2xl max-w-md w-[92vw] sm:w-[90vw] text-center animate-in fade-in-0 duration-500 mx-4">
           {/* Icon */}
           <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-red-900/50 border-2 border-red-500/50 flex items-center justify-center mb-4 sm:mb-6">
             <Skull className="h-8 w-8 sm:h-10 sm:w-10 text-red-400" />

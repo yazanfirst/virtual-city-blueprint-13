@@ -967,8 +967,12 @@ const StreetView = () => {
                 <Button
                   variant={cameraView === "thirdPerson" ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setCameraView("thirdPerson")}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    setCameraView("thirdPerson");
+                  }}
                   className="h-8 px-3"
+                  data-control-ignore="true"
                 >
                   <UserCircle className="h-4 w-4 mr-1" />
                   3rd Person
@@ -976,8 +980,12 @@ const StreetView = () => {
                 <Button
                   variant={cameraView === "firstPerson" ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setCameraView("firstPerson")}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    setCameraView("firstPerson");
+                  }}
                   className="h-8 px-3"
+                  data-control-ignore="true"
                 >
                   <Eye className="h-4 w-4 mr-1" />
                   1st Person
@@ -1086,8 +1094,8 @@ const StreetView = () => {
           {/* Mission Popup */}
           {showMissions && (
             <div 
-              className="absolute inset-0 flex items-center justify-center pointer-events-auto"
-              style={{ zIndex: 200, touchAction: 'manipulation' }}
+              className="mission-modal-overlay absolute inset-0 flex items-center justify-center pointer-events-auto"
+              style={{ zIndex: 320, touchAction: 'manipulation' }}
               data-control-ignore="true"
               onPointerDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
@@ -1101,7 +1109,7 @@ const StreetView = () => {
               }}
             >
               <div 
-                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md max-h-[80vh] overflow-auto"
+                className="mission-modal-panel bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md max-h-[80vh] overflow-auto"
                 onPointerDown={(e) => e.stopPropagation()}
                 onTouchStart={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
@@ -1395,7 +1403,7 @@ const StreetView = () => {
           {show2DMap && spotsWithShops && (
             <div 
               className="absolute inset-0 md:inset-auto md:top-16 md:left-4 flex items-center justify-center md:block pointer-events-auto"
-              style={{ zIndex: 200, touchAction: 'manipulation' }}
+              style={{ zIndex: 310, touchAction: 'manipulation' }}
               data-control-ignore="true"
               onPointerDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
@@ -1670,8 +1678,12 @@ const StreetView = () => {
                     <Button
                       variant={cameraView === "thirdPerson" ? "default" : "ghost"}
                       size="sm"
-                      onClick={() => setCameraView("thirdPerson")}
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        setCameraView("thirdPerson");
+                      }}
                       className="h-7 px-2 text-xs"
+                      data-control-ignore="true"
                       title="Third Person View"
                     >
                       <UserCircle className="h-3 w-3 mr-1" />
@@ -1680,8 +1692,12 @@ const StreetView = () => {
                     <Button
                       variant={cameraView === "firstPerson" ? "default" : "ghost"}
                       size="sm"
-                      onClick={() => setCameraView("firstPerson")}
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        setCameraView("firstPerson");
+                      }}
                       className="h-7 px-2 text-xs"
+                      data-control-ignore="true"
                       title="First Person View"
                     >
                       <Eye className="h-3 w-3 mr-1" />
@@ -1849,8 +1865,12 @@ const StreetView = () => {
         </div>
       </div>
       {isGamePaused && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="cyber-card w-[90vw] max-w-md p-6 text-center space-y-5">
+        <div className="mission-modal-overlay fixed inset-0 z-[330] flex items-center justify-center bg-background/80 backdrop-blur-sm"
+          data-control-ignore="true"
+          onPointerDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+        >
+          <div className="mission-modal-panel cyber-card w-[90vw] max-w-md p-6 text-center space-y-5">
             <div className="space-y-2">
               <h2 className="font-display text-2xl font-bold text-foreground">Game Paused</h2>
               <p className="text-sm text-muted-foreground">
@@ -1858,10 +1878,24 @@ const StreetView = () => {
               </p>
             </div>
             <div className="flex flex-col gap-3">
-              <Button variant="cyber" onClick={handleResumeGame}>
+              <Button
+                variant="cyber"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  handleResumeGame();
+                }}
+                data-control-ignore="true"
+              >
                 Resume Game
               </Button>
-              <Button variant="outline" onClick={handleExitGame}>
+              <Button
+                variant="outline"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  handleExitGame();
+                }}
+                data-control-ignore="true"
+              >
                 Exit to Start
               </Button>
             </div>

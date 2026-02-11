@@ -226,6 +226,32 @@
   animation: mirror-world-float 12s linear infinite;
 }
 
+.mission-modal-overlay {
+  padding: 1rem;
+  isolation: isolate;
+}
+
+.mission-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 42rem);
+  max-height: min(90svh, 90dvh);
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+@media (max-width: 900px) and (orientation: landscape) {
+  .mission-modal-overlay {
+    align-items: flex-start;
+    padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .mission-modal-panel {
+    max-height: min(96svh, 96dvh);
+  }
+}
+
 @keyframes mirror-world-float {
   from {
     transform: translateY(20px);
