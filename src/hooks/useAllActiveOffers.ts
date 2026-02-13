@@ -11,10 +11,12 @@ export interface OfferWithShop extends MerchantOffer {
 
 /**
  * Fetches all active offers across all shops on the current street.
- * Uses shopBrandings (already loaded) to resolve shop names client-side,
- * avoiding RLS issues with the shops table.
+ * Excludes offers from shops owned by the current merchant (if applicable).
  */
-export function useAllActiveOffers(shopMap: Map<string, { name: string; logoUrl: string | null; externalLink: string | null }>) {
+export function useAllActiveOffers(
+  shopMap: Map<string, { name: string; logoUrl: string | null; externalLink: string | null }>,
+  ownedShopIds?: Set<string>
+) {
   const { user } = useAuth();
 
   return useQuery({
@@ -34,10 +36,11 @@ export function useAllActiveOffers(shopMap: Map<string, { name: string; logoUrl:
 
       if (error) throw error;
 
-      // Filter out expired offers and enrich with shop info
+      // Filter out expired offers, merchant's own shop offers, and enrich with shop info
       const now = new Date();
       return ((data ?? []) as MerchantOffer[])
         .filter((o) => !o.expires_at || new Date(o.expires_at) > now)
+        .filter((o) => !ownedShopIds || !ownedShopIds.has(o.shop_id))
         .map((offer) => {
           const shop = shopMap.get(offer.shop_id);
           return {

@@ -48,6 +48,7 @@ import { useDeviceType } from "@/hooks/useDeviceType";
 import { useMobileAppBehavior } from "@/hooks/useMobileAppBehavior";
 import { usePlayerProgress } from "@/hooks/usePlayerProgress";
 import { useAllActiveOffers } from "@/hooks/useAllActiveOffers";
+import { useMerchantShops } from "@/hooks/useMerchantShops";
 import EligibleOffersPanel from "@/components/3d/EligibleOffersPanel";
 
 // Shop entry distance threshold (in world units)
@@ -158,7 +159,14 @@ const StreetView = () => {
     return map;
   }, [shopBrandings]);
 
-  const { data: allActiveOffers = [], isLoading: offersLoading } = useAllActiveOffers(shopMapForOffers);
+  // Get merchant's own shop IDs to exclude from offers panel
+  const { data: merchantShops } = useMerchantShops();
+  const ownedShopIds = useMemo(() => {
+    if (!merchantShops || merchantShops.length === 0) return undefined;
+    return new Set(merchantShops.map((s) => s.id));
+  }, [merchantShops]);
+
+  const { data: allActiveOffers = [], isLoading: offersLoading } = useAllActiveOffers(shopMapForOffers, ownedShopIds);
   
   // Get spot IDs for each recharge type (EMF, Flashlight, Trap) for map highlighting
   const rechargeSpotIds = useMemo(() => {
