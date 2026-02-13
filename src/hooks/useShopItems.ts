@@ -11,6 +11,7 @@ export type ShopItemUpsertInput = {
   description?: string | null;
   price?: number | null;
   image_url?: string | null;
+  product_url?: string | null;
 };
 
 export const shopItemsQueryKey = (shopId?: string) => ["shop-items", shopId];

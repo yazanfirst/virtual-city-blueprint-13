@@ -277,6 +277,7 @@ export type Database = {
           id: string
           image_url: string | null
           price: number | null
+          product_url: string | null
           shop_id: string
           slot_index: number
           title: string
@@ -288,6 +289,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           price?: number | null
+          product_url?: string | null
           shop_id: string
           slot_index: number
           title: string
@@ -299,6 +301,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           price?: number | null
+          product_url?: string | null
           shop_id?: string
           slot_index?: number
           title?: string
@@ -307,6 +310,70 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "shop_items_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_link_clicks: {
+        Row: {
+          created_at: string
+          id: string
+          shop_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          shop_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          shop_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_link_clicks_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shop_ratings: {
+        Row: {
+          created_at: string
+          id: string
+          rating: number
+          shop_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          rating: number
+          shop_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          rating?: number
+          shop_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_ratings_shop_id_fkey"
             columns: ["shop_id"]
             isOneToOne: false
             referencedRelation: "shops"

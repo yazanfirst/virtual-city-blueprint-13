@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, Loader2, Trash2, Package, DollarSign, FileText, Sparkles, Check, X, Edit3 } from "lucide-react";
+import { ImagePlus, Loader2, Trash2, Package, DollarSign, FileText, Sparkles, Check, X, Edit3, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,7 @@ interface SlotState {
   description: string;
   price: string;
   image_url?: string;
+  product_url?: string;
 }
 
 const emptySlot: SlotState = {
@@ -36,6 +37,7 @@ const emptySlot: SlotState = {
   description: "",
   price: "",
   image_url: "",
+  product_url: "",
 };
 
 const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#3B82F6", accentColor = "#10B981" }) => {
@@ -69,6 +71,7 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#
               description: match.description || "",
               price: match.price?.toString() || "",
               image_url: match.image_url || "",
+              product_url: match.product_url || "",
             }
           : { ...emptySlot };
       });
@@ -176,6 +179,7 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#
         description: editForm.description?.trim() || null,
         price: priceValue,
         image_url: editForm.image_url || null,
+        product_url: editForm.product_url?.trim() || null,
       });
       toast({
         title: "Item saved!",
@@ -495,6 +499,24 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#
                   className="bg-muted/50 pl-7"
                 />
               </div>
+            </div>
+
+            {/* Product URL */}
+            <div className="space-y-2">
+              <Label htmlFor="item-product-url" className="flex items-center gap-2">
+                <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                Product Link (optional)
+              </Label>
+              <Input
+                id="item-product-url"
+                value={editForm.product_url || ""}
+                onChange={e => setEditForm(prev => ({ ...prev, product_url: e.target.value }))}
+                placeholder="https://yourstore.com/product/123"
+                className="bg-muted/50"
+              />
+              <p className="text-xs text-muted-foreground">
+                Direct link to this product on your website. Players will see a "Buy Now" button.
+              </p>
             </div>
           </div>
 
