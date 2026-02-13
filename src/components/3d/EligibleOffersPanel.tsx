@@ -79,7 +79,7 @@ export default function EligibleOffersPanel({
 
   return (
     <>
-      <div className="cyber-card h-full">
+      <div className="cyber-card h-full max-h-[50vh] flex flex-col overflow-hidden">
         {/* Header */}
         <button
           type="button"
@@ -108,7 +108,7 @@ export default function EligibleOffersPanel({
 
         {/* Content */}
         {expanded && (
-          <div className="max-h-[45vh] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--primary) / 0.3) transparent' }}>
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--primary) / 0.3) transparent' }}>
             {loading ? (
               <div className="flex items-center justify-center py-6">
                 <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
