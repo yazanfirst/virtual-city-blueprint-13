@@ -1080,8 +1080,8 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[45, 0.02, 42]}><planeGeometry args={[16, 16]} /><meshLambertMaterial color="#6ABF6A" /></mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-45, 0.02, 42]}><planeGeometry args={[16, 16]} /><meshLambertMaterial color="#6ABF6A" /></mesh>
 
-      {/* === COLLECTIBLES === */}
-      {coinPositions.map((coin) => (
+      {/* === COLLECTIBLES (only during missions) === */}
+      {allowMissionEntities && coinPositions.map((coin) => (
         <CollectibleItem
           key={coin.id}
           id={coin.id}
