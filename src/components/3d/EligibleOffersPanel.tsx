@@ -121,7 +121,7 @@ export default function EligibleOffersPanel({
                 </p>
               </div>
             ) : (
-              <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+              <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
                 {Array.from(groupedOffers.entries()).map(([shopId, group]) => (
                   <div key={shopId} className="space-y-2">
                     {/* Shop header */}
