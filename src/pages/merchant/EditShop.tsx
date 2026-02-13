@@ -50,17 +50,25 @@ const EditShop = () => {
   const [saving, setSaving] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [originalData, setOriginalData] = useState<ShopData | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    category: "",
-    externalLink: "",
-    logoUrl: "",
-    primaryColor: "#3B82F6",
-    accentColor: "#10B981",
-    facadeTemplate: "modern_neon" as ShopFacadeTemplate,
-    signageFont: "classic" as ShopSignageFont,
-    textureTemplate: "none" as TextureTemplate,
-    textureUrl: "",
+  const storageKey = `editShop-${shopId}`;
+  const [formData, setFormData] = useState(() => {
+    // Restore from sessionStorage if available
+    try {
+      const saved = sessionStorage.getItem(storageKey);
+      if (saved) return JSON.parse(saved);
+    } catch { /* ignore */ }
+    return {
+      name: "",
+      category: "",
+      externalLink: "",
+      logoUrl: "",
+      primaryColor: "#3B82F6",
+      accentColor: "#10B981",
+      facadeTemplate: "modern_neon" as ShopFacadeTemplate,
+      signageFont: "classic" as ShopSignageFont,
+      textureTemplate: "none" as TextureTemplate,
+      textureUrl: "",
+    };
   });
 
   /**
@@ -111,18 +119,26 @@ const EditShop = () => {
       }
 
       setOriginalData(data as ShopData);
-      setFormData({
-        name: data.name || "",
-        category: data.category || "",
-        externalLink: data.external_link || "",
-        logoUrl: data.logo_url || "",
-        primaryColor: data.primary_color || "#3B82F6",
-        accentColor: data.accent_color || "#10B981",
-        facadeTemplate: (data.facade_template as ShopFacadeTemplate) || "modern_neon",
-        signageFont: (data.signage_font as ShopSignageFont) || "classic",
-        textureTemplate: (data.texture_template as TextureTemplate) || "none",
-        textureUrl: data.texture_url || "",
-      });
+      
+      // Only set form data from DB if no sessionStorage draft exists
+      const hasDraft = (() => {
+        try { return !!sessionStorage.getItem(storageKey); } catch { return false; }
+      })();
+      
+      if (!hasDraft) {
+        setFormData({
+          name: data.name || "",
+          category: data.category || "",
+          externalLink: data.external_link || "",
+          logoUrl: data.logo_url || "",
+          primaryColor: data.primary_color || "#3B82F6",
+          accentColor: data.accent_color || "#10B981",
+          facadeTemplate: (data.facade_template as ShopFacadeTemplate) || "modern_neon",
+          signageFont: (data.signage_font as ShopSignageFont) || "classic",
+          textureTemplate: (data.texture_template as TextureTemplate) || "none",
+          textureUrl: data.texture_url || "",
+        });
+      }
     } catch (error) {
       console.error('Error fetching shop:', error);
       toast({
@@ -205,6 +221,7 @@ const EditShop = () => {
         description: "Your changes have been submitted for admin review. The shop will show previous data until approved.",
       });
 
+      clearDraft();
       navigate('/merchant/dashboard');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to submit changes.";
@@ -220,7 +237,16 @@ const EditShop = () => {
   };
 
   const updateFormData = (updates: Partial<typeof formData>) => {
-    setFormData(prev => ({ ...prev, ...updates }));
+    setFormData(prev => {
+      const next = { ...prev, ...updates };
+      try { sessionStorage.setItem(storageKey, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
+  // Clear sessionStorage on successful save
+  const clearDraft = () => {
+    try { sessionStorage.removeItem(storageKey); } catch { /* ignore */ }
   };
 
   if (loading) {

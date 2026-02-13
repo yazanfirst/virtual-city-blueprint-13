@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LayoutDashboard, Store, Plus, Clock, CheckCircle, XCircle, Trash2, PauseCircle, PlayCircle, Edit } from "lucide-react";
+import { LayoutDashboard, Store, Plus, Clock, CheckCircle, XCircle, Trash2, PauseCircle, PlayCircle, Edit, Eye, MousePointerClick, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMerchantShops, type ShopWithLocation } from "@/hooks/useMerchantShops";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useMerchantAnalyticsSummary } from "@/hooks/useShopAnalytics";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +22,7 @@ import {
 const MerchantDashboard = () => {
   const { user } = useAuth();
   const { data: shops, isLoading, refetch } = useMerchantShops();
+  const { data: analytics } = useMerchantAnalyticsSummary();
   const queryClient = useQueryClient();
   const [deleteShopId, setDeleteShopId] = useState<string | null>(null);
 
@@ -114,7 +116,7 @@ const MerchantDashboard = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
           <div className="cyber-card">
             <Store className="h-6 w-6 text-primary mb-2" />
             <p className="text-2xl font-bold">{shops?.length || 0}</p>
@@ -134,6 +136,21 @@ const MerchantDashboard = () => {
             <PauseCircle className="h-6 w-6 text-orange-500 mb-2" />
             <p className="text-2xl font-bold">{suspendedShops.length}</p>
             <p className="text-muted-foreground text-sm">Suspended</p>
+          </div>
+          <div className="cyber-card">
+            <Eye className="h-6 w-6 text-blue-400 mb-2" />
+            <p className="text-2xl font-bold">{analytics?.totals.visits || 0}</p>
+            <p className="text-muted-foreground text-sm">Shop Visits</p>
+          </div>
+          <div className="cyber-card">
+            <MousePointerClick className="h-6 w-6 text-purple-400 mb-2" />
+            <p className="text-2xl font-bold">{analytics?.totals.clicks || 0}</p>
+            <p className="text-muted-foreground text-sm">Link Clicks</p>
+          </div>
+          <div className="cyber-card">
+            <Ticket className="h-6 w-6 text-emerald-400 mb-2" />
+            <p className="text-2xl font-bold">{analytics?.totals.redemptions || 0}</p>
+            <p className="text-muted-foreground text-sm">Coupon Uses</p>
           </div>
         </div>
 

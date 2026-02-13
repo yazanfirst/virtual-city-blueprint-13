@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Html, useTexture } from "@react-three/drei";
 import * as THREE from "three";
 import { ShopBranding } from "@/hooks/use3DShops";
+import { useShopRating } from "@/hooks/useShopRatings";
 
 interface BrandedShopProps {
   branding: ShopBranding;
@@ -71,6 +72,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
   const { position, hasShop, isSuspended, shopName, primaryColor, accentColor, facadeTemplate, logoUrl, signageFont, textureTemplate, textureUrl } = branding;
   const [hovered, setHovered] = useState(false);
   const [textureError, setTextureError] = useState(false);
+  const { data: ratingData } = useShopRating(hasShop && !isSuspended ? branding.shopId : undefined);
   
   const template = (facadeTemplate as keyof typeof templateColors) || 'modern_neon';
   const colors = templateColors[template] || templateColors.modern_neon;
@@ -324,7 +326,36 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
         )}
       </group>
 
-      {/* Hover effect - glow outline */}
+      {/* Star Rating on facade */}
+      {hasShop && !isSuspended && ratingData && ratingData.totalRatings > 0 && (
+        <Html
+          position={[0, 3.2, 4.35]}
+          transform
+          occlude
+          center
+          style={{ pointerEvents: 'none' }}
+        >
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '2px',
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            padding: '2px 8px',
+            borderRadius: '10px',
+            whiteSpace: 'nowrap',
+          }}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <span key={star} style={{
+                color: ratingData.averageRating >= star ? '#fbbf24' : '#555',
+                fontSize: '12px',
+              }}>★</span>
+            ))}
+            <span style={{ color: '#ccc', fontSize: '10px', marginLeft: '3px' }}>
+              {ratingData.averageRating.toFixed(1)}
+            </span>
+          </div>
+        </Html>
+      )}
       {hovered && hasShop && (
         <mesh position={[0, 3, 4.1]}>
           <boxGeometry args={[8.2, 6.2, 0.1]} />

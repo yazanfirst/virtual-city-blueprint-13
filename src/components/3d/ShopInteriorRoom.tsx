@@ -5,9 +5,12 @@ import * as THREE from "three";
 import { ShopBranding } from "@/hooks/use3DShops";
 import { Button } from "@/components/ui/button";
 import { ShopItem, useShopItems } from "@/hooks/useShopItems";
-import { X, ExternalLink, ChevronLeft, ChevronRight, Package, ShoppingBag } from "lucide-react";
+import { X, ExternalLink, ChevronLeft, ChevronRight, Package, ShoppingBag, Star } from "lucide-react";
 import ShopOffersSection from "@/components/3d/ShopOffersSection";
 import { useGhostHuntStore } from "@/stores/ghostHuntStore";
+import { trackLinkClick } from "@/hooks/useTrackLinkClick";
+import { useShopRating, useRateShop } from "@/hooks/useShopRatings";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Dialog,
   DialogContent,
@@ -572,6 +575,9 @@ function RoomCameraClamp({
 
 const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorRoomProps) => {
   const { data: items = [], isLoading } = useShopItems(shop.shopId);
+  const { user } = useAuth();
+  const { data: ratingData } = useShopRating(shop.shopId);
+  const rateShop = useRateShop();
   const {
     isActive: ghostHuntActive,
     rechargeShopIds,
@@ -587,6 +593,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
   const [retryNonce, setRetryNonce] = useState(0);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [hoverRating, setHoverRating] = useState(0);
 
   const wallItems = useMemo(() => {
     const filled = Array.from({ length: 5 }, () => undefined as ShopItem | undefined);
@@ -732,6 +739,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
               target="_blank" 
               rel="noopener noreferrer"
               onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => trackLinkClick(shop.shopId)}
               className="h-10 px-3 sm:px-4 rounded-md flex items-center justify-center gap-1.5 bg-transparent border border-border text-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-accent"
               data-control-ignore="true"
             >
@@ -872,9 +880,37 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
         </div>
       )}
 
-      {/* Bottom hint panel */}
+      {/* Bottom hint panel with rating */}
       <div className="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 landscape:p-1.5 bg-gradient-to-t from-background via-background/95 to-transparent">
         <div className="max-w-xl mx-auto">
+          {/* Star Rating */}
+          {user && !isMissionMode && (
+            <div className="flex items-center justify-center gap-2 mb-2 py-2 rounded-xl bg-card/60 backdrop-blur-sm border border-border/50">
+              <span className="text-xs text-muted-foreground mr-1">Rate:</span>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onMouseEnter={() => setHoverRating(star)}
+                  onMouseLeave={() => setHoverRating(0)}
+                  onClick={() => rateShop.mutate({ shopId: shop.shopId, rating: star })}
+                  className="touch-manipulation transition-transform hover:scale-110 active:scale-95"
+                >
+                  <Star
+                    className="h-5 w-5"
+                    fill={(hoverRating || ratingData?.userRating || 0) >= star ? '#fbbf24' : 'transparent'}
+                    stroke={(hoverRating || ratingData?.userRating || 0) >= star ? '#fbbf24' : '#888'}
+                  />
+                </button>
+              ))}
+              {ratingData && ratingData.totalRatings > 0 && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  {ratingData.averageRating.toFixed(1)} ({ratingData.totalRatings})
+                </span>
+              )}
+            </div>
+          )}
+
           {isLoading ? (
             <div className="text-center py-2">
               <p className="text-xs text-muted-foreground">Loading...</p>
@@ -984,12 +1020,13 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
                 
                 {/* Action buttons */}
                 <div className="flex gap-2 pt-2">
-                  {shop.externalLink && (
+                  {(selectedItem.product_url || shop.externalLink) && (
                     <a 
-                      href={shop.externalLink} 
+                      href={selectedItem.product_url || shop.externalLink || '#'} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       onPointerDown={(e) => e.stopPropagation()}
+                      onClick={() => trackLinkClick(shop.shopId)}
                       className="flex-1 h-11 rounded-md flex items-center justify-center gap-2 text-white font-medium touch-manipulation select-none active:scale-[0.98] transition-all"
                       style={{ backgroundColor: accent }}
                       data-control-ignore="true"
@@ -1004,7 +1041,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
                       e.stopPropagation();
                       setIsModalOpen(false);
                     }}
-                    className={`h-11 rounded-md flex items-center justify-center px-4 bg-transparent border border-border text-foreground font-medium touch-manipulation select-none active:scale-[0.98] transition-all hover:bg-accent ${shop.externalLink ? "" : "flex-1"}`}
+                    className={`h-11 rounded-md flex items-center justify-center px-4 bg-transparent border border-border text-foreground font-medium touch-manipulation select-none active:scale-[0.98] transition-all hover:bg-accent ${(selectedItem?.product_url || shop.externalLink) ? "" : "flex-1"}`}
                     data-control-ignore="true"
                   >
                     Close
