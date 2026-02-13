@@ -17,3 +17,16 @@ rolled back.
 **Why this prevents double-spend:** Postgres row-level locks ensure that concurrent
 UPDATEs on the same row are serialised. The `WHERE coins >= _price` guard guarantees
 that only one request can succeed when the balance is borderline.
+
+## 2026-02-13 — Hardened `deduct_coins` RPC privileges
+
+**Problem:** `deduct_coins` is SECURITY DEFINER and accepts an arbitrary `_user_id`.
+Without EXECUTE restrictions, `anon` or `authenticated` roles could call it directly
+to decrement any player's coins.
+
+**Fix:**
+- `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated`
+- `GRANT EXECUTE ... TO service_role` only
+- Added `IF _price <= 0 THEN RAISE EXCEPTION` guard to reject non-positive amounts.
+
+The edge function uses `SUPABASE_SERVICE_ROLE_KEY`, so it retains access.
