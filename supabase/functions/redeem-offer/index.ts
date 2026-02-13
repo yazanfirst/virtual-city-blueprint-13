@@ -200,26 +200,20 @@ Deno.serve(async (req) => {
       })
     }
 
-    // 11. Atomically deduct coins with race-condition guard
-    //     The .gte('coins', offer.coin_price) ensures no double-spend if two
-    //     requests race — only one will match and update.
-    const { data: updRows, error: deductErr } = await adminClient
-      .from('player_progress')
-      .update({ coins: progress.coins - offer.coin_price })
-      .eq('user_id', playerId)
-      .gte('coins', offer.coin_price)
-      .select('coins')
+    // 11. Atomically deduct coins via Postgres RPC.
+    //     deduct_coins uses UPDATE ... SET coins = coins - price WHERE coins >= price
+    //     so the value is never computed from a stale snapshot. Returns -1 on failure.
+    const { data: finalCoins, error: deductErr } = await adminClient
+      .rpc('deduct_coins', { _user_id: playerId, _price: offer.coin_price })
 
-    if (deductErr || !updRows || updRows.length === 0) {
-      // Race condition or insufficient coins — rollback redemption
+    if (deductErr || finalCoins === null || finalCoins < 0) {
+      // Insufficient coins or RPC error — rollback redemption
       await adminClient.from('offer_redemptions').delete().eq('id', redemption.id)
       return new Response(JSON.stringify({ error: 'Not enough coins. Please try again.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
-
-    const finalCoins = updRows[0].coins
 
     return new Response(JSON.stringify({
       success: true,

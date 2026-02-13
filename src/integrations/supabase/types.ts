@@ -521,6 +521,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      deduct_coins: {
+        Args: { _price: number; _user_id: string }
+        Returns: number
+      }
       get_active_or_suspended_public_shops_for_spots: {
         Args: { _spot_ids: string[] }
         Returns: {
