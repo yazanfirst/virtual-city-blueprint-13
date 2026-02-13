@@ -108,7 +108,7 @@ export default function EligibleOffersPanel({
 
         {/* Content */}
         {expanded && (
-          <div className="space-y-3">
+          <div className="max-h-[45vh] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--primary) / 0.3) transparent' }}>
             {loading ? (
               <div className="flex items-center justify-center py-6">
                 <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -121,11 +121,11 @@ export default function EligibleOffersPanel({
                 </p>
               </div>
             ) : (
-              <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+              <div className="space-y-4">
                 {Array.from(groupedOffers.entries()).map(([shopId, group]) => (
-                  <div key={shopId} className="space-y-2">
+                  <div key={shopId} className="rounded-lg border border-border/30 bg-card/40 p-2.5 space-y-2">
                     {/* Shop header */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 pb-1.5 border-b border-border/30">
                       {group.logoUrl ? (
                         <img
                           src={group.logoUrl}
@@ -135,8 +135,11 @@ export default function EligibleOffersPanel({
                       ) : (
                         <Store className="h-4 w-4 text-muted-foreground" />
                       )}
-                      <span className="text-xs font-semibold text-foreground truncate">
+                      <span className="text-xs font-semibold text-foreground truncate flex-1">
                         {group.shopName}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground">
+                        {group.offers.length} offer{group.offers.length > 1 ? 's' : ''}
                       </span>
                     </div>
 
