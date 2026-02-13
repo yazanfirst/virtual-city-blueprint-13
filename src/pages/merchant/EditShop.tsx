@@ -27,6 +27,8 @@ type ShopFacadeTemplate = "modern_neon" | "minimal_white" | "classic_brick" | "c
 type ShopSignageFont = "classic" | "bold" | "elegant" | "modern" | "playful";
 type TextureTemplate = "none" | "wood" | "marble" | "brick" | "metal" | "concrete" | "fabric" | "leather";
 
+const getEditDraftKey = (shopId: string) => `edit-shop-draft:${shopId}`;
+
 interface ShopData {
   id: string;
   name: string;
@@ -50,6 +52,7 @@ const EditShop = () => {
   const [saving, setSaving] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [originalData, setOriginalData] = useState<ShopData | null>(null);
+  const [restoredDraft, setRestoredDraft] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     category: "",
@@ -111,6 +114,22 @@ const EditShop = () => {
       }
 
       setOriginalData(data as ShopData);
+      const draftKey = getEditDraftKey(shopId);
+      const savedDraft = localStorage.getItem(draftKey);
+
+      if (savedDraft) {
+        try {
+          const parsed = JSON.parse(savedDraft);
+          if (parsed?.formData) {
+            setFormData(parsed.formData);
+            setRestoredDraft(true);
+            return;
+          }
+        } catch {
+          localStorage.removeItem(draftKey);
+        }
+      }
+
       setFormData({
         name: data.name || "",
         category: data.category || "",
@@ -139,6 +158,21 @@ const EditShop = () => {
   useEffect(() => {
     fetchShop();
   }, [fetchShop]);
+
+  useEffect(() => {
+    if (!shopId) return;
+    const draftKey = getEditDraftKey(shopId);
+    localStorage.setItem(draftKey, JSON.stringify({ formData, savedAt: Date.now() }));
+  }, [formData, shopId]);
+
+  useEffect(() => {
+    if (!restoredDraft) return;
+    toast({
+      title: "Draft restored",
+      description: "We restored your unsaved edits after you left the page.",
+    });
+    setRestoredDraft(false);
+  }, [restoredDraft]);
 
   const hasChanges = () => {
     if (!originalData) return false;
@@ -205,6 +239,9 @@ const EditShop = () => {
         description: "Your changes have been submitted for admin review. The shop will show previous data until approved.",
       });
 
+      if (shopId) {
+        localStorage.removeItem(getEditDraftKey(shopId));
+      }
       navigate('/merchant/dashboard');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to submit changes.";

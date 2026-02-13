@@ -8,6 +8,7 @@ import { ShopItem, useShopItems } from "@/hooks/useShopItems";
 import { X, ExternalLink, ChevronLeft, ChevronRight, Package, ShoppingBag } from "lucide-react";
 import ShopOffersSection from "@/components/3d/ShopOffersSection";
 import { useGhostHuntStore } from "@/stores/ghostHuntStore";
+import { trackShopLinkClick } from "@/lib/shopLinkTracking";
 import {
   Dialog,
   DialogContent,
@@ -731,6 +732,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
               href={shop.externalLink} 
               target="_blank" 
               rel="noopener noreferrer"
+              onClick={() => void trackShopLinkClick(shop.shopId)}
               onPointerDown={(e) => e.stopPropagation()}
               className="h-10 px-3 sm:px-4 rounded-md flex items-center justify-center gap-1.5 bg-transparent border border-border text-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-accent"
               data-control-ignore="true"
@@ -989,6 +991,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
                       href={shop.externalLink} 
                       target="_blank" 
                       rel="noopener noreferrer"
+                      onClick={() => void trackShopLinkClick(shop.shopId)}
                       onPointerDown={(e) => e.stopPropagation()}
                       className="flex-1 h-11 rounded-md flex items-center justify-center gap-2 text-white font-medium touch-manipulation select-none active:scale-[0.98] transition-all"
                       style={{ backgroundColor: accent }}
