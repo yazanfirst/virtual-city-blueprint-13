@@ -1808,7 +1808,7 @@ const StreetView = () => {
           </div>
 
           {/* Right Column - Player & Shop Info */}
-          <div className="lg:col-span-3 flex flex-col gap-6 max-h-[calc(100vh-6rem)] overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--primary) / 0.3) transparent' }}>
+          <div className="lg:col-span-3 flex flex-col gap-6">
             <PanelBox title="Player Panel" icon={User}>
               <div className="space-y-2">
                 <div className="flex justify-between">
