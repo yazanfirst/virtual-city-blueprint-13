@@ -1,1 +1,10 @@
 project_id = "kqytjcwfxrcptugctwdb"
+
+[functions.delete-account]
+verify_jwt = false
+
+[functions.send-notification]
+verify_jwt = false
+
+[functions.redeem-offer]
+verify_jwt = false

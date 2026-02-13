@@ -7,9 +7,22 @@ import * as THREE from "three";
 import PlayerController from "./PlayerController";
 import MobileControls from "./MobileControls";
 import BrandedShop from "./BrandedShop";
+import CollectibleItem from "./CollectibleItem";
+import ZombieCharacter from "./ZombieCharacter";
+import FirePitTrap from "./FirePitTrap";
+import SwingingAxeTrap from "./SwingingAxeTrap";
+import ThornsTrap from "./ThornsTrap";
+import GhostCharacter from "./GhostCharacter";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { usePlayerStore } from "@/stores/playerStore";
+import { useGameStore } from "@/stores/gameStore";
+import { useMissionStore } from "@/stores/missionStore";
+import { useGhostHuntStore } from "@/stores/ghostHuntStore";
+import { useMirrorWorldStore } from "@/stores/mirrorWorldStore";
 import { ShopBranding } from "@/hooks/use3DShops";
+import MirrorShadow from "./MirrorShadow";
+import RealityAnchor from "./RealityAnchor";
+import MirrorWorldEnvironment from "./MirrorWorldEnvironment";
 
 export type CameraView = "thirdPerson" | "firstPerson";
 
@@ -19,6 +32,10 @@ type CitySceneProps = {
   cameraView?: CameraView;
   shopBrandings?: ShopBranding[];
   onShopClick?: (branding: ShopBranding) => void;
+  forcedTimeOfDay?: "day" | "night" | null; // For mission control
+  onZombieTouchPlayer?: () => void;
+  onTrapHitPlayer?: () => void;
+  hideMobileControls?: boolean;
 };
 
 type InnerProps = {
@@ -28,6 +45,9 @@ type InnerProps = {
   cameraRotation: { azimuth: number; polar: number };
   shopBrandings: ShopBranding[];
   onShopClick?: (branding: ShopBranding) => void;
+  onZombieTouchPlayer?: () => void;
+  onTrapHitPlayer?: () => void;
+  mirrorWorldActive: boolean;
 };
 
 // Pastel color palette
@@ -158,6 +178,23 @@ const billboards = [
   { x: -68, z: 20, rotation: Math.PI / 3 },
 ];
 
+// Collectible coins scattered around
+const coinPositions = [
+  { id: 'coin1', x: 5, z: 25, type: 'coin' as const },
+  { id: 'coin2', x: -5, z: 35, type: 'coin' as const },
+  { id: 'coin3', x: 25, z: 5, type: 'coin' as const },
+  { id: 'coin4', x: -25, z: -5, type: 'coin' as const },
+  { id: 'coin5', x: 0, z: -35, type: 'coin' as const },
+  { id: 'coin6', x: 40, z: 12, type: 'coin' as const },
+  { id: 'coin7', x: -40, z: -12, type: 'coin' as const },
+  { id: 'gem1', x: 45, z: 40, type: 'gem' as const },
+  { id: 'gem2', x: -45, z: 40, type: 'gem' as const },
+  { id: 'star1', x: 0, z: 0, type: 'star' as const },
+  { id: 'coin8', x: 55, z: 5, type: 'coin' as const },
+  { id: 'coin9', x: -55, z: -5, type: 'coin' as const },
+  { id: 'coin10', x: 8, z: -45, type: 'coin' as const },
+];
+
 // Clouds
 const cloudPositions = [
   { x: -35, y: 50, z: -25, scale: 2.0 },
@@ -174,20 +211,33 @@ export default function CityScene({
   cameraView = "thirdPerson",
   shopBrandings = [],
   onShopClick,
+  forcedTimeOfDay = null,
+  onZombieTouchPlayer,
+  onTrapHitPlayer,
+  hideMobileControls = false,
 }: CitySceneProps) {
+  // Use forced time of day if provided (for mission night mode)
+  const effectiveTimeOfDay = forcedTimeOfDay ?? timeOfDay;
   const deviceType = useDeviceType();
   const isMobile = deviceType === 'mobile';
+  const mirrorWorld = useMirrorWorldStore();
+  const mission = useMissionStore();
+  const ghostHunt = useGhostHuntStore();
   const [joystickInput, setJoystickInput] = useState({ x: 0, y: 0 });
   
   // Use store for camera rotation to persist across game mode changes
-  const { cameraRotation, setCameraRotation } = usePlayerStore();
+  const { cameraRotation, setCameraRotation, incrementJump } = usePlayerStore();
   
-  const isMouseDownRef = useRef(false);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
+  const isMouseDownRef = useRef(false);
 
   const handleJoystickMove = useCallback((x: number, y: number) => {
     setJoystickInput({ x, y });
   }, []);
+
+  const handleJump = useCallback(() => {
+    incrementJump();
+  }, [incrementJump]);
 
   const handleCameraMove = useCallback((deltaX: number, deltaY: number) => {
     setCameraRotation({
@@ -197,26 +247,34 @@ export default function CityScene({
     });
   }, [cameraRotation, setCameraRotation]);
 
-  // Desktop mouse controls for camera rotation
+  // Desktop mouse controls for camera rotation - LEFT CLICK to orbit
   useEffect(() => {
     if (isMobile) return;
 
     const handleMouseDown = (e: MouseEvent) => {
-      // Right click or left click for camera control
-      isMouseDownRef.current = true;
-      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+      if (e.button === 0) { // Left click
+        isMouseDownRef.current = true;
+        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+      }
+    };
+
+    const handleMouseUp = (e: MouseEvent) => {
+      if (e.button === 0) {
+        isMouseDownRef.current = false;
+      }
     };
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!isMouseDownRef.current) return;
-      const deltaX = (e.clientX - lastMousePosRef.current.x) * 0.005;
-      const deltaY = (e.clientY - lastMousePosRef.current.y) * 0.005;
+      
+      // Calculate delta from last position
+      const deltaX = (e.clientX - lastMousePosRef.current.x) * 0.003;
+      const deltaY = (e.clientY - lastMousePosRef.current.y) * 0.003;
+      
+      // Apply camera rotation only when mouse is held down
       handleCameraMove(-deltaX, deltaY);
+      
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
-    };
-
-    const handleMouseUp = () => {
-      isMouseDownRef.current = false;
     };
 
     const handleContextMenu = (e: MouseEvent) => {
@@ -224,41 +282,113 @@ export default function CityScene({
     };
 
     window.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('contextmenu', handleContextMenu);
 
     return () => {
       window.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('contextmenu', handleContextMenu);
     };
   }, [isMobile, handleCameraMove]);
 
+  const showMirrorWorld = mirrorWorld.isActive && mirrorWorld.phase !== 'inactive' && !mission.isActive && !ghostHunt.isActive;
+  const mirrorWorldActive = mirrorWorld.isActive && mirrorWorld.phase === 'hunting' && !mission.isActive && !ghostHunt.isActive;
+
+  // WebGL context loss recovery
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [contextLost, setContextLost] = useState(false);
+
+  const handleCreated = useCallback((state: any) => {
+    const canvas = state.gl.domElement as HTMLCanvasElement;
+    canvasRef.current = canvas;
+
+    const onLost = (e: Event) => {
+      e.preventDefault();
+      console.warn('[CityScene] WebGL context lost – waiting for restore…');
+      setContextLost(true);
+    };
+    const onRestored = () => {
+      console.info('[CityScene] WebGL context restored');
+      setContextLost(false);
+    };
+
+    canvas.addEventListener('webglcontextlost', onLost);
+    canvas.addEventListener('webglcontextrestored', onRestored);
+  }, []);
+
   return (
     <div className="relative h-full w-full">
+      {contextLost && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm">
+          <div className="text-center p-6">
+            <p className="text-foreground font-bold text-lg mb-2">Recovering Graphics…</p>
+            <p className="text-muted-foreground text-sm">The GPU context was lost. Restoring automatically.</p>
+          </div>
+        </div>
+      )}
       <Canvas
-        className="h-full w-full"
+        className={`h-full w-full ${mirrorWorldActive ? 'mirror-world-canvas' : ''}`}
+        style={{ touchAction: "none" }}
         camera={{ position: [0, 10, 50], fov: 50 }}
         gl={{ antialias: false, powerPreference: "high-performance" }}
+        onCreated={handleCreated}
       >
         <Suspense fallback={null}>
+          <CameraUpController mirrorWorldActive={mirrorWorldActive} />
           <SceneInner 
-            timeOfDay={timeOfDay} 
+            timeOfDay={effectiveTimeOfDay} 
             cameraView={cameraView}
             joystickInput={joystickInput}
             cameraRotation={cameraRotation}
             shopBrandings={shopBrandings}
             onShopClick={onShopClick}
+            onZombieTouchPlayer={onZombieTouchPlayer}
+            onTrapHitPlayer={onTrapHitPlayer}
+            mirrorWorldActive={showMirrorWorld}
           />
+          {showMirrorWorld && (
+            <>
+              <MirrorShadow />
+              {mirrorWorld.anchors.map((anchor) => (
+                <RealityAnchor
+                  key={anchor.id}
+                  id={anchor.id}
+                  position={anchor.position}
+                  isCollected={anchor.isCollected}
+                  type={anchor.type}
+                  isVisible={anchor.isVisible}
+                  requiredKey={anchor.requiredKey}
+                  shieldActive={anchor.shieldActive}
+                />
+              ))}
+            </>
+          )}
         </Suspense>
       </Canvas>
-      {isMobile && (
-        <MobileControls 
+      {mirrorWorldActive && <MirrorWorldEnvironment />}
+      {isMobile && !hideMobileControls && (
+        <MobileControls
           onJoystickMove={handleJoystickMove}
           onCameraMove={handleCameraMove}
+          onJump={handleJump}
         />
+      )}
+      {!isMobile && (
+        <div
+          className="pointer-events-none absolute bottom-4 right-4 flex flex-col items-end"
+          style={{ zIndex: 55 }}
+        >
+          <button
+            type="button"
+            onClick={handleJump}
+            className="pointer-events-auto rounded-full bg-black/60 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur transition hover:bg-black/70"
+          >
+            Jump <span className="text-xs text-white/70">(Space)</span>
+          </button>
+        </div>
       )}
     </div>
   );
@@ -538,6 +668,114 @@ function Billboard({ position, rotation, isNight }: { position: [number, number,
   );
 }
 
+// Animated fountain water stream component
+function FountainWater({ isNight }: { isNight: boolean }) {
+  const groupRef = useRef<THREE.Group>(null);
+  
+  // Animate water streams
+  useEffect(() => {
+    let animationId: number;
+    let time = 0;
+    
+    const animate = () => {
+      time += 0.03;
+      if (groupRef.current) {
+        // Gentle pulsing animation for water height
+        const pulse = Math.sin(time * 2) * 0.1 + 1;
+        groupRef.current.scale.y = pulse;
+      }
+      animationId = requestAnimationFrame(animate);
+    };
+    
+    animate();
+    return () => cancelAnimationFrame(animationId);
+  }, []);
+  
+  const waterColor = isNight ? "#4A8ABB" : "#6BC8E8";
+  const waterEmissive = isNight ? "#3A6A9A" : "#4AA8C8";
+  
+  return (
+    <group ref={groupRef}>
+      {/* Central water jet - main upward stream */}
+      <mesh position={[0, 4.8, 0]}>
+        <coneGeometry args={[0.15, 1.8, 8]} />
+        <meshLambertMaterial 
+          color={waterColor} 
+          transparent 
+          opacity={0.7}
+          emissive={waterEmissive}
+          emissiveIntensity={isNight ? 0.4 : 0.1}
+        />
+      </mesh>
+      
+      {/* Water spray at top - splashing effect */}
+      <mesh position={[0, 5.6, 0]}>
+        <sphereGeometry args={[0.25, 8, 6]} />
+        <meshLambertMaterial 
+          color={waterColor} 
+          transparent 
+          opacity={0.5}
+          emissive={waterEmissive}
+          emissiveIntensity={isNight ? 0.3 : 0.05}
+        />
+      </mesh>
+      
+      {/* Falling water curtain - cascading down */}
+      <mesh position={[0, 4.2, 0]}>
+        <cylinderGeometry args={[0.6, 0.2, 0.8, 12, 1, true]} />
+        <meshLambertMaterial 
+          color={waterColor} 
+          transparent 
+          opacity={0.4}
+          side={THREE.DoubleSide}
+          emissive={waterEmissive}
+          emissiveIntensity={isNight ? 0.2 : 0}
+        />
+      </mesh>
+      
+      {/* Secondary falling streams into lower basin */}
+      {[0, Math.PI / 2, Math.PI, Math.PI * 1.5].map((angle, i) => (
+        <mesh 
+          key={`stream-${i}`} 
+          position={[
+            Math.cos(angle) * 1.2, 
+            2.8, 
+            Math.sin(angle) * 1.2
+          ]}
+          rotation={[0.3 * Math.cos(angle), 0, 0.3 * Math.sin(angle)]}
+        >
+          <coneGeometry args={[0.08, 1.2, 6]} />
+          <meshLambertMaterial 
+            color={waterColor} 
+            transparent 
+            opacity={0.5}
+            emissive={waterEmissive}
+            emissiveIntensity={isNight ? 0.25 : 0.05}
+          />
+        </mesh>
+      ))}
+      
+      {/* Ripple rings on water surface */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.65, 0]}>
+        <ringGeometry args={[0.5, 0.7, 16]} />
+        <meshLambertMaterial 
+          color="#8AD8F8" 
+          transparent 
+          opacity={0.3}
+        />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.64, 0]}>
+        <ringGeometry args={[1.2, 1.4, 16]} />
+        <meshLambertMaterial 
+          color="#8AD8F8" 
+          transparent 
+          opacity={0.2}
+        />
+      </mesh>
+    </group>
+  );
+}
+
 // ROUNDABOUT with Fountain in center
 function Roundabout({ isNight }: { isNight: boolean }) {
   return (
@@ -582,6 +820,9 @@ function Roundabout({ isNight }: { isNight: boolean }) {
         <cylinderGeometry args={[1.2, 1.2, 0.3, 10]} />
         <meshLambertMaterial color={COLORS.water} />
       </mesh>
+      
+      {/* Animated water streams */}
+      <FountainWater isNight={isNight} />
     </group>
   );
 }
@@ -596,9 +837,100 @@ function LaneMarking({ position, rotation = 0 }: { position: [number, number, nu
   );
 }
 
-function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick }: InnerProps) {
+// Ghost Hunt Ghosts Component
+function GhostHuntGhosts({ isNight }: { isNight: boolean }) {
+  const { ghosts, phase, isActive } = useGhostHuntStore();
+  
+  if (!isActive || phase === 'inactive' || phase === 'briefing') return null;
+  
+  return (
+    <>
+      {ghosts.map((ghost) => (
+        <GhostCharacter
+          key={ghost.id}
+          id={ghost.id}
+          position={ghost.position}
+          type={ghost.type}
+          isRevealed={ghost.isRevealed}
+          isCaptured={ghost.isCaptured}
+          isNight={isNight}
+        />
+      ))}
+    </>
+  );
+}
+
+function MirrorWorldLadders() {
+  const ladderSets = [
+    { position: [13.6, 0, 40] as [number, number, number], rotation: Math.PI / 2 },
+    { position: [-13.6, 0, 28] as [number, number, number], rotation: -Math.PI / 2 },
+    { position: [47, 0, 13.6] as [number, number, number], rotation: 0 },
+    { position: [-35, 0, -13.6] as [number, number, number], rotation: Math.PI },
+    { position: [13.6, 0, -40] as [number, number, number], rotation: Math.PI / 2 },
+  ];
+  const ladderHeight = 8.6;
+  const railOffset = 0.35;
+  const rungCount = 8; // Reduced from 10 for performance
+  const rungSpacing = ladderHeight / (rungCount + 1);
+
+  return (
+    <group>
+      {ladderSets.map((ladder, ladderIndex) => (
+        <group key={`mirror-ladder-${ladderIndex}`} position={ladder.position} rotation={[0, ladder.rotation, 0]}>
+          {/* Rails - use lower segment count */}
+          <mesh position={[-railOffset, ladderHeight / 2, 0]}>
+            <cylinderGeometry args={[0.07, 0.07, ladderHeight, 6]} />
+            <meshStandardMaterial color="#5A30A3" emissive="#2A1244" emissiveIntensity={0.7} />
+          </mesh>
+          <mesh position={[railOffset, ladderHeight / 2, 0]}>
+            <cylinderGeometry args={[0.07, 0.07, ladderHeight, 6]} />
+            <meshStandardMaterial color="#5A30A3" emissive="#2A1244" emissiveIntensity={0.7} />
+          </mesh>
+          {/* Portal - emissive provides glow, no point light needed */}
+          <mesh position={[0, 1.4, 0.5]}>
+            <planeGeometry args={[1.1, 2.2]} />
+            <meshStandardMaterial color="#A78BFA" emissive="#7C3AED" emissiveIntensity={1.4} />
+          </mesh>
+          {/* REMOVED point light for performance */}
+          {Array.from({ length: rungCount }).map((_, rungIndex) => (
+            <mesh
+              key={`mirror-rung-${ladderIndex}-${rungIndex}`}
+              position={[0, rungSpacing * (rungIndex + 1), 0]}
+            >
+              <boxGeometry args={[railOffset * 2.2, 0.08, 0.12]} />
+              <meshStandardMaterial color="#8B5CF6" emissive="#4C1D95" emissiveIntensity={0.9} />
+            </mesh>
+          ))}
+          {/* Top ornament - reduced segments */}
+          <mesh position={[0, ladderHeight + 0.8, 0]}>
+            <cylinderGeometry args={[0.25, 0.35, 1.6, 6]} />
+            <meshStandardMaterial color="#B992FF" emissive="#8B5CF6" emissiveIntensity={1.2} />
+          </mesh>
+          {/* REMOVED point light for performance */}
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// Dynamically update camera up vector for mirror world (avoids Canvas key remount)
+function CameraUpController({ mirrorWorldActive }: { mirrorWorldActive: boolean }) {
+  const { camera } = useThree();
+  useEffect(() => {
+    camera.up.set(0, mirrorWorldActive ? -1 : 1, 0);
+    camera.updateProjectionMatrix();
+  }, [mirrorWorldActive, camera]);
+  return null;
+}
+
+function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer, mirrorWorldActive }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
+  const collectCoin = useGameStore((state) => state.collectCoin);
+  const { zombies, zombiesPaused, traps, isActive: missionActive, slowedZombieIds, frozenZombieIds, freezeZombie, targetShop, phase: missionPhase } = useMissionStore();
+  const ghostHuntActive = useGhostHuntStore((state) => state.isActive);
+  const allowMissionEntities = missionActive && !ghostHuntActive && !mirrorWorldActive;
+  const allowGhosts = ghostHuntActive && !missionActive && !mirrorWorldActive;
 
   useEffect(() => {
     scene.background = null;
@@ -618,6 +950,10 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
   const getBrandingAtPosition = (x: number, z: number): ShopBranding | undefined => {
     return brandingsByPosition.get(`${x},${z}`);
   };
+
+  const handleCollectItem = useCallback((id: string, type: 'coin' | 'gem' | 'star') => {
+    collectCoin(id);
+  }, [collectCoin]);
 
   return (
     <>
@@ -679,16 +1015,22 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {/* === ROUNDABOUT === */}
       <Roundabout isNight={isNight} />
 
+      {mirrorWorldActive && <MirrorWorldLadders />}
+
       {/* === SHOPS - Render BrandedShop if branding data exists, otherwise regular Shop === */}
       {mainBoulevardShops.map((shop, i) => {
         const branding = getBrandingAtPosition(shop.x, shop.z);
         if (branding) {
+          // During active mission (escape phase only), only target shop is clickable
+          // During inactive or completed mission, ALL shops are clickable
+          const isEscapePhase = allowMissionEntities && missionPhase === 'escape';
+          const isClickable = !isEscapePhase || branding.shopId === targetShop?.shopId;
           return (
             <BrandedShop 
               key={`main-${i}`} 
               branding={branding} 
               isNight={isNight} 
-              onClick={() => onShopClick?.(branding)}
+              onClick={isClickable ? () => onShopClick?.(branding) : undefined}
             />
           );
         }
@@ -697,12 +1039,16 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {crossStreetShops.map((shop, i) => {
         const branding = getBrandingAtPosition(shop.x, shop.z);
         if (branding) {
+          // During active mission (escape phase only), only target shop is clickable
+          // During inactive or completed mission, ALL shops are clickable
+          const isEscapePhase = allowMissionEntities && missionPhase === 'escape';
+          const isClickable = !isEscapePhase || branding.shopId === targetShop?.shopId;
           return (
             <BrandedShop 
               key={`cross-${i}`} 
               branding={branding} 
               isNight={isNight} 
-              onClick={() => onShopClick?.(branding)}
+              onClick={isClickable ? () => onShopClick?.(branding) : undefined}
             />
           );
         }
@@ -733,6 +1079,71 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {/* === PARKS === */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[45, 0.02, 42]}><planeGeometry args={[16, 16]} /><meshLambertMaterial color="#6ABF6A" /></mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-45, 0.02, 42]}><planeGeometry args={[16, 16]} /><meshLambertMaterial color="#6ABF6A" /></mesh>
+
+      {/* === COLLECTIBLES === */}
+      {coinPositions.map((coin) => (
+        <CollectibleItem
+          key={coin.id}
+          id={coin.id}
+          position={[coin.x, 0.5, coin.z]}
+          type={coin.type}
+          isNight={isNight}
+          onCollect={handleCollectItem}
+        />
+      ))}
+
+      {/* === ZOMBIES (Mission) === */}
+      {allowMissionEntities && zombies.map((zombie) => (
+        <ZombieCharacter
+          key={zombie.id}
+          id={zombie.id}
+          position={zombie.position}
+          speed={zombie.speed}
+          isNight={isNight}
+          isPaused={zombiesPaused}
+          isSlowed={slowedZombieIds.has(zombie.id)}
+          isFrozen={frozenZombieIds.has(zombie.id)}
+          behaviorType={zombie.behaviorType}
+          onTouchPlayer={(id) => onZombieTouchPlayer?.()}
+        />
+      ))}
+
+      {/* === FIRE PIT TRAPS (Mission) === */}
+      {allowMissionEntities && traps.filter(t => t.type === 'firepit').map((trap) => (
+        <FirePitTrap
+          key={trap.id}
+          id={trap.id}
+          position={trap.position}
+          isActive={trap.isActive}
+          onPlayerHit={(id) => onTrapHitPlayer?.()}
+        />
+      ))}
+      
+      {/* === SWINGING AXE TRAPS (Mission) === */}
+      {allowMissionEntities && traps.filter(t => t.type === 'axe').map((trap) => (
+        <SwingingAxeTrap
+          key={trap.id}
+          id={trap.id}
+          position={trap.position}
+          rotation={trap.rotation}
+          isActive={trap.isActive}
+          onPlayerHit={(id) => onTrapHitPlayer?.()}
+        />
+      ))}
+      
+      {/* === THORNS TRAPS (Mission) === */}
+      {allowMissionEntities && traps.filter(t => t.type === 'thorns').map((trap) => (
+        <ThornsTrap
+          key={trap.id}
+          id={trap.id}
+          position={trap.position}
+          isActive={trap.isActive}
+          onPlayerHit={(id) => onTrapHitPlayer?.()}
+        />
+      ))}
+
+      {/* === GHOSTS (Ghost Hunt Mission) === */}
+      {allowGhosts && <GhostHuntGhosts isNight={isNight} />}
 
       {/* === PLAYER CHARACTER === */}
       <PlayerController 

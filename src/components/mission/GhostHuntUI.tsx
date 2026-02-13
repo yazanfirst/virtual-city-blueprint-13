@@ -1,0 +1,390 @@
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Radio, Flashlight, Ghost, Clock, Heart, Zap, AlertTriangle, Crosshair } from 'lucide-react';
+import { useGhostHuntStore } from '@/stores/ghostHuntStore';
+import { cn } from '@/lib/utils';
+
+interface GhostHuntUIProps {
+  onComplete?: () => void;
+  onFailed?: () => void;
+}
+
+export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) {
+  const {
+    phase,
+    isPaused,
+    timeRemaining,
+    ghosts,
+    capturedCount,
+    requiredCaptures,
+    totalGhosts,
+    equipment,
+    playerLives,
+    difficultyLevel,
+    emfDrainPerSecond,
+    toastMessage,
+    updateTimer,
+    toggleEMF,
+    useFlashlight,
+    fireGhostTrap,
+    drainBattery,
+    completeBriefing,
+  } = useGhostHuntStore();
+  
+  // Timer logic - respects pause state
+  useEffect(() => {
+    if (phase !== 'hunting' || isPaused) return;
+    
+    const interval = setInterval(() => {
+      updateTimer(1);
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [phase, isPaused, updateTimer]);
+  
+  // EMF battery drain while active - respects pause state
+  useEffect(() => {
+    if (phase !== 'hunting' || !equipment.emfActive || isPaused) return;
+    
+    const interval = setInterval(() => {
+      drainBattery('emf', emfDrainPerSecond);
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [phase, equipment.emfActive, isPaused, drainBattery, emfDrainPerSecond]);
+  
+  // Track phase changes - use ref to prevent infinite re-trigger
+  // (onComplete/onFailed are inline functions that change reference every render)
+  const handledPhaseRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (phase === 'completed' && handledPhaseRef.current !== 'completed') {
+      handledPhaseRef.current = 'completed';
+      onComplete?.();
+    } else if (phase === 'failed' && handledPhaseRef.current !== 'failed') {
+      handledPhaseRef.current = 'failed';
+      onFailed?.();
+    } else if (phase !== 'completed' && phase !== 'failed') {
+      handledPhaseRef.current = null;
+    }
+  }, [phase, onComplete, onFailed]);
+  
+  // Get strongest EMF reading
+  const strongestEMF = ghosts
+    .filter(g => !g.isCaptured)
+    .reduce((max, g) => Math.max(max, g.emfStrength), 0);
+  
+  // EMF level classification
+  const getEMFLevel = (strength: number): { level: number; label: string; color: string } => {
+    if (strength < 0.1) return { level: 0, label: 'NONE', color: 'text-muted-foreground' };
+    if (strength < 0.3) return { level: 1, label: 'WEAK', color: 'text-blue-400' };
+    if (strength < 0.5) return { level: 2, label: 'MODERATE', color: 'text-yellow-400' };
+    if (strength < 0.7) return { level: 3, label: 'STRONG', color: 'text-orange-400' };
+    if (strength < 0.9) return { level: 4, label: 'VERY STRONG', color: 'text-red-400' };
+    return { level: 5, label: 'EXTREME!', color: 'text-red-500 animate-pulse' };
+  };
+  
+  const emfReading = getEMFLevel(strongestEMF);
+  
+  // Format time
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+  
+  // Briefing screen
+  if (phase === 'briefing') {
+    return (
+      <div 
+        className="mission-modal-overlay fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+        style={{ touchAction: 'manipulation' }}
+      >
+        <div className="ghost-hunt-briefing mission-modal-panel bg-background/95 border border-purple-500/50 rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+          <div className="flex items-center gap-3 mb-4">
+            <Ghost className="h-8 w-8 text-purple-400" />
+            <h2 className="font-display text-xl font-bold text-purple-400 uppercase tracking-wider">
+              Ghost Hunt
+            </h2>
+          </div>
+          <div className="ghost-hunt-briefing__content text-sm text-muted-foreground space-y-3 mb-6">
+            <p className="text-foreground font-medium">
+              Paranormal activity detected! Capture {requiredCaptures} ghosts before time runs out.
+            </p>
+            
+            <div className="bg-purple-950/50 rounded-lg p-3 border border-purple-500/30">
+              <h3 className="text-purple-300 font-bold text-xs uppercase mb-2">Equipment:</h3>
+              <ul className="space-y-1 text-xs">
+                <li className="flex items-center gap-2">
+                  <Radio className="h-3 w-3 text-blue-400" />
+                  <span><strong>EMF Detector:</strong> Shows ghost proximity</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Flashlight className="h-3 w-3 text-yellow-400" />
+                  <span><strong>Flashlight:</strong> Reveals hidden ghosts</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Crosshair className="h-3 w-3 text-green-400" />
+                  <span><strong>Ghost Trap:</strong> Shoot to capture revealed ghosts</span>
+                </li>
+              </ul>
+            </div>
+            
+            <div className="bg-red-950/50 rounded-lg p-3 border border-red-500/30">
+              <h3 className="text-red-300 font-bold text-xs uppercase mb-2">Warning:</h3>
+              <ul className="space-y-1 text-xs">
+                <li>• Ghosts can attack if you're too close</li>
+                <li>• Reveal ghosts before capturing them</li>
+                <li>• Equipment has limited battery</li>
+                <li>• Difficulty: Level {difficultyLevel}</li>
+              </ul>
+            </div>
+          </div>
+          
+          <button
+            type="button"
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              completeBriefing();
+            }}
+            className="w-full py-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold uppercase tracking-wider transition-colors touch-manipulation active:scale-[0.98]"
+          >
+            Start Hunt
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  // Hunting phase UI
+  if (phase !== 'hunting') return null;
+  
+  return (
+    <div className="ghost-hunt-ui">
+      {/* Top HUD - Timer (smaller on mobile) */}
+      <div 
+        className="ghost-hunt-ui__timer absolute left-1/2 -translate-x-1/2 pointer-events-none top-12 sm:top-14"
+        style={{ zIndex: 150 }}
+      >
+        <div className={cn(
+          "flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg backdrop-blur-md border",
+          timeRemaining <= 15 
+            ? "bg-red-950/90 border-red-500/50 animate-pulse" 
+            : "bg-background/80 border-border/50"
+        )}>
+          <Clock className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4", timeRemaining <= 15 ? "text-red-400" : "text-muted-foreground")} />
+          <span className={cn(
+            "font-mono text-base sm:text-lg font-bold",
+            timeRemaining <= 15 ? "text-red-400" : "text-foreground"
+          )}>
+            {formatTime(timeRemaining)}
+          </span>
+        </div>
+      </div>
+      
+      {/* Left side - Lives & Progress (compact on mobile) */}
+      <div 
+        className="ghost-hunt-ui__stats absolute left-1 sm:left-2 flex flex-col gap-1.5 pointer-events-none top-24 sm:top-28"
+        style={{ zIndex: 150 }}
+      >
+        {/* Lives */}
+        <div className="flex items-center gap-0.5 bg-background/80 backdrop-blur-md rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-border/50">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Heart
+              key={i}
+              className={cn(
+                "h-3.5 w-3.5 sm:h-4 sm:w-4",
+                i < playerLives ? "text-red-500 fill-red-500" : "text-muted-foreground"
+              )}
+            />
+          ))}
+        </div>
+        
+        {/* Capture progress */}
+        <div className="bg-background/80 backdrop-blur-md rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-border/50">
+          <div className="flex items-center gap-1.5 text-[10px] sm:text-xs">
+            <Ghost className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-400" />
+            <span className="font-bold text-foreground">
+              {capturedCount}/{requiredCaptures}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Right side - Equipment (compact vertical stack on mobile) */}
+      <div 
+        className="ghost-hunt-ui__equipment absolute right-1 sm:right-2 flex flex-col gap-1 sm:gap-2 pointer-events-auto top-24 sm:top-28"
+        style={{ zIndex: 150 }}
+      >
+        {/* EMF Detector */}
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            toggleEMF();
+          }}
+          data-control-ignore="true"
+          className={cn(
+            "flex flex-col items-center gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
+            equipment.emfActive
+              ? "bg-blue-950/90 border-blue-500/50"
+              : "bg-background/80 border-border/50 hover:bg-background/90"
+          )}
+          disabled={equipment.emfBattery <= 0}
+        >
+          <Radio className={cn("h-4 w-4 sm:h-5 sm:w-5", equipment.emfActive ? "text-blue-400" : "text-muted-foreground")} />
+          <span className="text-[8px] sm:text-[10px] uppercase font-bold text-muted-foreground">EMF</span>
+          <div className="w-6 h-1 sm:w-8 sm:h-1.5 bg-muted rounded-full overflow-hidden">
+            <div 
+              className={cn(
+                "h-full transition-all",
+                equipment.emfBattery > 30 ? "bg-blue-400" : "bg-red-400"
+              )}
+              style={{ width: `${equipment.emfBattery}%` }}
+            />
+          </div>
+        </button>
+        
+        {/* Flashlight */}
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            useFlashlight();
+          }}
+          data-control-ignore="true"
+          className={cn(
+            "flex flex-col items-center gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
+            equipment.flashlightActive
+              ? "bg-yellow-950/90 border-yellow-500/50"
+              : "bg-background/80 border-border/50 hover:bg-background/90",
+            equipment.flashlightCooldown > 0 && "opacity-50"
+          )}
+          disabled={equipment.flashlightBattery <= 0 || equipment.flashlightCooldown > 0}
+        >
+          <Flashlight className={cn("h-4 w-4 sm:h-5 sm:w-5", equipment.flashlightActive ? "text-yellow-400" : "text-muted-foreground")} />
+          <span className="text-[8px] sm:text-[10px] uppercase font-bold text-muted-foreground">Flash</span>
+          <div className="w-6 h-1 sm:w-8 sm:h-1.5 bg-muted rounded-full overflow-hidden">
+            <div 
+              className={cn(
+                "h-full transition-all",
+                equipment.flashlightBattery > 30 ? "bg-yellow-400" : "bg-red-400"
+              )}
+              style={{ width: `${equipment.flashlightBattery}%` }}
+            />
+          </div>
+        </button>
+        
+        {/* Ghost Trap */}
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            fireGhostTrap();
+          }}
+          data-control-ignore="true"
+          className={cn(
+            "flex flex-col items-center gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg border transition-all touch-manipulation active:scale-95",
+            equipment.trapActive
+              ? "bg-green-950/90 border-green-500/50 scale-105"
+              : "bg-background/80 border-border/50 hover:bg-background/90",
+            equipment.trapCharges <= 0 && "opacity-50"
+          )}
+          disabled={equipment.trapCharges <= 0 || equipment.trapActive}
+        >
+          <Crosshair className={cn("h-4 w-4 sm:h-5 sm:w-5", equipment.trapActive ? "text-green-400 animate-pulse" : "text-muted-foreground")} />
+          <span className="text-[8px] sm:text-[10px] uppercase font-bold text-muted-foreground">Trap</span>
+          <div className="flex gap-0.5">
+            {[1, 2, 3].map((charge) => (
+              <div
+                key={charge}
+                className={cn(
+                  "w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all",
+                  charge <= equipment.trapCharges ? "bg-green-400" : "bg-muted"
+                )}
+              />
+            ))}
+          </div>
+        </button>
+      </div>
+      
+      {/* EMF Reading Display (when active) - bottom center, above controls */}
+      {equipment.emfActive && (
+        <div 
+          className="ghost-hunt-ui__emf absolute left-1/2 -translate-x-1/2 pointer-events-none bottom-28 sm:bottom-32"
+          style={{ zIndex: 150 }}
+        >
+          <div className="bg-blue-950/90 backdrop-blur-md rounded-lg px-3 py-2 sm:px-4 sm:py-3 border border-blue-500/50">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Radio className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400 animate-pulse" />
+              <div className="flex flex-col">
+                <span className="text-[8px] sm:text-[10px] uppercase text-blue-300">EMF</span>
+                <span className={cn("font-mono font-bold text-sm sm:text-base", emfReading.color)}>
+                  {emfReading.label}
+                </span>
+              </div>
+              {/* Visual meter */}
+              <div className="flex gap-0.5">
+                {[1, 2, 3, 4, 5].map((level) => (
+                  <div
+                    key={level}
+                    className={cn(
+                      "w-1.5 h-3 sm:w-2 sm:h-4 rounded-sm transition-all",
+                      level <= emfReading.level
+                        ? level <= 2 ? "bg-blue-400" : level <= 4 ? "bg-orange-400" : "bg-red-500"
+                        : "bg-muted"
+                    )}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Flashlight active indicator */}
+      {equipment.flashlightActive && (
+        <div 
+          className="fixed inset-0 pointer-events-none"
+          style={{ 
+            zIndex: 100,
+            background: 'radial-gradient(circle at 50% 50%, transparent 20%, rgba(255,255,200,0.15) 40%, transparent 60%)',
+          }}
+        />
+      )}
+      
+      {/* Ghost Trap beam effect */}
+      {equipment.trapActive && (
+        <div 
+          className="fixed inset-0 pointer-events-none flex items-center justify-center"
+          style={{ zIndex: 100 }}
+        >
+          {/* Targeting crosshair */}
+          <div className="relative">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-4 border-green-400 rounded-full animate-ping opacity-50" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-green-300 rounded-full" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-8 bg-green-400" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-1 bg-green-400" />
+          </div>
+          {/* Green beam overlay */}
+          <div 
+            className="absolute inset-0"
+            style={{
+              background: 'radial-gradient(ellipse 40% 60% at 50% 50%, rgba(74, 222, 128, 0.3) 0%, transparent 70%)',
+            }}
+          />
+        </div>
+      )}
+      
+      {/* Big Toast Message for Recharge Pickups */}
+      {toastMessage && (
+        <div 
+          className="fixed inset-x-0 top-1/2 -translate-y-1/2 flex justify-center pointer-events-none"
+          style={{ zIndex: 200 }}
+        >
+          <div className="mx-4 max-w-lg rounded-2xl border-2 border-emerald-200/90 bg-emerald-500/95 px-8 py-5 text-center text-xl font-bold text-white shadow-2xl shadow-emerald-500/50 animate-pulse">
+            {toastMessage}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

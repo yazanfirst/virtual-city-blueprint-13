@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LayoutDashboard, Store, Plus, Clock, CheckCircle, XCircle, Trash2, PauseCircle, PlayCircle } from "lucide-react";
+import { LayoutDashboard, Store, Plus, Clock, CheckCircle, XCircle, Trash2, PauseCircle, PlayCircle, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useMerchantShops } from "@/hooks/useMerchantShops";
+import { useMerchantShops, type ShopWithLocation } from "@/hooks/useMerchantShops";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -151,7 +151,7 @@ const MerchantDashboard = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {shops.map(shop => (
+              {shops.map((shop: ShopWithLocation) => (
                 <div key={shop.id} className="flex items-center justify-between p-4 bg-muted rounded-lg gap-4">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div className="w-10 h-10 rounded bg-primary/20 flex items-center justify-center shrink-0">
@@ -160,7 +160,7 @@ const MerchantDashboard = () => {
                     <div className="min-w-0">
                       <p className="font-medium truncate">{shop.name}</p>
                       <p className="text-sm text-muted-foreground truncate">
-                        {(shop as any).shop_spots?.streets?.name} - Spot {(shop as any).shop_spots?.spot_label}
+                        {shop.shop_spots?.streets?.name} - Spot {shop.shop_spots?.spot_label}
                       </p>
                     </div>
                   </div>
@@ -171,6 +171,21 @@ const MerchantDashboard = () => {
                   </div>
                   
                   <div className="flex items-center gap-2 shrink-0">
+                    {/* Edit button for all shops except pending */}
+                    {shop.status !== 'pending_review' && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        asChild
+                        className="text-primary border-primary/50 hover:bg-primary/10"
+                      >
+                        <Link to={`/merchant/edit-shop/${shop.id}`}>
+                          <Edit className="h-4 w-4 sm:mr-1" />
+                          <span className="hidden sm:inline">Edit</span>
+                        </Link>
+                      </Button>
+                    )}
+                    
                     {/* Suspend/Reactivate button for active/suspended shops */}
                     {shop.status === 'active' && (
                       <Button 

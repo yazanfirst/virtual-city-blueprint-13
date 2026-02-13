@@ -14,6 +14,235 @@ export type Database = {
   }
   public: {
     Tables: {
+      merchant_offers: {
+        Row: {
+          code_type: string
+          coin_price: number
+          coupon_code: string | null
+          created_at: string
+          daily_limit: number
+          description: string | null
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          min_order_value: number | null
+          min_player_level: number
+          per_player_limit: number
+          shop_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          code_type?: string
+          coin_price: number
+          coupon_code?: string | null
+          created_at?: string
+          daily_limit?: number
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          min_order_value?: number | null
+          min_player_level?: number
+          per_player_limit?: number
+          shop_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          code_type?: string
+          coin_price?: number
+          coupon_code?: string | null
+          created_at?: string
+          daily_limit?: number
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          min_order_value?: number | null
+          min_player_level?: number
+          per_player_limit?: number
+          shop_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_offers_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mission_completions: {
+        Row: {
+          coins_earned: number
+          completed_at: string
+          id: string
+          level: number
+          mission_type: string
+          user_id: string
+          xp_earned: number
+        }
+        Insert: {
+          coins_earned?: number
+          completed_at?: string
+          id?: string
+          level: number
+          mission_type: string
+          user_id: string
+          xp_earned?: number
+        }
+        Update: {
+          coins_earned?: number
+          completed_at?: string
+          id?: string
+          level?: number
+          mission_type?: string
+          user_id?: string
+          xp_earned?: number
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          link: string | null
+          message: string
+          read: boolean
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message: string
+          read?: boolean
+          title: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          link?: string | null
+          message?: string
+          read?: boolean
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      offer_redemptions: {
+        Row: {
+          coins_spent: number
+          created_at: string
+          expires_at: string
+          id: string
+          offer_id: string
+          player_id: string
+          redemption_code: string
+          status: string
+        }
+        Insert: {
+          coins_spent: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          offer_id: string
+          player_id: string
+          redemption_code: string
+          status?: string
+        }
+        Update: {
+          coins_spent?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          offer_id?: string
+          player_id?: string
+          redemption_code?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_redemptions_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "merchant_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_progress: {
+        Row: {
+          coins: number
+          created_at: string
+          id: string
+          level: number
+          missions_completed: number
+          shops_visited: number
+          updated_at: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          coins?: number
+          created_at?: string
+          id?: string
+          level?: number
+          missions_completed?: number
+          shops_visited?: number
+          updated_at?: string
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          coins?: number
+          created_at?: string
+          id?: string
+          level?: number
+          missions_completed?: number
+          shops_visited?: number
+          updated_at?: string
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
+      }
+      player_shop_visits: {
+        Row: {
+          created_at: string
+          id: string
+          shop_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          shop_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          shop_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -41,10 +270,54 @@ export type Database = {
         }
         Relationships: []
       }
+      shop_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          price: number | null
+          shop_id: string
+          slot_index: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          price?: number | null
+          shop_id: string
+          slot_index: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          price?: number | null
+          shop_id?: string
+          slot_index?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_items_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shop_reviews: {
         Row: {
           action: string
-          admin_id: string
+          admin_id: string | null
           created_at: string | null
           id: string
           notes: string | null
@@ -52,7 +325,7 @@ export type Database = {
         }
         Insert: {
           action: string
-          admin_id: string
+          admin_id?: string | null
           created_at?: string | null
           id?: string
           notes?: string | null
@@ -60,7 +333,7 @@ export type Database = {
         }
         Update: {
           action?: string
-          admin_id?: string
+          admin_id?: string | null
           created_at?: string | null
           id?: string
           notes?: string | null
@@ -130,6 +403,8 @@ export type Database = {
           signage_font: string | null
           spot_id: string
           status: Database["public"]["Enums"]["shop_status"] | null
+          texture_template: string | null
+          texture_url: string | null
           updated_at: string | null
         }
         Insert: {
@@ -152,6 +427,8 @@ export type Database = {
           signage_font?: string | null
           spot_id: string
           status?: Database["public"]["Enums"]["shop_status"] | null
+          texture_template?: string | null
+          texture_url?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -174,6 +451,8 @@ export type Database = {
           signage_font?: string | null
           spot_id?: string
           status?: Database["public"]["Enums"]["shop_status"] | null
+          texture_template?: string | null
+          texture_url?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -242,6 +521,52 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_active_or_suspended_public_shops_for_spots: {
+        Args: { _spot_ids: string[] }
+        Returns: {
+          accent_color: string
+          branch_justification: string
+          branch_label: string
+          category: string
+          created_at: string
+          duplicate_brand: boolean
+          external_link: string
+          facade_template: Database["public"]["Enums"]["facade_template"]
+          id: string
+          logo_url: string
+          name: string
+          primary_color: string
+          signage_font: string
+          spot_id: string
+          status: Database["public"]["Enums"]["shop_status"]
+          texture_template: string
+          texture_url: string
+          updated_at: string
+        }[]
+      }
+      get_active_public_shops_for_spots: {
+        Args: { _spot_ids: string[] }
+        Returns: {
+          accent_color: string
+          branch_justification: string
+          branch_label: string
+          category: string
+          created_at: string
+          duplicate_brand: boolean
+          external_link: string
+          facade_template: Database["public"]["Enums"]["facade_template"]
+          id: string
+          logo_url: string
+          name: string
+          primary_color: string
+          signage_font: string
+          spot_id: string
+          status: Database["public"]["Enums"]["shop_status"]
+          texture_template: string
+          texture_url: string
+          updated_at: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -251,6 +576,7 @@ export type Database = {
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_merchant: { Args: { _user_id: string }; Returns: boolean }
+      is_shop_active: { Args: { _shop_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "merchant" | "admin" | "player"
@@ -263,6 +589,12 @@ export type Database = {
         | "urban_industrial"
         | "retro_vintage"
         | "nature_organic"
+        | "led_display"
+        | "pharaoh_gold"
+        | "greek_marble"
+        | "art_deco"
+        | "japanese_zen"
+        | "neon_cyberpunk"
       shop_status: "pending_review" | "active" | "rejected" | "suspended"
     }
     CompositeTypes: {
@@ -401,6 +733,12 @@ export const Constants = {
         "urban_industrial",
         "retro_vintage",
         "nature_organic",
+        "led_display",
+        "pharaoh_gold",
+        "greek_marble",
+        "art_deco",
+        "japanese_zen",
+        "neon_cyberpunk",
       ],
       shop_status: ["pending_review", "active", "rejected", "suspended"],
     },

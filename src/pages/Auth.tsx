@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { User, Lock, ArrowRight, UserPlus, Building2, Gamepad2 } from "lucide-react";
+import { User, Lock, ArrowRight, UserPlus, Building2, Gamepad2, AlertTriangle, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { z } from "zod";
+import { checkPasswordLeaked, checkPasswordStrength, passwordRequirements } from "@/lib/passwordSecurity";
 
 const signInSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }),
@@ -15,7 +16,12 @@ const signInSchema = z.object({
 
 const signUpSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+  password: z.string()
+    .min(passwordRequirements.minLength, { message: `Password must be at least ${passwordRequirements.minLength} characters` })
+    .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
+    .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter" })
+    .regex(/[0-9]/, { message: "Password must contain at least one number" })
+    .regex(/[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\\/`~]/, { message: "Password must contain at least one special character" }),
   displayName: z.string().trim().min(2, { message: "Name must be at least 2 characters" }).max(50, { message: "Name must be less than 50 characters" }),
 });
 
@@ -30,6 +36,8 @@ const Auth = () => {
   const [displayName, setDisplayName] = useState("");
   const [selectedRole, setSelectedRole] = useState<UserRole>("player");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingPassword, setIsCheckingPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState<{ isStrong: boolean; unmetRequirements: string[] }>({ isStrong: false, unmetRequirements: [] });
 
   // Redirect if already logged in
   useEffect(() => {
@@ -41,6 +49,15 @@ const Auth = () => {
       }
     }
   }, [user, loading, userRole, navigate]);
+
+  // Check password strength as user types (only for signup)
+  useEffect(() => {
+    if (isSignUp && password) {
+      setPasswordStrength(checkPasswordStrength(password));
+    } else {
+      setPasswordStrength({ isStrong: false, unmetRequirements: [] });
+    }
+  }, [password, isSignUp]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +77,21 @@ const Auth = () => {
           return;
         }
 
+        // Check if password has been leaked
+        setIsCheckingPassword(true);
+        const leakResult = await checkPasswordLeaked(password);
+        setIsCheckingPassword(false);
+
+        if (leakResult.isLeaked) {
+          toast({
+            title: "Compromised Password Detected",
+            description: `This password has appeared in ${leakResult.count.toLocaleString()} data breaches. Please choose a different password to protect your account.`,
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
         const { error } = await signUp(email, password, displayName, selectedRole);
         
         if (error) {
@@ -71,11 +103,6 @@ const Auth = () => {
             title: "Sign Up Failed",
             description: message,
             variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Account Created!",
-            description: "Please check your email to confirm your account. You may need to disable email confirmation in Supabase for testing.",
           });
         }
       } else {
@@ -192,6 +219,33 @@ const Auth = () => {
                   disabled={isSubmitting}
                 />
               </div>
+              
+              {/* Password strength indicator for signup */}
+              {isSignUp && password && (
+                <div className="mt-3 p-3 rounded-lg bg-muted/50 border border-border">
+                  <div className="flex items-center gap-2 mb-2">
+                    {passwordStrength.isStrong ? (
+                      <Check className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    )}
+                    <span className={`text-sm font-medium ${passwordStrength.isStrong ? 'text-green-500' : 'text-yellow-500'}`}>
+                      {passwordStrength.isStrong ? 'Strong password' : 'Password requirements'}
+                    </span>
+                  </div>
+                  
+                  {!passwordStrength.isStrong && (
+                    <ul className="space-y-1">
+                      {passwordStrength.unmetRequirements.map((req, idx) => (
+                        <li key={idx} className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <X className="h-3 w-3 text-destructive" />
+                          {req}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
 
             {isSignUp && (
@@ -232,10 +286,12 @@ const Auth = () => {
               variant="cyber" 
               className="w-full" 
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isCheckingPassword}
             >
-              {isSubmitting ? (
-                <span className="animate-pulse">Processing...</span>
+              {isSubmitting || isCheckingPassword ? (
+                <span className="animate-pulse">
+                  {isCheckingPassword ? "Checking password security..." : "Processing..."}
+                </span>
               ) : (
                 <>
                   {isSignUp ? "Create Account" : "Sign In"}

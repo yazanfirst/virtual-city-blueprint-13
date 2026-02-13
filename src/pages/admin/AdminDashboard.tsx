@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { createNotification } from "@/hooks/useNotifications";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -16,11 +17,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tables } from "@/integrations/supabase/types";
+
+type ShopWithLocation = Tables<'shops'> & {
+  shop_spots?: {
+    spot_label?: string | null;
+    streets?: { name?: string | null } | null;
+  } | null;
+};
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("pending");
   
-  const { data: shops, isLoading, refetch } = useQuery({
+  const { data: shops, isLoading, refetch } = useQuery<ShopWithLocation[]>({
     queryKey: ['admin-all-shops'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -35,7 +44,7 @@ const AdminDashboard = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as ShopWithLocation[];
     },
   });
 
@@ -45,6 +54,7 @@ const AdminDashboard = () => {
   const rejectedShops = shops?.filter(s => s.status === 'rejected') || [];
 
   const handleApprove = async (shopId: string) => {
+    const shop = shops?.find(s => s.id === shopId);
     const { error } = await supabase
       .from('shops')
       .update({ status: 'active' })
@@ -53,12 +63,23 @@ const AdminDashboard = () => {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      // Create notification for merchant
+      if (shop?.merchant_id) {
+        await createNotification(
+          shop.merchant_id,
+          "Shop Approved! 🎉",
+          `Your shop "${shop.name}" has been approved and is now live in the city!`,
+          "success",
+          "/merchant/dashboard"
+        );
+      }
       toast({ title: "Shop Approved", description: "The shop is now active." });
       refetch();
     }
   };
 
   const handleReject = async (shopId: string) => {
+    const shop = shops?.find(s => s.id === shopId);
     const { error } = await supabase
       .from('shops')
       .update({ status: 'rejected' })
@@ -67,12 +88,23 @@ const AdminDashboard = () => {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      // Create notification for merchant
+      if (shop?.merchant_id) {
+        await createNotification(
+          shop.merchant_id,
+          "Shop Rejected",
+          `Your shop "${shop.name}" was not approved. Please review our guidelines and try again.`,
+          "error",
+          "/merchant/dashboard"
+        );
+      }
       toast({ title: "Shop Rejected" });
       refetch();
     }
   };
 
   const handleSuspend = async (shopId: string) => {
+    const shop = shops?.find(s => s.id === shopId);
     const { error } = await supabase
       .from('shops')
       .update({ status: 'suspended' })
@@ -81,12 +113,23 @@ const AdminDashboard = () => {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      // Create notification for merchant
+      if (shop?.merchant_id) {
+        await createNotification(
+          shop.merchant_id,
+          "Shop Suspended",
+          `Your shop "${shop.name}" has been suspended by an administrator.`,
+          "warning",
+          "/merchant/dashboard"
+        );
+      }
       toast({ title: "Shop Suspended", description: "The shop has been suspended." });
       refetch();
     }
   };
 
   const handleReactivate = async (shopId: string) => {
+    const shop = shops?.find(s => s.id === shopId);
     const { error } = await supabase
       .from('shops')
       .update({ status: 'active' })
@@ -95,6 +138,16 @@ const AdminDashboard = () => {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      // Create notification for merchant
+      if (shop?.merchant_id) {
+        await createNotification(
+          shop.merchant_id,
+          "Shop Reactivated! 🎉",
+          `Your shop "${shop.name}" has been reactivated and is now live again!`,
+          "success",
+          "/merchant/dashboard"
+        );
+      }
       toast({ title: "Shop Reactivated", description: "The shop is now active again." });
       refetch();
     }
@@ -114,7 +167,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const ShopCard = ({ shop, actions }: { shop: any; actions: React.ReactNode }) => (
+  const ShopCard = ({ shop, actions }: { shop: ShopWithLocation; actions: React.ReactNode }) => (
     <div className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-muted rounded-lg gap-4">
       <div className="flex-1">
         <div className="flex items-center gap-2">
@@ -124,7 +177,7 @@ const AdminDashboard = () => {
           )}
         </div>
         <p className="text-sm text-muted-foreground">
-          {(shop as any).shop_spots?.streets?.name} - Spot {(shop as any).shop_spots?.spot_label}
+          {shop.shop_spots?.streets?.name} - Spot {shop.shop_spots?.spot_label}
         </p>
         {shop.category && <p className="text-xs text-muted-foreground mt-1">{shop.category}</p>}
         {shop.external_link && (

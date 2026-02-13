@@ -80,13 +80,73 @@
     @apply border-border;
   }
 
+  /* Mobile app-like viewport fix */
+  :root {
+    --vh: 1vh;
+    --app-height: 100vh;
+  }
+
+  html, body {
+    height: 100%;
+    height: var(--app-height, 100vh);
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', sans-serif;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    height: var(--app-height, 100vh);
+  }
+
+  /* Allow scrolling in the main content area only */
+  #root {
+    height: 100%;
+    height: var(--app-height, 100vh);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* When game is active, lock everything */
+  body.game-active #root {
+    overflow: hidden;
+  }
+
+  /* Improve mobile tap responsiveness across the app */
+  button,
+  [role="button"],
+  a {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  canvas {
+    touch-action: none;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Orbitron', sans-serif;
+  }
+
+  /* Prevent text selection during game */
+  body.game-active {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Mobile-specific game container */
+  .mobile-game-container {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    height: var(--app-height, 100vh);
+    overflow: hidden;
   }
 }
 
@@ -138,5 +198,211 @@
   .cyber-card::before {
     content: '';
     @apply absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50;
+  }
+}
+
+.mirror-world-canvas {
+  filter: hue-rotate(180deg) saturate(0.85);
+}
+
+.mirror-world-void {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(84, 14, 120, 0.5) 0%, rgba(0, 0, 0, 0) 55%);
+}
+
+.mirror-world-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0) 55%, rgba(44, 0, 65, 0.6) 100%);
+}
+
+.mirror-world-particles {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.25) 1px, transparent 1px);
+  background-size: 80px 80px;
+  opacity: 0.4;
+  animation: mirror-world-float 12s linear infinite;
+}
+
+.mission-modal-overlay {
+  padding: 1rem;
+  isolation: isolate;
+}
+
+.mission-modal-panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 42rem);
+  max-height: min(90svh, 90dvh);
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+@media (max-width: 900px) and (orientation: landscape) {
+  .mission-modal-overlay {
+    align-items: flex-start;
+    padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .mission-modal-panel {
+    max-height: calc(
+      min(100svh, 100dvh) - max(0.75rem, env(safe-area-inset-top, 0px)) - max(0.75rem, env(safe-area-inset-bottom, 0px))
+    );
+  }
+}
+
+@keyframes mirror-world-float {
+  from {
+    transform: translateY(20px);
+  }
+  to {
+    transform: translateY(-40px);
+  }
+}
+
+/* Mobile-specific styles when game is active */
+@media (max-width: 768px) {
+  /* Safe area padding for notch/status bar */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Ensure the game fills the screen properly */
+  .mobile-game-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: var(--app-height, 100vh) !important;
+    max-height: var(--app-height, 100vh) !important;
+    overflow: hidden !important;
+  }
+
+  /* Compact UI elements on mobile */
+  .ghost-hunt-briefing {
+    max-width: min(480px, 94vw);
+    max-height: 85vh;
+    padding: 0.75rem;
+    overflow-y: auto;
+    margin: 0.5rem;
+  }
+
+  .ghost-hunt-briefing__content {
+    font-size: 0.75rem;
+  }
+}
+
+/* Landscape-specific mobile optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+  .ghost-hunt-briefing {
+    max-width: min(520px, 92vw);
+    max-height: 80vh;
+    padding: 0.75rem;
+  }
+
+  /* Timer moves to top-left in landscape */
+  .ghost-hunt-ui__timer {
+    top: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* Stats stay on left, horizontal layout */
+  .ghost-hunt-ui__stats {
+    top: 2.5rem;
+    left: 0.5rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .ghost-hunt-ui__stats > div {
+    padding: 0.25rem 0.5rem;
+  }
+
+  /* Equipment moves to horizontal row at bottom-center */
+  .ghost-hunt-ui__equipment {
+    top: auto;
+    bottom: 4rem;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ghost-hunt-ui__equipment > button {
+    padding: 0.25rem 0.4rem;
+  }
+
+  .ghost-hunt-ui__equipment > button span {
+    font-size: 0.5rem;
+  }
+
+  .ghost-hunt-ui__emf {
+    bottom: 6.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* Joystick and jump button positioning in landscape */
+  .mobile-controls__jump {
+    bottom: 0.5rem;
+    right: 0.5rem;
+  }
+
+  .mobile-controls__jump-button {
+    width: 52px;
+    height: 52px;
+    font-size: 0.7rem;
+  }
+
+  .mobile-controls__joystick {
+    bottom: 0.5rem;
+    left: 0.5rem;
+  }
+}
+
+/* Portrait-specific mobile optimizations */
+@media (max-width: 768px) and (orientation: portrait) {
+  .mobile-controls__jump-button {
+    width: 68px;
+    height: 68px;
+  }
+
+  /* Show portrait mode warning for game */
+  body.game-active::after {
+    content: 'Rotate your device for the best experience';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 0.5rem 1rem;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    z-index: 9999;
+    animation: slideDown 0.3s ease-out;
+  }
+
+  @keyframes slideDown {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: translateY(0);
+    }
   }
 }

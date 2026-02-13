@@ -1,12 +1,57 @@
-import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Target, User, Store, AlertCircle, Maximize2, Minimize2, Sun, Moon, ZoomIn, Move, UserCircle, Eye, ExternalLink, Map } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, User, Store, AlertCircle, Minimize2, Sun, Moon, UserCircle, Eye, ExternalLink, Coins, Trophy, X, Maximize2, ZoomIn, Move, Target, Heart, Map as MapIcon, Ghost, Sparkles, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStreetBySlug, useSpotsWithShops } from "@/hooks/useStreets";
 import { useAllSpotsForStreet, transformToShopBranding, ShopBranding } from "@/hooks/use3DShops";
+import { ShopItem } from "@/hooks/useShopItems";
 import CityScene, { CameraView } from "@/components/3d/CityScene";
 import ShopDetailModal from "@/components/3d/ShopDetailModal";
+import ShopInteriorRoom from "@/components/3d/ShopInteriorRoom";
 import SpotSelectionMap from "@/components/merchant/SpotSelectionMap";
+import MissionPanel from "@/components/mission/MissionPanel";
+import GhostHuntPanel from "@/components/mission/GhostHuntPanel";
+import GhostHuntUI from "@/components/mission/GhostHuntUI";
+import GhostHuntFailedModal from "@/components/mission/GhostHuntFailedModal";
+import GhostHuntCompleteModal from "@/components/mission/GhostHuntCompleteModal";
+import ZombieMissionCompleteModal from "@/components/mission/ZombieMissionCompleteModal";
+import MirrorWorldPanel from "@/components/mission/MirrorWorldPanel";
+import MirrorWorldBriefing from "@/components/mission/MirrorWorldBriefing";
+import MirrorWorldUI from "@/components/mission/MirrorWorldUI";
+import MirrorWorldComplete from "@/components/mission/MirrorWorldComplete";
+import MirrorWorldFailed from "@/components/mission/MirrorWorldFailed";
+import PauseOverlay from "@/components/mission/PauseOverlay";
+import QuestionModal from "@/components/mission/QuestionModal";
+import HealthDisplay from "@/components/mission/HealthDisplay";
+import MissionFailedModal from "@/components/mission/MissionFailedModal";
+import TrapHitFeedback from "@/components/mission/TrapHitFeedback";
+import MissionTimer from "@/components/mission/MissionTimer";
+import JumpScareModal from "@/components/mission/JumpScareModal";
+import GameStartScreen from "@/components/3d/GameStartScreen";
+import ShopProximityIndicator from "@/components/3d/ShopProximityIndicator";
+import TutorialTooltip from "@/components/3d/TutorialTooltip";
+import { useGameStore } from "@/stores/gameStore";
+import { useMissionStore } from "@/stores/missionStore";
+import { useGhostHuntStore } from "@/stores/ghostHuntStore";
+import { useMirrorWorldStore } from "@/stores/mirrorWorldStore";
+import { usePlayerStore } from "@/stores/playerStore";
+import { useTutorialProgress } from "@/hooks/useTutorialProgress";
+import { generateMissionQuestions } from "@/lib/missionQuestions";
+import { selectMissionTargetShop } from "@/lib/missionShopSelection";
+import { getEligibleShops } from "@/lib/missionShopSelection";
+import { getGhostHuntLevelConfig, getMirrorWorldLevelConfig, getZombieLevelConfig } from "@/lib/missionLevels";
+import { useGameAudio, playSounds } from "@/hooks/useGameAudio";
+import { supabase } from "@/integrations/supabase/client";
+import { useFlashlightReveal } from "@/hooks/useFlashlightReveal";
+import { useGhostTrapCapture } from "@/hooks/useGhostTrapCapture";
+import { useDeviceType } from "@/hooks/useDeviceType";
+import { useMobileAppBehavior } from "@/hooks/useMobileAppBehavior";
+import { usePlayerProgress } from "@/hooks/usePlayerProgress";
+import { useAllActiveOffers } from "@/hooks/useAllActiveOffers";
+import EligibleOffersPanel from "@/components/3d/EligibleOffersPanel";
+
+// Shop entry distance threshold (in world units)
+const SHOP_ENTRY_DISTANCE = 8;
 
 const PanelBox = ({ 
   title,
@@ -34,44 +79,707 @@ const PanelBox = ({
 
 const StreetView = () => {
   const { streetId } = useParams<{ streetId: string }>();
+  const navigate = useNavigate();
   const { data: street, isLoading } = useStreetBySlug(streetId || "");
   const { data: spotsData } = useAllSpotsForStreet(streetId || "");
   const { data: spotsWithShops } = useSpotsWithShops(street?.id || "");
   const [isMaximized, setIsMaximized] = useState(false);
+  const [hasGameStarted, setHasGameStarted] = useState(false);
+  const [isGamePaused, setIsGamePaused] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<"day" | "night">("day");
   const [cameraView, setCameraView] = useState<CameraView>("thirdPerson");
   const [selectedShop, setSelectedShop] = useState<ShopBranding | null>(null);
   const [showShopModal, setShowShopModal] = useState(false);
   const [show2DMap, setShow2DMap] = useState(false);
+  const [showMissions, setShowMissions] = useState(false);
+  const [isInsideShop, setIsInsideShop] = useState(false);
+  const [interiorShop, setInteriorShop] = useState<ShopBranding | null>(null);
+  const [nearbyShop, setNearbyShop] = useState<ShopBranding | null>(null);
+
+  // Game state
+  const { coins, level, xp, resetSession } = useGameStore();
+  
+  // Player progress persistence
+  const playerProgress = usePlayerProgress();
+  
+  // Track rewards for display in completion modals
+  const [lastReward, setLastReward] = useState<{ coins: number; xp: number }>({ coins: 0, xp: 0 });
+  
+  // Player state
+  const { position: playerPosition, resetToSafeSpawn, resetPlayer, enterShop: playerEnterShop, exitShop: playerExitShop } = usePlayerStore();
+  
+  // Mission state
+  const mission = useMissionStore();
+  const ghostHunt = useGhostHuntStore();
+  const mirrorWorld = useMirrorWorldStore();
+  const deviceType = useDeviceType();
+  const isMobile = deviceType === "mobile";
+  
+  // Mobile app behavior - prevents zoom, fixes viewport, etc.
+  useMobileAppBehavior(isMaximized);
+  
+  const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [showFailedModal, setShowFailedModal] = useState(false);
+  const [showJumpScare, setShowJumpScare] = useState(false);
+  const [showGhostHuntFailed, setShowGhostHuntFailed] = useState(false);
+  const [showGhostHuntComplete, setShowGhostHuntComplete] = useState(false);
+  const [showZombieComplete, setShowZombieComplete] = useState(false);
+  const [showMissionPause, setShowMissionPause] = useState(false);
+  const [missionTab, setMissionTab] = useState<'zombie' | 'ghost' | 'mirror'>('zombie');
+  const [shopItemsMap, setShopItemsMap] = useState<Map<string, ShopItem[]>>(new Map());
+  
+  // Game audio
+  useGameAudio();
+  
+  // Flashlight reveal logic for ghost hunt
+  useFlashlightReveal();
+  
+  // Ghost trap capture logic
+  useGhostTrapCapture();
+
+  // Tutorial system
+  const tutorial = useTutorialProgress();
+
+  // Transform spots data to shop brandings - MUST be before useEffect that uses it
+  const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
+
+  // Build shop map for eligible offers lookup
+  const shopMapForOffers = useMemo(() => {
+    const map = new Map<string, { name: string; logoUrl: string | null; externalLink: string | null }>();
+    for (const sb of shopBrandings) {
+      if (sb.hasShop && sb.shopId) {
+        map.set(sb.shopId, {
+          name: sb.shopName ?? 'Shop',
+          logoUrl: sb.logoUrl ?? null,
+          externalLink: sb.externalLink ?? null,
+        });
+      }
+    }
+    return map;
+  }, [shopBrandings]);
+
+  const { data: allActiveOffers = [], isLoading: offersLoading } = useAllActiveOffers(shopMapForOffers);
+  
+  // Get spot IDs for each recharge type (EMF, Flashlight, Trap) for map highlighting
+  const rechargeSpotIds = useMemo(() => {
+    const ids: { emf: string; flashlight: string; trap: string } = { emf: '', flashlight: '', trap: '' };
+    const shopIds = ghostHunt.rechargeShopIds;
+    if (shopIds.emf) ids.emf = shopBrandings.find((s) => s.shopId === shopIds.emf)?.spotId ?? '';
+    if (shopIds.flashlight) ids.flashlight = shopBrandings.find((s) => s.shopId === shopIds.flashlight)?.spotId ?? '';
+    if (shopIds.trap) ids.trap = shopBrandings.find((s) => s.shopId === shopIds.trap)?.spotId ?? '';
+    return ids;
+  }, [ghostHunt.rechargeShopIds, shopBrandings]);
+  
+  // Check if any recharge pickups are assigned
+  const hasAnyRechargeShop = Boolean(ghostHunt.rechargeShopIds.emf || ghostHunt.rechargeShopIds.flashlight || ghostHunt.rechargeShopIds.trap);
+
+  // Track if user has exited a shop for first time (to show mission intro)
+  const [hasExitedShopOnce, setHasExitedShopOnce] = useState(false);
+
+  const isAnyMissionActive = mission.isActive || ghostHunt.isActive || mirrorWorld.isActive;
+  const isMissionBlocking = (mission.isActive && mission.phase !== 'completed' && mission.phase !== 'failed') ||
+    (ghostHunt.isActive && ghostHunt.phase !== 'completed' && ghostHunt.phase !== 'failed') ||
+    (mirrorWorld.isActive && mirrorWorld.phase !== 'completed' && mirrorWorld.phase !== 'failed');
+  const activeMissionTab = mirrorWorld.isActive ? 'mirror' : ghostHunt.isActive ? 'ghost' : mission.isActive ? 'zombie' : 'zombie';
+  const zombieConfig = getZombieLevelConfig(mission.level);
+  const ghostConfig = getGhostHuntLevelConfig(ghostHunt.difficultyLevel);
+  const mirrorConfig = getMirrorWorldLevelConfig(mirrorWorld.difficultyLevel);
+
+  // Tutorial triggers - IN ORDER:
+  // 1. Movement tutorial when game starts
+  useEffect(() => {
+    if (hasGameStarted && isMaximized && !isInsideShop && !isAnyMissionActive) {
+      tutorial.showTutorialStep('movement');
+    }
+  }, [hasGameStarted, isMaximized, isInsideShop, isAnyMissionActive, tutorial]);
+
+  // 2. Shop nearby tutorial
+  useEffect(() => {
+    if (nearbyShop && hasGameStarted && !isInsideShop && !isAnyMissionActive) {
+      tutorial.showTutorialStep('shop_nearby');
+    }
+  }, [nearbyShop, hasGameStarted, isInsideShop, isAnyMissionActive, tutorial]);
+
+  // 3. Shop exit tutorial (after first exit - not during mission) - introduce missions
+  useEffect(() => {
+    if (hasExitedShopOnce && !isInsideShop && !isAnyMissionActive) {
+      tutorial.showTutorialStep('shop_exit_missions');
+    }
+  }, [hasExitedShopOnce, isInsideShop, isAnyMissionActive, tutorial]);
+
+  // 4. Mission activated tutorial - right after clicking activate
+  useEffect(() => {
+    if (mission.isActive && mission.phase === 'escape' && !tutorial.isStepCompleted('mission_activated')) {
+      tutorial.showTutorialStep('mission_activated');
+    }
+  }, [mission.isActive, mission.phase, tutorial]);
+
+  // Question phase - no tutorial needed, questions appear directly
+
+  // PAUSE GAME when ANY popup/modal is active
+  const isAnyPopupOpen = tutorial.activeTooltip ||
+    showMissions ||
+    show2DMap ||
+    showShopModal ||
+    showQuestionModal ||
+    showFailedModal ||
+    showJumpScare ||
+    showGhostHuntFailed ||
+    showGhostHuntComplete ||
+    ghostHunt.phase === 'briefing' ||
+    mirrorWorld.phase === 'briefing' ||
+    mirrorWorld.phase === 'completed' ||
+    mirrorWorld.phase === 'failed';
+  const hideMobileControls = Boolean(
+    tutorial.activeTooltip ||
+    showMissions ||
+    show2DMap ||
+    showShopModal ||
+    showQuestionModal ||
+    showFailedModal ||
+    showJumpScare ||
+    showGhostHuntFailed ||
+    showGhostHuntComplete ||
+    showMissionPause ||
+    ghostHunt.phase === 'briefing' ||
+    mirrorWorld.phase === 'briefing' ||
+    mirrorWorld.phase === 'completed' ||
+    mirrorWorld.phase === 'failed'
+  );
+  const hideSidePanels = isMobile && ((ghostHunt.isActive && ghostHunt.phase !== 'inactive') || (mirrorWorld.isActive && mirrorWorld.phase !== 'inactive'));
+  
+  useEffect(() => {
+    if (isAnyPopupOpen) {
+      // Pause zombies when any popup is showing
+      if (mission.isActive && !mission.zombiesPaused) {
+        mission.pauseZombies();
+      }
+    }
+  }, [isAnyPopupOpen, mission.isActive]);
+
+  useEffect(() => {
+    if (isAnyMissionActive) {
+      tutorial.dismissTooltip();
+    }
+  }, [isAnyMissionActive, tutorial]);
+
+  // Track zombie mission completion - use ref to prevent duplicate reward grants
+  const zombieRewardedRef = useRef(false);
+  useEffect(() => {
+    if (mission.phase === 'completed' && !zombieRewardedRef.current) {
+      zombieRewardedRef.current = true;
+      // Grant rewards via server-validated completeMission
+      if (playerProgress.isLoggedIn) {
+        playerProgress
+          .completeMission('zombie', mission.level, 30, mission.level * 50)
+          .then((result) => {
+            setLastReward({ coins: result.coinsEarned, xp: result.xpEarned });
+            setShowZombieComplete(true);
+          });
+      } else {
+        setLastReward({ coins: 0, xp: 0 });
+        setShowZombieComplete(true);
+      }
+    } else if (mission.phase !== 'completed') {
+      zombieRewardedRef.current = false;
+      setShowZombieComplete(false);
+    }
+  }, [mission.phase]);
+
+  // Track Mirror World completion - use ref to prevent duplicate reward grants
+  const mirrorRewardedRef = useRef(false);
+  useEffect(() => {
+    if (mirrorWorld.phase === 'completed' && !mirrorRewardedRef.current) {
+      mirrorRewardedRef.current = true;
+      if (playerProgress.isLoggedIn) {
+        const baseCoins = 20 * mirrorWorld.collectedCount;
+        const baseXP = mirrorWorld.difficultyLevel * 50;
+        playerProgress
+          .completeMission('mirror_world', mirrorWorld.difficultyLevel, baseCoins, baseXP)
+          .then((result) => {
+            setLastReward({ coins: result.coinsEarned, xp: result.xpEarned });
+          });
+      } else {
+        setLastReward({ coins: 0, xp: 0 });
+      }
+    } else if (mirrorWorld.phase !== 'completed') {
+      mirrorRewardedRef.current = false;
+    }
+  }, [mirrorWorld.phase]);
+
+  // Resume game when tutorial tooltip is dismissed
+  const handleTutorialDismiss = useCallback(() => {
+    tutorial.dismissTooltip();
+    // Resume zombies only if no other popups are open
+    const otherPopupsOpen = showMissions || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+    if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
+      mission.resumeZombies();
+    }
+  }, [tutorial, mission, showMissions, show2DMap, showShopModal, showQuestionModal, showFailedModal, showJumpScare]);
+  // Fetch all shop items for shops on this street
+  useEffect(() => {
+    const fetchAllShopItems = async () => {
+      if (!shopBrandings || shopBrandings.length === 0) return;
+      
+      // Get all shop IDs that have shops
+      const shopIds = shopBrandings
+        .filter(b => b.hasShop && b.shopId)
+        .map(b => b.shopId);
+      
+      if (shopIds.length === 0) return;
+      
+      const { data, error } = await supabase
+        .from('shop_items')
+        .select('*')
+        .in('shop_id', shopIds);
+      
+      if (error) {
+        console.error('Failed to fetch shop items:', error);
+        return;
+      }
+      
+      // Group by shop_id
+      const itemsByShop = new Map<string, ShopItem[]>();
+      for (const item of data || []) {
+        const existing = itemsByShop.get(item.shop_id) || [];
+        existing.push(item);
+        itemsByShop.set(item.shop_id, existing);
+      }
+      
+      setShopItemsMap(itemsByShop);
+    };
+    
+    fetchAllShopItems();
+  }, [shopBrandings.length]); // use length instead of array to avoid infinite loop
+
+  // Select 3 DIFFERENT random shops for EMF, Flashlight, Trap recharges
+  useEffect(() => {
+    if (!ghostHunt.isActive || ghostHunt.phase !== 'briefing') return;
+    // Already assigned
+    if (hasAnyRechargeShop) return;
+    if (!shopBrandings || shopBrandings.length === 0) return;
+
+    const eligible = getEligibleShops(shopBrandings, shopItemsMap, []);
+    if (eligible.length < 3) {
+      console.debug('[GhostHunt] Recharge pickup skipped: not enough eligible shops.');
+      return;
+    }
+
+    // Shuffle eligible shops using current timestamp as seed
+    const seed = Date.now();
+    const shuffled = [...eligible].sort((a, b) => {
+      const hashA = Math.sin(seed + a.shop.spotId.charCodeAt(0)) * 10000;
+      const hashB = Math.sin(seed + b.shop.spotId.charCodeAt(0)) * 10000;
+      return (hashA - Math.floor(hashA)) - (hashB - Math.floor(hashB));
+    });
+
+    const emfShop = shuffled[0]?.shop.shopId ?? null;
+    const flashlightShop = shuffled[1]?.shop.shopId ?? null;
+    const trapShop = shuffled[2]?.shop.shopId ?? null;
+
+    ghostHunt.setRechargePickups({ emf: emfShop, flashlight: flashlightShop, trap: trapShop });
+    console.debug('[GhostHunt] Recharge pickups assigned:', { emf: emfShop, flashlight: flashlightShop, trap: trapShop });
+  }, [ghostHunt.isActive, ghostHunt.phase, hasAnyRechargeShop, ghostHunt.setRechargePickups, shopBrandings, shopItemsMap]);
+
+  // Proximity detection - find nearby shop
+  useEffect(() => {
+    if (!hasGameStarted || isInsideShop) {
+      setNearbyShop(null);
+      return;
+    }
+
+    const [px, , pz] = playerPosition;
+    let closest: ShopBranding | null = null;
+    let closestDist = Infinity;
+
+    for (const shop of shopBrandings) {
+      if (!shop.hasShop || shop.isSuspended) continue;
+      
+      // Calculate distance to shop front (z+4 offset for front of building)
+      const shopFrontX = shop.position.x;
+      const shopFrontZ = shop.position.z + Math.cos(shop.position.rotation) * 4;
+      const shopFrontXOffset = Math.sin(shop.position.rotation) * 4;
+      
+      const dx = px - (shopFrontX + shopFrontXOffset);
+      const dz = pz - shopFrontZ;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+
+      if (dist < SHOP_ENTRY_DISTANCE && dist < closestDist) {
+        closest = shop;
+        closestDist = dist;
+      }
+    }
+
+    setNearbyShop(closest);
+  }, [playerPosition, shopBrandings, hasGameStarted, isInsideShop]);
 
   // Find the spot ID for the selected shop (to highlight in 2D map)
   const selectedSpotId = selectedShop?.spotId || "";
 
+  // Check if player is close enough to enter shop
+  const isPlayerNearShop = (shop: ShopBranding): boolean => {
+    const [px, , pz] = playerPosition;
+    const shopFrontX = shop.position.x;
+    const shopFrontZ = shop.position.z + Math.cos(shop.position.rotation) * 4;
+    const shopFrontXOffset = Math.sin(shop.position.rotation) * 4;
+    
+    const dx = px - (shopFrontX + shopFrontXOffset);
+    const dz = pz - shopFrontZ;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    
+    return dist < SHOP_ENTRY_DISTANCE;
+  };
+
   const handleShopClick = (shop: ShopBranding) => {
+    // Check proximity first - player must be near the shop
+    if (!isPlayerNearShop(shop)) {
+      return; // Too far away, ignore click
+    }
+
+    // During mission escape phase, only allow clicking target shop
+    if (mission.isActive && mission.phase === 'escape') {
+      if (shop.shopId === mission.targetShop?.shopId) {
+        mission.enterShop();
+        // Save outside state before entering shop
+        playerEnterShop();
+        setInteriorShop(shop);
+        setIsInsideShop(true);
+      }
+      // Non-target shops are ignored during escape phase
+      return;
+    }
+
+    // After wrong answer: allow ONE return to the *target* shop (it will trigger the trap)
+    if (mission.isActive && mission.phase === 'question' && mission.deceptiveMessageShown) {
+      if (shop.shopId === mission.targetShop?.shopId) {
+        handleEnterShop(shop);
+      }
+      return;
+    }
+    
+    // During observation/question phase, don't allow any shop clicks
+    if (mission.isActive && (mission.phase === 'observation' || mission.phase === 'question')) {
+      return;
+    }
+    
+    // Mission completed or inactive - all shops are clickable normally
+    // (This handles both normal mode and post-mission state)
     setSelectedShop(shop);
     setShowShopModal(true);
   };
 
-  // Transform spots data to shop brandings
-  const shopBrandings = spotsData ? transformToShopBranding(spotsData) : [];
+  const handleEnterShop = (shop: ShopBranding) => {
+    // Check for mission trap (second entry after wrong answer)
+    if (mission.isActive && mission.deceptiveMessageShown && shop.shopId === mission.targetShop?.shopId) {
+      // Trigger jump scare modal (NO sound)
+      setShowJumpScare(true);
+      mission.triggerTrap();
+      return;
+    }
+    // Save outside state before entering shop (camera + position)
+    playerEnterShop();
+    setInteriorShop(shop);
+    setIsInsideShop(true);
+    setShowShopModal(false);
+    
+    // Reward first-time shop visit (5 coins) — server validates uniqueness
+    if (shop.shopId && playerProgress.isLoggedIn) {
+      playerProgress.recordShopVisit(shop.shopId);
+    }
+  };
+
+  const handleExitShop = () => {
+    // Restore outside state (camera + position) when exiting shop
+    playerExitShop();
+    setIsInsideShop(false);
+    
+    // Track first shop exit (not during mission) to show mission intro tutorial
+    if (!mission.isActive && !hasExitedShopOnce) {
+      setHasExitedShopOnce(true);
+    }
+    
+    // If in mission observation phase, trigger questions
+    if (mission.isActive && mission.phase === 'observation') {
+      const questions = generateMissionQuestions(
+        mission.targetShopItems,
+        mission.targetShop?.shopName
+      );
+      mission.exitShop(questions);
+      if (questions.length > 0) {
+        setShowQuestionModal(true);
+      }
+    }
+  };
+  
+  const handleMissionActivate = () => {
+    // Mission is now active, night mode will be forced
+    ghostHunt.resetMission();
+    tutorial.dismissTooltip();
+    setShowGhostHuntFailed(false);
+    setShowGhostHuntComplete(false);
+    setShowFailedModal(false);
+  };
+  
+  const handleZombieTouchPlayer = () => {
+    // Don't trigger if protected (spawn protection or other)
+    if (mission.isActive && !mission.isProtected && mission.phase !== 'failed') {
+      mission.failMission('zombie');
+      setShowQuestionModal(false);
+      setShowFailedModal(true);
+    }
+  };
+  
+  const handleTrapHitPlayer = (trapType: 'firepit' | 'axe' | 'thorns' = 'firepit') => {
+    // Don't trigger if protected (spawn protection)
+    if (mission.isActive && !mission.isProtected && mission.phase !== 'failed') {
+      playSounds.ouch();
+      mission.hitByTrap(trapType);
+      // Check if lives depleted
+      if (mission.lives <= 1) {
+        setShowFailedModal(true);
+      }
+    }
+  };
+  
+  const handleRetryMission = () => {
+    setShowFailedModal(false);
+    setShowJumpScare(false);
+    resetToSafeSpawn(); // Move player to safe position before retry
+    mission.resetMission();
+    setShowMissions(true); // Show mission panel to start again
+  };
+  
+  const handleExitMission = () => {
+    setShowFailedModal(false);
+    setShowJumpScare(false);
+    resetToSafeSpawn(); // Move player to safe position
+    mission.resetMission();
+  };
+
+  const handlePauseGame = () => {
+    // If in a mission, show mission pause overlay instead of exiting
+    if (mission.isActive || ghostHunt.isActive || mirrorWorld.isActive) {
+      setShowMissionPause(true);
+      if (mission.isActive && mission.phase === 'escape') {
+        mission.pauseZombies();
+        mission.setPaused(true);
+      }
+      if (ghostHunt.isActive && ghostHunt.phase === 'hunting') {
+        ghostHunt.setPaused(true);
+      }
+      if (mirrorWorld.isActive && mirrorWorld.phase === 'hunting') {
+        mirrorWorld.setPaused(true);
+      }
+      return;
+    }
+    setIsGamePaused(true);
+    setIsMaximized(false);
+  };
+
+  const handleMissionPauseResume = () => {
+    setShowMissionPause(false);
+    if (mission.isActive && mission.phase === 'escape') {
+      mission.resumeZombies();
+      mission.setPaused(false);
+    }
+    if (ghostHunt.isActive && ghostHunt.phase === 'hunting') {
+      ghostHunt.setPaused(false);
+    }
+    if (mirrorWorld.isActive && mirrorWorld.phase === 'hunting') {
+      mirrorWorld.setPaused(false);
+    }
+  };
+
+  const handleMissionPauseExit = () => {
+    setShowMissionPause(false);
+    if (mission.isActive) {
+      mission.resetMission();
+    }
+    if (ghostHunt.isActive) {
+      ghostHunt.resetMission();
+    }
+    if (mirrorWorld.isActive) {
+      mirrorWorld.resetMission();
+    }
+    resetToSafeSpawn();
+  };
+
+  const handleResumeGame = () => {
+    setIsGamePaused(false);
+    setIsMaximized(true);
+    if (mission.isActive && mission.phase === 'escape') {
+      mission.resumeZombies();
+      mission.setPaused(false);
+    }
+    if (ghostHunt.isActive && ghostHunt.phase === 'hunting') {
+      ghostHunt.setPaused(false);
+    }
+    if (mirrorWorld.isActive && mirrorWorld.phase === 'hunting') {
+      mirrorWorld.setPaused(false);
+    }
+  };
+
+  const handleExitGame = () => {
+    setIsGamePaused(false);
+    setIsMaximized(false);
+    setHasGameStarted(false);
+    setHasExitedShopOnce(false);
+    setShowMissions(false);
+    setShow2DMap(false);
+    setShowShopModal(false);
+    setShowQuestionModal(false);
+    setShowFailedModal(false);
+    setShowJumpScare(false);
+    setShowGhostHuntFailed(false);
+    setShowGhostHuntComplete(false);
+    setSelectedShop(null);
+    setInteriorShop(null);
+    setIsInsideShop(false);
+    setNearbyShop(null);
+    playerExitShop();
+    resetPlayer();
+    resetSession();
+    mission.resetMission();
+    mission.resetProgress();
+    ghostHunt.resetMission();
+    ghostHunt.resetProgress();
+    mirrorWorld.resetMission();
+    mirrorWorld.resetProgress();
+  };
+
+  const handleExitToCityMap = () => {
+    handleExitGame();
+    navigate("/city-map");
+  };
+
+  // Context-aware back behavior:
+  // - If inside a shop or mission: step back to the previous in-game state
+  // - Otherwise: go back to previous route (fallback to /city-map)
+  const navigateBackRoute = () => {
+    // If user opened the street directly (no history), fallback to city map
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/city-map");
+    }
+  };
+
+  const handleSmartBack = () => {
+    // Close transient overlays first
+    if (showJumpScare) {
+      setShowJumpScare(false);
+      return;
+    }
+    if (showFailedModal) {
+      setShowFailedModal(false);
+      return;
+    }
+    if (showQuestionModal) {
+      setShowQuestionModal(false);
+      return;
+    }
+    if (showGhostHuntFailed) {
+      setShowGhostHuntFailed(false);
+      resetToSafeSpawn();
+      ghostHunt.resetMission();
+      return;
+    }
+    if (showGhostHuntComplete) {
+      setShowGhostHuntComplete(false);
+      resetToSafeSpawn();
+      ghostHunt.resetMission();
+      return;
+    }
+
+    // Step out of shop/interactions before leaving the game
+    if (isInsideShop) {
+      handleExitShop();
+      return;
+    }
+    if (showShopModal) {
+      setShowShopModal(false);
+      return;
+    }
+    if (show2DMap) {
+      setShow2DMap(false);
+      return;
+    }
+    if (showMissions) {
+      setShowMissions(false);
+      return;
+    }
+
+    // If any mission is active, exit back to explore mode
+    if (mirrorWorld.isActive && mirrorWorld.phase !== 'inactive') {
+      mirrorWorld.resetMission();
+      resetToSafeSpawn();
+      setIsInsideShop(false);
+      return;
+    }
+    if (ghostHunt.isActive && ghostHunt.phase !== 'inactive') {
+      ghostHunt.resetMission();
+      resetToSafeSpawn();
+      return;
+    }
+    if (mission.isActive && mission.phase !== 'inactive') {
+      handleExitMission();
+      return;
+    }
+
+    // If we're in fullscreen game mode, go back to the street page (pause/minimize)
+    if (isMaximized) {
+      handlePauseGame();
+      return;
+    }
+
+    // Otherwise: go back in navigation history
+    navigateBackRoute();
+  };
+  
+  const handleQuestionAnswer = (answer: string) => {
+    // answerQuestion returns a deterministic status ('wrong' | 'next' | 'completed')
+    // instead of relying on mission.phase which would be stale in the same render tick.
+    const status = mission.answerQuestion(answer);
+    
+    // Freeze ALL zombies for 3 seconds after any question closes
+    // This gives player a fair chance to escape even if zombies were close
+    mission.freezeAllZombies(3000);
+    
+    if (status === 'wrong') {
+      // Wrong answer - close modal, show deceptive message, play notification
+      playSounds.notification();
+      setShowQuestionModal(false);
+    } else if (status === 'completed') {
+      // All correct - mission complete, close modal immediately
+      setShowQuestionModal(false);
+    }
+    // status === 'next' — next question will show automatically via store update
+  };
+
+  // shopBrandings already declared above
 
   // Request fullscreen + landscape orientation when maximized on mobile
   useEffect(() => {
     const requestFullscreenLandscape = async () => {
       if (!isMaximized) return;
-      
+
       try {
         // First request fullscreen (required for orientation lock on most browsers)
-        const docEl = document.documentElement;
+        const docEl = document.documentElement as HTMLElement & {
+          webkitRequestFullscreen?: () => Promise<void>;
+        };
         if (docEl.requestFullscreen) {
           await docEl.requestFullscreen();
-        } else if ((docEl as any).webkitRequestFullscreen) {
-          await (docEl as any).webkitRequestFullscreen();
+        } else if (docEl.webkitRequestFullscreen) {
+          await docEl.webkitRequestFullscreen();
         }
-        
+
         // Then try to lock to landscape
         if ('screen' in window && 'orientation' in screen) {
-          await (screen.orientation as any).lock?.('landscape');
+          const orientation = screen.orientation as ScreenOrientation & {
+            lock?: (orientation: string) => Promise<void>;
+          };
+          await orientation.lock?.('landscape');
         }
       } catch {
         // Silently fail if not supported
@@ -82,12 +790,18 @@ const StreetView = () => {
       try {
         if (document.fullscreenElement) {
           await document.exitFullscreen();
-        } else if ((document as any).webkitExitFullscreen) {
-          await (document as any).webkitExitFullscreen();
+        } else {
+          const docWithWebkit = document as Document & {
+            webkitExitFullscreen?: () => Promise<void>;
+          };
+          await docWithWebkit.webkitExitFullscreen?.();
         }
-        
+
         if ('screen' in window && 'orientation' in screen) {
-          (screen.orientation as any).unlock?.();
+          const orientation = screen.orientation as ScreenOrientation & {
+            unlock?: () => void;
+          };
+          orientation.unlock?.();
         }
       } catch {
         // Silently fail
@@ -140,7 +854,7 @@ const StreetView = () => {
   }
 
   // Compact overlay panel for game mode
-  const OverlayPanel = ({ 
+  const OverlayPanel = ({
     title, 
     icon: Icon, 
     children,
@@ -166,33 +880,79 @@ const StreetView = () => {
 
   // Game Mode (Maximized) Layout
   if (isMaximized) {
+    const interiorOverlay = isInsideShop && interiorShop ? (
+      <ShopInteriorRoom 
+        shop={interiorShop} 
+        onExit={handleExitShop} 
+        isMissionMode={mission.isActive && mission.phase === 'observation'}
+      />
+    ) : null;
+
     return (
-      <div className="fixed inset-0 z-50 bg-background">
+      <div className={`fixed inset-0 z-50 bg-background ${isMobile ? 'mobile-game-container' : ''}`}>
         {/* Full-screen 3D Scene */}
-        <div className="relative h-full w-full">
+        <div className="relative w-full h-full" style={{ height: 'var(--app-height, 100vh)' }}>
           <CityScene 
             streetId={street.id} 
             timeOfDay={timeOfDay} 
             cameraView={cameraView}
             shopBrandings={shopBrandings}
             onShopClick={handleShopClick}
+            forcedTimeOfDay={(mission.isActive && mission.phase !== 'completed' && mission.phase !== 'inactive') || (ghostHunt.isActive && ghostHunt.phase !== 'inactive') || (mirrorWorld.isActive && mirrorWorld.phase !== 'inactive') ? "night" : null}
+            onZombieTouchPlayer={handleZombieTouchPlayer}
+            onTrapHitPlayer={handleTrapHitPlayer}
+            hideMobileControls={hideMobileControls}
+          />
+          
+          {/* Health Display (Lives) - for zombie missions */}
+          {mission.isActive && (
+            <div className={`absolute pointer-events-none ${isMobile ? 'top-12 left-2' : 'top-14 left-4'}`} style={{ zIndex: 150 }}>
+              <HealthDisplay />
+            </div>
+          )}
+
+          {/* Zombie Mission Timer */}
+          {mission.isActive && (
+            <div className={`absolute left-1/2 -translate-x-1/2 pointer-events-none ${isMobile ? 'top-12' : 'top-14'}`} style={{ zIndex: 150 }}>
+              <MissionTimer />
+            </div>
+          )}
+          
+          {/* Shop Proximity Indicator */}
+          <ShopProximityIndicator 
+            nearbyShop={nearbyShop} 
+            onPress={() => {
+              if (nearbyShop) {
+                handleShopClick(nearbyShop);
+              }
+            }}
           />
           
           {/* Shop Detail Modal */}
           {showShopModal && (
-            <ShopDetailModal 
-              shop={selectedShop} 
-              onClose={() => setShowShopModal(false)} 
+            <ShopDetailModal
+              shop={selectedShop}
+              onClose={() => setShowShopModal(false)}
+              onEnterShop={handleEnterShop}
             />
           )}
           
-          {/* Top Controls Bar - Compact for mobile */}
-          <div className="absolute top-2 md:top-4 left-2 md:left-4 right-2 md:right-4 flex items-center justify-between pointer-events-none" style={{ zIndex: 150 }}>
-            <div className="flex items-center gap-1 md:gap-3 pointer-events-auto">
-              <Button variant="ghost" size="icon" asChild className="bg-background/80 backdrop-blur-md h-8 w-8 md:h-10 md:w-10">
-                <Link to="/city-map">
-                  <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
-                </Link>
+          {/* Top Controls Bar - Optimized for mobile */}
+          <div className={`absolute left-1 right-1 flex items-center justify-between pointer-events-none ${isMobile ? 'top-1 safe-area-top' : 'top-4 left-4 right-4'}`} style={{ zIndex: 150 }}>
+            <div className="flex items-center gap-1 pointer-events-auto">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="bg-background/80 backdrop-blur-md h-8 w-8 md:h-10 md:w-10"
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                  handleSmartBack();
+                }}
+                type="button"
+                aria-label="Back to city map"
+                data-control-ignore="true"
+              >
+                <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
               </Button>
               <div className="bg-background/80 backdrop-blur-md rounded-lg px-2 py-1 md:px-4 md:py-2 hidden sm:block">
                 <h1 className="font-display text-sm md:text-lg font-bold text-foreground">
@@ -207,8 +967,12 @@ const StreetView = () => {
                 <Button
                   variant={cameraView === "thirdPerson" ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setCameraView("thirdPerson")}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    setCameraView("thirdPerson");
+                  }}
                   className="h-8 px-3"
+                  data-control-ignore="true"
                 >
                   <UserCircle className="h-4 w-4 mr-1" />
                   3rd Person
@@ -216,8 +980,12 @@ const StreetView = () => {
                 <Button
                   variant={cameraView === "firstPerson" ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setCameraView("firstPerson")}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    setCameraView("firstPerson");
+                  }}
                   className="h-8 px-3"
+                  data-control-ignore="true"
                 >
                   <Eye className="h-4 w-4 mr-1" />
                   1st Person
@@ -226,83 +994,439 @@ const StreetView = () => {
 
               {/* Day/Night Toggle - Compact on mobile */}
               <div className="bg-background/80 backdrop-blur-md rounded-lg p-0.5 md:p-1 flex gap-0.5 md:gap-1">
-                <Button
-                  variant={timeOfDay === "day" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setTimeOfDay("day")}
-                  className="h-6 w-6 md:h-8 md:w-8 p-0 md:px-3"
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    setTimeOfDay("day");
+                  }}
+                  className={`h-8 w-8 md:h-8 md:w-8 p-0 md:px-3 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all ${
+                    timeOfDay === "day" 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-transparent text-foreground hover:bg-accent"
+                  }`}
+                  data-control-ignore="true"
                 >
-                  <Sun className="h-3 w-3 md:h-4 md:w-4" />
-                </Button>
-                <Button
-                  variant={timeOfDay === "night" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setTimeOfDay("night")}
-                  className="h-6 w-6 md:h-8 md:w-8 p-0 md:px-3"
+                  <Sun className="h-4 w-4 md:h-4 md:w-4" />
+                </button>
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    setTimeOfDay("night");
+                  }}
+                  className={`h-8 w-8 md:h-8 md:w-8 p-0 md:px-3 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all ${
+                    timeOfDay === "night" 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-transparent text-foreground hover:bg-accent"
+                  }`}
+                  data-control-ignore="true"
                 >
-                  <Moon className="h-3 w-3 md:h-4 md:w-4" />
-                </Button>
+                  <Moon className="h-4 w-4 md:h-4 md:w-4" />
+                </button>
               </div>
               
               {/* Map Toggle - Mobile friendly */}
-              <Button
-                variant={show2DMap ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShow2DMap(!show2DMap)}
-                className="bg-background/80 backdrop-blur-md h-6 w-6 md:h-8 md:w-auto p-0 md:px-3"
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  setShow2DMap(!show2DMap);
+                }}
+                className={`h-8 w-8 md:h-8 md:w-auto p-0 md:px-3 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all ${
+                  show2DMap 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-background/80 backdrop-blur-md border border-border text-foreground hover:bg-accent"
+                }`}
                 style={{ zIndex: 160 }}
+                data-control-ignore="true"
               >
-                <Map className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                <MapIcon className="h-4 w-4 md:h-4 md:w-4 md:mr-2" />
                 <span className="hidden md:inline">{show2DMap ? "Hide" : "Map"}</span>
-              </Button>
+              </button>
               
               {/* Exit Game Mode */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsMaximized(false)}
-                className="bg-background/80 backdrop-blur-md h-6 md:h-8 px-2 md:px-3"
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  handlePauseGame();
+                }}
+                className="bg-background/80 backdrop-blur-md h-8 md:h-8 px-3 md:px-3 rounded-md border border-border flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all text-foreground hover:bg-accent"
+                data-control-ignore="true"
               >
-                <Minimize2 className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                <Minimize2 className="h-4 w-4 md:h-4 md:w-4 md:mr-2" />
                 <span className="hidden md:inline">Exit</span>
-              </Button>
+              </button>
             </div>
           </div>
           
-          {/* Left side - Missions Panel (all screens) */}
+          {/* Left side - Mission Tab Button */}
           <div className="absolute top-10 md:top-16 left-2 md:left-4 pointer-events-auto" style={{ zIndex: 150 }}>
-            <OverlayPanel title="Missions" icon={Target} className="w-32 md:w-48">
-              <ul className="space-y-1">
-                <li className="flex items-center gap-2">
-                  <span className="h-1 w-1 rounded-full bg-primary" />
-                  <span className="text-[10px] md:text-xs">Visit 3 shops</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1 w-1 rounded-full bg-muted-foreground" />
-                  <span className="text-[10px] md:text-xs">Find hidden item</span>
-                </li>
-              </ul>
-            </OverlayPanel>
+            <button
+              type="button"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                setMissionTab(isAnyMissionActive ? activeMissionTab : missionTab);
+                setShowMissions(true);
+                mission.setNotification(false);
+                if (mission.isActive && mission.phase === 'escape') {
+                  mission.pauseZombies();
+                }
+              }}
+              className="relative flex items-center gap-2 px-4 py-3 md:px-4 md:py-2.5 rounded-lg bg-background/80 backdrop-blur-md border border-border/50 text-foreground hover:bg-background/90 transition-all shadow-lg touch-manipulation select-none active:scale-95"
+              data-control-ignore="true"
+            >
+              <Target className="h-4 w-4 text-primary" />
+              <span className="font-display text-xs md:text-sm font-bold uppercase tracking-wider">
+                {isMissionBlocking ? 'Mission Guide' : 'Missions'}
+              </span>
+              {/* Notification indicator */}
+              {mission.hasNotification && !isMissionBlocking && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span>
+                </span>
+              )}
+            </button>
           </div>
+          
+          {/* Mission Popup */}
+          {showMissions && (
+            <div 
+              className="mission-modal-overlay absolute inset-0 flex items-center justify-center pointer-events-auto"
+              style={{ zIndex: 320, touchAction: 'manipulation' }}
+              data-control-ignore="true"
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onClick={() => {
+                setShowMissions(false);
+                // Resume zombies when mission panel closes during escape phase (if no other popups open)
+                const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+                if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
+                  mission.resumeZombies();
+                }
+              }}
+            >
+              <div 
+                className="mission-modal-panel bg-background/95 backdrop-blur-md border border-border/50 rounded-xl p-4 md:p-6 shadow-xl w-[90vw] max-w-md max-h-[80vh] overflow-auto"
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/30">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 border border-primary/30">
+                      <Target className="h-5 w-5 text-primary" />
+                    </div>
+                    <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
+                      {isMissionBlocking ? 'Mission Guide' : 'Missions'}
+                    </h3>
+                  </div>
+                  <button 
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setShowMissions(false);
+                      const otherPopupsOpen = tutorial.activeTooltip || show2DMap || showShopModal || showQuestionModal || showFailedModal || showJumpScare;
+                      if (mission.isActive && mission.phase === 'escape' && !otherPopupsOpen) {
+                        mission.resumeZombies();
+                      }
+                    }}
+                    className="text-muted-foreground hover:text-foreground p-3 -m-2 touch-manipulation select-none active:scale-95"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+                
+                {/* Mission Tabs */}
+                <div className="flex gap-2 mb-4">
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setMissionTab('zombie');
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold uppercase tracking-wider transition-all touch-manipulation active:scale-95 flex items-center justify-center gap-2 ${
+                      missionTab === 'zombie'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <Target className="h-3 w-3" />
+                    Zombie Escape
+                  </button>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setMissionTab('ghost');
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold uppercase tracking-wider transition-all touch-manipulation active:scale-95 flex items-center justify-center gap-2 ${
+                      missionTab === 'ghost'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <Ghost className="h-3 w-3" />
+                    Ghost Hunt
+                  </button>
+                  <button
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setMissionTab('mirror');
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold uppercase tracking-wider transition-all touch-manipulation active:scale-95 flex items-center justify-center gap-2 ${
+                      missionTab === 'mirror'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    Mirror World
+                  </button>
+                </div>
+                
+                {/* Mission Content */}
+                <div className="py-2">
+                  {missionTab === 'zombie' && (
+                    <MissionPanel
+                      shops={shopBrandings}
+                      shopItemsMap={shopItemsMap}
+                      onActivate={() => {
+                        handleMissionActivate();
+                        setShowMissions(false);
+                      }}
+                      disableActivation={isMissionBlocking && !mission.isActive}
+                      isCompact
+                    />
+                  )}
+                  {missionTab === 'ghost' && (
+                    <GhostHuntPanel
+                      onActivate={() => {
+                        mission.resetMission();
+                        mirrorWorld.resetMission();
+                        tutorial.dismissTooltip();
+                        setShowQuestionModal(false);
+                        setShowFailedModal(false);
+                        setShowJumpScare(false);
+                        setShowMissions(false);
+                      }}
+                      disableActivation={isMissionBlocking && !ghostHunt.isActive}
+                      isCompact
+                    />
+                  )}
+                  {missionTab === 'mirror' && (
+                    <MirrorWorldPanel
+                      onActivate={() => {
+                        mission.resetMission();
+                        ghostHunt.resetMission();
+                        resetToSafeSpawn();
+                        tutorial.dismissTooltip();
+                        setShowQuestionModal(false);
+                        setShowFailedModal(false);
+                        setShowJumpScare(false);
+                        setShowMissions(false);
+                      }}
+                      disableActivation={isMissionBlocking && !mirrorWorld.isActive}
+                      isCompact
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Ghost Hunt UI Overlay */}
+          {ghostHunt.isActive && ghostHunt.phase !== 'inactive' && (
+            <GhostHuntUI 
+              onComplete={() => {
+                // Grant rewards via server-validated completeMission
+                const baseCoins = 15 * ghostHunt.capturedCount;
+                const baseXP = ghostHunt.difficultyLevel * 50;
+                if (playerProgress.isLoggedIn) {
+                  playerProgress
+                    .completeMission('ghost_hunt', ghostHunt.difficultyLevel, baseCoins, baseXP)
+                    .then((result) => {
+                      setLastReward({ coins: result.coinsEarned, xp: result.xpEarned });
+                      setShowGhostHuntComplete(true);
+                    });
+                } else {
+                  setLastReward({ coins: 0, xp: 0 });
+                  setShowGhostHuntComplete(true);
+                }
+              }}
+              onFailed={() => setShowGhostHuntFailed(true)}
+            />
+          )}
+
+          {/* Mirror World Briefing */}
+          {mirrorWorld.isActive && mirrorWorld.phase === 'briefing' && (
+            <MirrorWorldBriefing />
+          )}
+
+          {/* Mirror World UI Overlay */}
+          {mirrorWorld.isActive && mirrorWorld.phase === 'hunting' && (
+            <MirrorWorldUI />
+          )}
+
+          <MirrorWorldComplete
+            isOpen={mirrorWorld.phase === 'completed'}
+            nextLevel={Math.min(mirrorWorld.maxLevel, mirrorWorld.unlockedLevel)}
+            currentLevel={mirrorWorld.difficultyLevel}
+            coinsEarned={lastReward.coins}
+            xpEarned={lastReward.xp}
+            onContinue={() => {
+              const nextLevel = Math.min(mirrorWorld.maxLevel, mirrorWorld.unlockedLevel);
+              mirrorWorld.setDifficultyLevel(nextLevel);
+              resetToSafeSpawn();
+              mirrorWorld.startMission();
+            }}
+            onExit={() => {
+              mirrorWorld.resetMission();
+              resetToSafeSpawn();
+              setIsInsideShop(false);
+              setInteriorShop(null);
+            }}
+          />
+
+          <MirrorWorldFailed
+            isOpen={mirrorWorld.phase === 'failed'}
+            onRetry={() => {
+              mirrorWorld.resetMission();
+              mirrorWorld.startMission();
+            }}
+            onExit={() => {
+              mirrorWorld.resetMission();
+              resetToSafeSpawn();
+              setIsInsideShop(false);
+              setInteriorShop(null);
+            }}
+          />
+          
+          {/* Ghost Hunt Failed Modal */}
+          {showGhostHuntFailed && (
+            <GhostHuntFailedModal
+              reason={ghostHunt.timeRemaining <= 0 ? 'time' : 'death'}
+              capturedCount={ghostHunt.capturedCount}
+              requiredCaptures={ghostHunt.requiredCaptures}
+              onRetry={() => {
+                setShowGhostHuntFailed(false);
+                resetToSafeSpawn();
+                ghostHunt.resetMission();
+                ghostHunt.startMission();
+              }}
+              onExit={() => {
+                setShowGhostHuntFailed(false);
+                resetToSafeSpawn();
+                ghostHunt.resetMission();
+              }}
+            />
+          )}
+          
+          {/* Ghost Hunt Complete Modal */}
+          {showGhostHuntComplete && (
+            <GhostHuntCompleteModal
+              capturedCount={ghostHunt.capturedCount}
+              totalGhosts={ghostHunt.totalGhosts}
+              currentLevel={ghostHunt.difficultyLevel}
+              unlockedLevel={ghostHunt.unlockedLevel}
+              maxLevel={ghostHunt.maxLevel}
+              timeBonus={Math.floor(ghostHunt.timeRemaining * 2)}
+              coinsEarned={lastReward.coins}
+              xpEarned={lastReward.xp}
+              onContinue={() => {
+                const nextLevel = Math.min(ghostHunt.maxLevel, ghostHunt.unlockedLevel);
+                setShowGhostHuntComplete(false);
+                ghostHunt.setDifficultyLevel(nextLevel);
+                ghostHunt.startMission(); // startMission already resets state internally
+              }}
+              onExit={() => {
+                setShowGhostHuntComplete(false);
+                ghostHunt.resetMission();
+              }}
+            />
+          )}
+
+          <ZombieMissionCompleteModal
+            isOpen={showZombieComplete}
+            currentLevel={mission.level}
+            unlockedLevel={mission.unlockedLevel}
+            maxLevel={mission.maxLevel}
+            isAllComplete={mission.level >= mission.maxLevel}
+            coinsEarned={lastReward.coins}
+            xpEarned={lastReward.xp}
+            onContinue={() => {
+              const nextLevel = mission.level >= mission.maxLevel ? 1 : Math.min(mission.maxLevel, mission.unlockedLevel);
+              const recentShopIds = mission.recentlyUsedShopIds;
+              mission.setLevel(nextLevel);
+              const selected = selectMissionTargetShop(shopBrandings, shopItemsMap, recentShopIds);
+              if (selected) {
+                mission.activateMission(selected.shop, selected.items);
+                handleMissionActivate();
+              } else {
+                mission.resetMission();
+              }
+              setShowZombieComplete(false);
+            }}
+            onExit={() => {
+              mission.resetMission();
+              setShowZombieComplete(false);
+            }}
+          />
+
+          {/* Mission Pause Overlay */}
+          {showMissionPause && (
+            <PauseOverlay
+              missionName={
+                mirrorWorld.isActive ? 'Mirror World' :
+                ghostHunt.isActive ? 'Ghost Hunt' :
+                mission.isActive ? 'Night Escape' : 'Mission'
+              }
+              missionLevel={
+                mirrorWorld.isActive ? mirrorWorld.difficultyLevel :
+                ghostHunt.isActive ? ghostHunt.difficultyLevel :
+                mission.level
+              }
+              timeRemaining={
+                mirrorWorld.isActive ? mirrorWorld.timeRemaining :
+                ghostHunt.isActive ? ghostHunt.timeRemaining :
+                mission.timeRemaining
+              }
+              onResume={handleMissionPauseResume}
+              onExit={handleMissionPauseExit}
+            />
+          )}
           
           {/* 2D Map Overlay - Full screen on mobile, positioned on desktop */}
           {show2DMap && spotsWithShops && (
             <div 
               className="absolute inset-0 md:inset-auto md:top-16 md:left-4 flex items-center justify-center md:block pointer-events-auto"
-              style={{ zIndex: 200 }}
+              style={{ zIndex: 310, touchAction: 'manipulation' }}
+              data-control-ignore="true"
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
             >
-              {/* Mobile: centered modal, Desktop: side panel */}
-              <div className="bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-3 md:p-4 shadow-lg w-[90vw] max-w-sm md:max-w-md max-h-[80vh] overflow-auto">
+              <div 
+                className="bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-3 md:p-4 shadow-lg w-[90vw] max-w-sm md:max-w-md max-h-[80vh] overflow-auto"
+                onPointerDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-display text-sm font-bold text-foreground flex items-center gap-2">
-                    <Map className="h-4 w-4 text-primary" />
+                    <MapIcon className="h-4 w-4 text-primary" />
                     Street Map
                   </h3>
                   <button 
-                    onClick={() => setShow2DMap(false)}
-                    className="text-muted-foreground hover:text-foreground text-xl leading-none p-1"
+                    type="button"
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setShow2DMap(false);
+                    }}
+                    className="text-muted-foreground hover:text-foreground p-3 -m-2 touch-manipulation select-none active:scale-95 text-xl leading-none"
                   >
-                    ×
+                    <X className="h-5 w-5" />
                   </button>
                 </div>
                 <div className="overflow-auto">
@@ -311,7 +1435,8 @@ const StreetView = () => {
                       spots={spotsWithShops}
                       selectedSpotId=""
                       onSelectSpot={() => {}}
-                      highlightedSpotId={selectedSpotId}
+                      highlightedSpotId={ghostHunt.isActive && rechargeSpotIds.emf ? rechargeSpotIds.emf : selectedSpotId}
+                      highlightedSpotLabel={ghostHunt.isActive && hasAnyRechargeShop ? 'Recharge Gear (EMF/Flash/Trap)' : undefined}
                     />
                   </div>
                 </div>
@@ -319,57 +1444,125 @@ const StreetView = () => {
             </div>
           )}
           
-          {/* Right side - Player & Shop panels (all screens) */}
-          <div className="absolute top-10 md:top-auto md:bottom-4 right-2 md:right-4 pointer-events-auto flex flex-col gap-1 md:gap-2" style={{ zIndex: 150 }}>
-            <OverlayPanel title="Player" icon={User} className="w-28 md:w-40">
-              <div className="space-y-0.5 md:space-y-1 text-[10px] md:text-xs">
-                <div className="flex justify-between">
-                  <span>Level</span>
-                  <span className="text-foreground">1</span>
+          {/* Right side - Player & Shop panels */}
+          {!hideSidePanels && (
+            <div className="absolute top-10 md:top-auto md:bottom-4 right-2 md:right-4 pointer-events-auto flex flex-col gap-1 md:gap-2" style={{ zIndex: 150 }}>
+              <OverlayPanel title="Player" icon={User} className="w-28 md:w-40">
+                <div className="space-y-0.5 md:space-y-1 text-[10px] md:text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-1"><Trophy className="h-2.5 w-2.5" /> Level</span>
+                    <span className="text-foreground font-bold">{level}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-1"><Coins className="h-2.5 w-2.5" /> Coins</span>
+                    <span className="text-primary font-bold">{coins}</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-1.5 mt-1">
+                    <div 
+                      className="bg-primary h-1.5 rounded-full transition-all" 
+                      style={{ width: `${(xp % 200) / 2}%` }}
+                    />
+                  </div>
+                  <div className="text-[8px] text-muted-foreground text-center">
+                    {xp % 200}/200 XP
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span>Coins</span>
-                  <span className="text-primary">500</span>
-                </div>
-              </div>
-            </OverlayPanel>
-            
-            <OverlayPanel title="Shop" icon={Store} className="w-28 md:w-48">
-              {selectedShop?.hasShop ? (
-                <div className="space-y-1 text-[10px] md:text-xs">
-                  <p className="text-foreground font-medium truncate">{selectedShop.shopName}</p>
-                  {selectedShop.category && <p className="truncate">{selectedShop.category}</p>}
-                  {selectedShop.externalLink && (
-                    <a 
-                      href={selectedShop.externalLink} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-primary hover:underline"
-                    >
-                      Visit <ExternalLink className="h-2 w-2 md:h-3 md:w-3" />
-                    </a>
-                  )}
-                </div>
-              ) : (
-                <p className="text-[10px] md:text-xs">Click shop for details</p>
-              )}
-            </OverlayPanel>
-          </div>
+              </OverlayPanel>
+              
+              <OverlayPanel title="Shop" icon={Store} className="w-28 md:w-48">
+                {selectedShop?.hasShop ? (
+                  <div className="space-y-1 text-[10px] md:text-xs">
+                    <p className="text-foreground font-medium truncate">{selectedShop.shopName}</p>
+                    {selectedShop.category && <p className="truncate">{selectedShop.category}</p>}
+                    {selectedShop.externalLink && (
+                      <a 
+                        href={selectedShop.externalLink} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-primary hover:underline"
+                      >
+                        Visit <ExternalLink className="h-2 w-2 md:h-3 md:w-3" />
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[10px] md:text-xs">Click shop for details</p>
+                )}
+              </OverlayPanel>
+            </div>
+          )}
         </div>
+        {interiorOverlay}
+        
+        {/* Question Modal */}
+        <QuestionModal
+          isOpen={showQuestionModal}
+          question={mission.questions[mission.currentQuestionIndex] || null}
+          onAnswer={handleQuestionAnswer}
+          onClose={() => setShowQuestionModal(false)}
+          onRecheck={() => {
+            // Player tried to re-check - trigger jump scare (same as wrong answer trap)
+            setShowQuestionModal(false);
+            setShowJumpScare(true);
+          }}
+        />
+        
+        {/* Trap Hit Feedback ("Ouch!") */}
+        {mission.isActive && <TrapHitFeedback />}
+        
+        {/* Jump Scare Modal */}
+        <JumpScareModal
+          isOpen={showJumpScare}
+          onRetry={handleRetryMission}
+          onExit={handleExitMission}
+        />
+        
+        {/* Mission Failed Modal (for non-jumpscare fails) */}
+        <MissionFailedModal
+          isOpen={(showFailedModal || mission.phase === 'failed') && !showJumpScare && mission.failReason !== 'jumpscare'}
+          failReason={mission.failReason}
+          onRetry={handleRetryMission}
+          onExit={handleExitMission}
+        />
+        
+        {/* Tutorial Tooltip */}
+        {tutorial.activeTooltip && (
+          <TutorialTooltip
+            step={tutorial.activeTooltip}
+            onDismiss={handleTutorialDismiss}
+          />
+        )}
       </div>
     );
   }
 
+  const interiorOverlay = isInsideShop && interiorShop ? (
+    <ShopInteriorRoom 
+      shop={interiorShop} 
+      onExit={handleExitShop}
+      isMissionMode={mission.isActive && mission.phase === 'observation'}
+    />
+  ) : null;
+
   // Normal 3-Column Layout
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4">
-      <div className="container mx-auto max-w-7xl">
+    <>
+      <div className="min-h-screen pt-24 pb-12 px-4">
+        <div className="container mx-auto max-w-7xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/city-map">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              handleSmartBack();
+            }}
+            type="button"
+            aria-label="Back to city map"
+            data-control-ignore="true"
+          >
+            <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <h1 className="font-display text-3xl font-bold text-foreground">
@@ -386,108 +1579,222 @@ const StreetView = () => {
           {/* Left Column - Missions Panel */}
           <div className="lg:col-span-3">
             <PanelBox title="Missions Panel" icon={Target}>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-muted-foreground">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  Visit 3 shops
-                </li>
-                <li className="flex items-center gap-2 text-muted-foreground">
-                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-                  Find the hidden item
-                </li>
-                <li className="flex items-center gap-2 text-muted-foreground">
-                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
-                  Talk to an NPC
-                </li>
-              </ul>
+              <div className="space-y-4">
+                <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs uppercase tracking-[0.2em] text-primary">
+                  Mission Briefing
+                </div>
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-border/70 bg-background/40 p-3 shadow-[0_0_30px_rgba(45,212,191,0.08)]">
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                        Mission 1
+                      </span>
+                      <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                        Level {mission.level}/{mission.maxLevel}
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <h4 className="text-sm font-semibold text-foreground">
+                        Night Escape
+                      </h4>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        Escape the zombies, find the target shop, and remember everything you see. Finish before the countdown reaches zero.
+                      </p>
+                      <div className="text-[11px] font-medium text-primary">
+                        {zombieConfig.zombieCount} zombies • {zombieConfig.activeTrapCount} traps • {zombieConfig.timeLimit}s • {zombieConfig.lives} lives
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border/70 bg-background/40 p-3 shadow-[0_0_30px_rgba(45,212,191,0.08)]">
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                        Mission 2
+                      </span>
+                      <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                        Level {ghostHunt.difficultyLevel}/{ghostHunt.maxLevel}
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <h4 className="text-sm font-semibold text-foreground">
+                        Ghost Hunt
+                      </h4>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        Paranormal activity detected. Use your EMF detector to locate invisible ghosts, reveal them with your flashlight, and capture them before time runs out.
+                      </p>
+                      <div className="text-[11px] font-medium text-primary">
+                        {ghostConfig.requiredCaptures} captures • {ghostConfig.ghostCount} ghosts • {ghostConfig.timeLimit}s • {ghostConfig.playerLives} lives
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-border/70 bg-background/40 p-3 shadow-[0_0_30px_rgba(45,212,191,0.08)]">
+                    <div className="flex items-center justify-between">
+                      <span className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                        Mission 3
+                      </span>
+                      <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                        Level {mirrorWorld.difficultyLevel}/{mirrorWorld.maxLevel}
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <h4 className="text-sm font-semibold text-foreground">
+                        Mirror World
+                      </h4>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        Enter the inverted city, clear {mirrorConfig.requiredAnchors} anchor challenges, and outrun your Shadow.
+                      </p>
+                      <div className="text-[11px] font-medium text-primary">
+                        {mirrorConfig.requiredAnchors} anchors • {mirrorConfig.baseTime}s • {mirrorConfig.lives} lives
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Complete each mission to unlock the next level.
+                </p>
+              </div>
             </PanelBox>
           </div>
 
-          {/* Center Column - 3D Scene */}
+          {/* Center Column - 3D Scene or Start Screen */}
           <div className="lg:col-span-6">
             <div className="cyber-card h-full min-h-[400px] lg:min-h-[500px] p-0 overflow-hidden relative">
-              {/* Controls Bar */}
-              <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
-              {/* Camera View - Only desktop */}
-              <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 gap-1 hidden md:flex">
-                <Button
-                  variant={cameraView === "thirdPerson" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setCameraView("thirdPerson")}
-                  className="h-7 px-2 text-xs"
-                  title="Third Person View"
-                >
-                  <UserCircle className="h-3 w-3 mr-1" />
-                  3rd
-                </Button>
-                <Button
-                  variant={cameraView === "firstPerson" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setCameraView("firstPerson")}
-                  className="h-7 px-2 text-xs"
-                  title="First Person View"
-                >
-                  <Eye className="h-3 w-3 mr-1" />
-                  1st
-                </Button>
-              </div>
-
-                {/* Day/Night Toggle */}
-                <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 flex gap-1">
-                  <Button
-                    variant={timeOfDay === "day" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setTimeOfDay("day")}
-                    className="h-7 px-2 text-xs"
-                  >
-                    <Sun className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant={timeOfDay === "night" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setTimeOfDay("night")}
-                    className="h-7 px-2 text-xs"
-                  >
-                    <Moon className="h-3 w-3" />
-                  </Button>
-                </div>
-                
-                {/* Maximize Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsMaximized(true)}
-                  className="h-7 px-2 text-xs bg-background/80 backdrop-blur-md"
-                >
-                  <Maximize2 className="h-3 w-3 mr-1" />
-                  Game Mode
-                </Button>
-              </div>
-              
-              {/* Zoom/Controls Hint */}
-              <div className="absolute bottom-2 left-2 z-10 bg-background/70 backdrop-blur-md rounded-lg px-3 py-1.5 flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <ZoomIn className="h-3 w-3" /> Scroll to zoom
-                </span>
-                <span className="flex items-center gap-1">
-                  <Move className="h-3 w-3" /> Drag to rotate
-                </span>
-              </div>
-              
-              <CityScene 
-                streetId={street.id} 
-                timeOfDay={timeOfDay} 
-                cameraView={cameraView} 
-                shopBrandings={shopBrandings}
-                onShopClick={handleShopClick}
-              />
-              
-              {/* Shop Detail Modal */}
-              {showShopModal && (
-                <ShopDetailModal 
-                  shop={selectedShop} 
-                  onClose={() => setShowShopModal(false)} 
+              {!hasGameStarted ? (
+                /* Start Game Screen */
+                <GameStartScreen 
+                  streetName={street.name}
+                  category={street.category}
+                  onStartGame={() => {
+                    setHasGameStarted(true);
+                    setIsGamePaused(false);
+                    setIsMaximized(true); // Auto fullscreen on start
+                  }}
                 />
+              ) : (
+                <>
+                  {/* Controls Bar */}
+                  <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+                  {/* Camera View - Only desktop */}
+                  <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 gap-1 hidden md:flex">
+                    <Button
+                      variant={cameraView === "thirdPerson" ? "default" : "ghost"}
+                      size="sm"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        setCameraView("thirdPerson");
+                      }}
+                      className="h-7 px-2 text-xs"
+                      data-control-ignore="true"
+                      title="Third Person View"
+                    >
+                      <UserCircle className="h-3 w-3 mr-1" />
+                      3rd
+                    </Button>
+                    <Button
+                      variant={cameraView === "firstPerson" ? "default" : "ghost"}
+                      size="sm"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        setCameraView("firstPerson");
+                      }}
+                      className="h-7 px-2 text-xs"
+                      data-control-ignore="true"
+                      title="First Person View"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      1st
+                    </Button>
+                  </div>
+
+                    {/* Day/Night Toggle */}
+                    <div className="bg-background/80 backdrop-blur-md rounded-lg p-1 flex gap-1">
+                      <button
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          setTimeOfDay("day");
+                        }}
+                        className={`h-10 w-10 p-0 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all md:h-7 md:w-7 ${
+                          timeOfDay === "day" 
+                            ? "bg-primary text-primary-foreground" 
+                            : "bg-transparent text-foreground hover:bg-accent"
+                        }`}
+                        aria-label="Day mode"
+                        data-control-ignore="true"
+                      >
+                        <Sun className="h-4 w-4 md:h-3 md:w-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          setTimeOfDay("night");
+                        }}
+                        className={`h-10 w-10 p-0 rounded-md flex items-center justify-center touch-manipulation select-none active:scale-95 transition-all md:h-7 md:w-7 ${
+                          timeOfDay === "night" 
+                            ? "bg-primary text-primary-foreground" 
+                            : "bg-transparent text-foreground hover:bg-accent"
+                        }`}
+                        aria-label="Night mode"
+                        data-control-ignore="true"
+                      >
+                        <Moon className="h-4 w-4 md:h-3 md:w-3" />
+                      </button>
+                    </div>
+
+                    {/* Maximize Button */}
+                    <button
+                      type="button"
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        isGamePaused ? handleResumeGame() : setIsMaximized(true);
+                      }}
+                      className="h-10 px-3 text-sm rounded-md flex items-center justify-center bg-background/80 backdrop-blur-md border border-border text-foreground touch-manipulation select-none active:scale-95 transition-all hover:bg-accent md:h-7 md:px-2 md:text-xs"
+                      data-control-ignore="true"
+                    >
+                      <Maximize2 className="h-4 w-4 mr-2 md:h-3 md:w-3 md:mr-1" />
+                      {isGamePaused ? "Resume" : "Game Mode"}
+                    </button>
+                  </div>
+                  
+                  {/* Zoom/Controls Hint */}
+                  <div className="absolute bottom-2 left-2 z-10 bg-background/70 backdrop-blur-md rounded-lg px-3 py-1.5 flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <ZoomIn className="h-3 w-3" /> Scroll to zoom
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Move className="h-3 w-3" /> Drag to rotate
+                    </span>
+                  </div>
+                  
+                  <CityScene 
+                    streetId={street.id} 
+                    timeOfDay={timeOfDay} 
+                    cameraView={cameraView} 
+                    shopBrandings={shopBrandings}
+                    onShopClick={handleShopClick}
+                    forcedTimeOfDay={(mission.isActive && mission.phase !== 'completed' && mission.phase !== 'inactive') || (ghostHunt.isActive && ghostHunt.phase !== 'inactive') || (mirrorWorld.isActive && mirrorWorld.phase !== 'inactive') ? "night" : null}
+                    onZombieTouchPlayer={handleZombieTouchPlayer}
+                    onTrapHitPlayer={handleTrapHitPlayer}
+                    hideMobileControls={hideMobileControls}
+                  />
+                  
+                  {/* Shop Proximity Indicator */}
+                  <ShopProximityIndicator
+                    nearbyShop={nearbyShop}
+                    onPress={() => {
+                      if (nearbyShop) handleShopClick(nearbyShop);
+                    }}
+                  />
+                  
+                  {/* Shop Detail Modal */}
+                  {showShopModal && (
+                    <ShopDetailModal
+                      shop={selectedShop}
+                      onClose={() => setShowShopModal(false)}
+                      onEnterShop={handleEnterShop}
+                    />
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -498,15 +1805,15 @@ const StreetView = () => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Level</span>
-                  <span className="text-foreground">1</span>
+                  <span className="text-foreground">{level}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Coins</span>
-                  <span className="text-primary">500</span>
+                  <span className="text-primary">{coins}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>XP</span>
-                  <span className="text-foreground">0 / 100</span>
+                  <span className="text-foreground">{xp % 200} / 200</span>
                 </div>
               </div>
             </PanelBox>
@@ -545,10 +1852,76 @@ const StreetView = () => {
                 <p>Click on a shop in the 3D scene to view details here.</p>
               )}
             </PanelBox>
+
+            {/* Eligible Offers Panel */}
+            <EligibleOffersPanel
+              offers={allActiveOffers}
+              playerCoins={coins}
+              playerLevel={level}
+              loading={offersLoading}
+            />
           </div>
         </div>
+        </div>
       </div>
-    </div>
+      {isGamePaused && (
+        <div className="mission-modal-overlay fixed inset-0 z-[330] flex items-center justify-center bg-background/80 backdrop-blur-sm"
+          data-control-ignore="true"
+          onPointerDown={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+        >
+          <div className="mission-modal-panel cyber-card w-[90vw] max-w-md p-6 text-center space-y-5">
+            <div className="space-y-2">
+              <h2 className="font-display text-2xl font-bold text-foreground">Game Paused</h2>
+              <p className="text-sm text-muted-foreground">
+                Resume to continue where you left off, or exit to restart from the beginning.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <Button
+                variant="cyber"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  handleResumeGame();
+                }}
+                data-control-ignore="true"
+              >
+                Resume Game
+              </Button>
+              <Button
+                variant="outline"
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  handleExitGame();
+                }}
+                data-control-ignore="true"
+              >
+                Exit to Start
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {interiorOverlay}
+      
+      {/* Trap Hit Feedback ("Ouch!") */}
+      {mission.isActive && <TrapHitFeedback />}
+      
+      {/* Jump Scare Modal */}
+      <JumpScareModal
+        isOpen={showJumpScare}
+        onRetry={handleRetryMission}
+        onExit={handleExitMission}
+      />
+      
+      {/* Mission Failed Modal (for non-jumpscare fails) */}
+      <MissionFailedModal
+        isOpen={(showFailedModal || mission.phase === 'failed') && !showJumpScare && mission.failReason !== 'jumpscare'}
+        failReason={mission.failReason}
+        onRetry={handleRetryMission}
+        onExit={handleExitMission}
+      />
+    </>
   );
 };
 

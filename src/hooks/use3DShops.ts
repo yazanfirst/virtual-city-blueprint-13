@@ -3,10 +3,31 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 
 export type ShopSpot = Tables<'shop_spots'>;
-export type Shop = Tables<'shops'>;
+
+// Public shop type from RPC - excludes merchant_id and admin_notes
+export interface PublicShop {
+  id: string;
+  spot_id: string;
+  name: string;
+  category: string | null;
+  external_link: string | null;
+  logo_url: string | null;
+  primary_color: string | null;
+  accent_color: string | null;
+  facade_template: string | null;
+  signage_font: string | null;
+  texture_template: string | null;
+  texture_url: string | null;
+  status: string | null;
+  duplicate_brand: boolean | null;
+  branch_label: string | null;
+  branch_justification: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
 
 export interface SpotWithActiveShop extends ShopSpot {
-  shop: Shop | null;
+  shop: PublicShop | null;
 }
 
 // Hook to fetch all spots with their active shops for 3D rendering
@@ -33,20 +54,17 @@ export function useAllSpotsForStreet(streetSlug: string) {
 
       if (spotsError) throw spotsError;
 
-      // Get all active AND suspended shops for these spots (suspended shows as closed)
+      // Use RPC to get public shop data (excludes merchant_id and admin_notes)
       const spotIds = spots.map(s => s.id);
       const { data: shops, error: shopsError } = await supabase
-        .from('shops')
-        .select('*')
-        .in('spot_id', spotIds)
-        .in('status', ['active', 'suspended']);
+        .rpc('get_active_or_suspended_public_shops_for_spots', { _spot_ids: spotIds });
 
       if (shopsError) throw shopsError;
 
       // Combine spots with their shops
       const spotsWithShops: SpotWithActiveShop[] = spots.map(spot => ({
         ...spot,
-        shop: shops?.find(shop => shop.spot_id === spot.id) || null,
+        shop: shops?.find((shop: PublicShop) => shop.spot_id === spot.id) || null,
       }));
 
       return spotsWithShops;
@@ -64,11 +82,16 @@ export interface Position3D {
 }
 
 // Helper to parse position_3d from the database
-export function parsePosition3D(position3d: any): Position3D {
+export function parsePosition3D(position3d: Position3D | string | null): Position3D {
   if (typeof position3d === 'string') {
-    return JSON.parse(position3d);
+    return JSON.parse(position3d) as Position3D;
   }
-  return position3d as Position3D;
+
+  if (position3d && typeof position3d === 'object') {
+    return position3d;
+  }
+
+  return { x: 0, z: 0, rotation: 0 };
 }
 
 export interface ShopBranding {
@@ -77,6 +100,7 @@ export interface ShopBranding {
   spotLabel: string;
   position: Position3D;
   hasShop: boolean;
+  shopId?: string;
   isSuspended?: boolean;
   shopName?: string;
   category?: string | null;
@@ -86,11 +110,13 @@ export interface ShopBranding {
   logoUrl?: string | null;
   externalLink?: string | null;
   signageFont?: string | null;
+  textureTemplate?: string | null;
+  textureUrl?: string | null;
 }
 
 export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): ShopBranding[] {
   return spotsWithShops.map(spot => {
-    const position = parsePosition3D(spot.position_3d);
+    const position = parsePosition3D(spot.position_3d as unknown as string | Position3D);
     
     if (spot.shop) {
       return {
@@ -99,6 +125,7 @@ export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): S
         spotLabel: spot.spot_label,
         position,
         hasShop: true,
+        shopId: spot.shop.id,
         isSuspended: spot.shop.status === 'suspended',
         shopName: spot.shop.name,
         category: spot.shop.category,
@@ -107,7 +134,9 @@ export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): S
         facadeTemplate: spot.shop.facade_template || 'modern_neon',
         logoUrl: spot.shop.logo_url,
         externalLink: spot.shop.external_link,
-        signageFont: (spot.shop as any).signage_font || 'classic',
+        signageFont: spot.shop.signage_font || 'classic',
+        textureTemplate: spot.shop.texture_template || null,
+        textureUrl: spot.shop.texture_url || null,
       };
     }
 

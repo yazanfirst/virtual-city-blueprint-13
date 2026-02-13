@@ -5,19 +5,48 @@ import { useAuth } from './useAuth';
 
 export type Shop = Tables<'shops'>;
 export type ShopInsert = TablesInsert<'shops'>;
+export type ShopWithLocation = Shop & {
+  shop_spots?: {
+    spot_label?: string | null;
+    street_id?: string | null;
+    streets?: {
+      name?: string | null;
+      slug?: string | null;
+    } | null;
+  } | null;
+};
 
 export function useMerchantShops() {
   const { user } = useAuth();
 
-  return useQuery({
+  return useQuery<ShopWithLocation[]>({
     queryKey: ['merchant-shops', user?.id],
     queryFn: async () => {
       if (!user) return [];
 
+      // Explicitly select fields to exclude admin_notes (internal admin field)
       const { data, error } = await supabase
         .from('shops')
         .select(`
-          *,
+          id,
+          merchant_id,
+          spot_id,
+          name,
+          category,
+          external_link,
+          logo_url,
+          primary_color,
+          accent_color,
+          facade_template,
+          signage_font,
+          texture_template,
+          texture_url,
+          status,
+          duplicate_brand,
+          branch_label,
+          branch_justification,
+          created_at,
+          updated_at,
           shop_spots (
             spot_label,
             street_id,
@@ -31,7 +60,7 @@ export function useMerchantShops() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as ShopWithLocation[];
     },
     enabled: !!user,
   });

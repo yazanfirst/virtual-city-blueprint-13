@@ -5,9 +5,16 @@ interface SpotSelectionMapProps {
   selectedSpotId: string;
   onSelectSpot: (spotId: string) => void;
   highlightedSpotId?: string; // For external selection (e.g., from 3D view)
+  highlightedSpotLabel?: string;
 }
 
-const SpotSelectionMap = ({ spots, selectedSpotId, onSelectSpot, highlightedSpotId }: SpotSelectionMapProps) => {
+const SpotSelectionMap = ({
+  spots,
+  selectedSpotId,
+  onSelectSpot,
+  highlightedSpotId,
+  highlightedSpotLabel,
+}: SpotSelectionMapProps) => {
   // Group spots by their label prefix (L, R, N, S)
   const leftSpots = spots.filter(s => s.spot_label.startsWith('L')).sort((a, b) => a.sort_order - b.sort_order);
   const rightSpots = spots.filter(s => s.spot_label.startsWith('R')).sort((a, b) => a.sort_order - b.sort_order);
@@ -59,7 +66,7 @@ const SpotSelectionMap = ({ spots, selectedSpotId, onSelectSpot, highlightedSpot
           status === 'taken' ? 'Occupied' : 
           status === 'pending' ? 'Pending Review' : 
           status === 'suspended' ? 'Suspended' :
-          status === 'highlighted' ? 'Selected in 3D View' :
+          status === 'highlighted' ? highlightedSpotLabel || 'Selected in 3D View' :
           'Selected'
         }${spot.shop?.name ? ` (${spot.shop.name})` : ''}`}
       >
@@ -91,7 +98,7 @@ const SpotSelectionMap = ({ spots, selectedSpotId, onSelectSpot, highlightedSpot
         {highlightedSpotId && (
           <div className="flex items-center gap-1">
             <div className="w-3 h-3 rounded bg-secondary/50 border border-secondary animate-pulse" />
-            <span className="text-muted-foreground">3D Selected</span>
+            <span className="text-muted-foreground">{highlightedSpotLabel || '3D Selected'}</span>
           </div>
         )}
       </div>
