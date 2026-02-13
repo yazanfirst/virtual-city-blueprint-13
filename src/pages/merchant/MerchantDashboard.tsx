@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LayoutDashboard, Store, Plus, Clock, CheckCircle, XCircle, Trash2, PauseCircle, PlayCircle, Edit } from "lucide-react";
+import { LayoutDashboard, Store, Plus, Clock, CheckCircle, XCircle, Trash2, PauseCircle, PlayCircle, Edit, Users, MousePointerClick, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMerchantShops, type ShopWithLocation } from "@/hooks/useMerchantShops";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useMerchantAnalytics } from "@/hooks/useMerchantAnalytics";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +22,7 @@ import {
 const MerchantDashboard = () => {
   const { user } = useAuth();
   const { data: shops, isLoading, refetch } = useMerchantShops();
+  const { data: analytics } = useMerchantAnalytics();
   const queryClient = useQueryClient();
   const [deleteShopId, setDeleteShopId] = useState<string | null>(null);
 
@@ -114,7 +116,7 @@ const MerchantDashboard = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-8 gap-6 mb-8">
           <div className="cyber-card">
             <Store className="h-6 w-6 text-primary mb-2" />
             <p className="text-2xl font-bold">{shops?.length || 0}</p>
@@ -135,7 +137,31 @@ const MerchantDashboard = () => {
             <p className="text-2xl font-bold">{suspendedShops.length}</p>
             <p className="text-muted-foreground text-sm">Suspended</p>
           </div>
+          <div className="cyber-card">
+            <Users className="h-6 w-6 text-cyan-500 mb-2" />
+            <p className="text-2xl font-bold">{analytics?.uniqueVisitors ?? 0}</p>
+            <p className="text-muted-foreground text-sm">Unique Visitors</p>
+          </div>
+          <div className="cyber-card">
+            <Store className="h-6 w-6 text-primary mb-2" />
+            <p className="text-2xl font-bold">{analytics?.totalShopVisits ?? 0}</p>
+            <p className="text-muted-foreground text-sm">Shop Entries</p>
+          </div>
+          <div className="cyber-card">
+            <MousePointerClick className="h-6 w-6 text-violet-500 mb-2" />
+            <p className="text-2xl font-bold">{analytics?.websiteClicks ?? 0}</p>
+            <p className="text-muted-foreground text-sm">Website Clicks</p>
+          </div>
+          <div className="cyber-card">
+            <Ticket className="h-6 w-6 text-green-500 mb-2" />
+            <p className="text-2xl font-bold">{analytics?.couponClaims ?? 0}</p>
+            <p className="text-muted-foreground text-sm">Coupon Claims (Platform)</p>
+          </div>
         </div>
+
+        <p className="text-xs text-muted-foreground mb-6">
+          Coupon claims are tracked only when players redeem from this platform. Final use at your external website is not tracked.
+        </p>
 
         <div className="cyber-card">
           <h2 className="font-display text-lg font-bold mb-4">Your Shops</h2>
