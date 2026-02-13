@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // 5. Check coins
+    // 5. Check coins (preliminary check; atomic deduction happens later)
     if (progress.coins < offer.coin_price) {
       return new Response(JSON.stringify({ error: `Not enough coins. You need ${offer.coin_price} but have ${progress.coins}` }), {
         status: 400,
@@ -200,27 +200,33 @@ Deno.serve(async (req) => {
       })
     }
 
-    // 11. Deduct coins
-    const { error: deductErr } = await adminClient
+    // 11. Atomically deduct coins with race-condition guard
+    //     The .gte('coins', offer.coin_price) ensures no double-spend if two
+    //     requests race — only one will match and update.
+    const { data: updRows, error: deductErr } = await adminClient
       .from('player_progress')
       .update({ coins: progress.coins - offer.coin_price })
       .eq('user_id', playerId)
+      .gte('coins', offer.coin_price)
+      .select('coins')
 
-    if (deductErr) {
-      // Rollback: delete the redemption
+    if (deductErr || !updRows || updRows.length === 0) {
+      // Race condition or insufficient coins — rollback redemption
       await adminClient.from('offer_redemptions').delete().eq('id', redemption.id)
-      return new Response(JSON.stringify({ error: 'Failed to deduct coins' }), {
-        status: 500,
+      return new Response(JSON.stringify({ error: 'Not enough coins. Please try again.' }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    const finalCoins = updRows[0].coins
 
     return new Response(JSON.stringify({
       success: true,
       redemption_code: redemptionCode,
       coupon_code: offer.coupon_code || null,
       coins_spent: offer.coin_price,
-      coins_remaining: progress.coins - offer.coin_price,
+      coins_remaining: finalCoins,
       expires_at: expiresAt.toISOString(),
     }), {
       status: 200,
