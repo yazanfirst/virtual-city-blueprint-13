@@ -13,7 +13,8 @@ import {
   Crown,
   Trash2,
   Key,
-  Mail
+  Mail,
+  Ticket
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import MyCoupons from "@/components/settings/MyCoupons";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -340,10 +342,14 @@ const Settings = () => {
 
         {/* Settings Tabs */}
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
             <TabsTrigger value="profile" className="gap-2">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Profile</span>
+            </TabsTrigger>
+            <TabsTrigger value="coupons" className="gap-2">
+              <Ticket className="h-4 w-4" />
+              <span className="hidden sm:inline">Coupons</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="gap-2">
               <Bell className="h-4 w-4" />
@@ -417,6 +423,11 @@ const Settings = () => {
                 </Button>
               </div>
             </div>
+          </TabsContent>
+
+          {/* Coupons Tab */}
+          <TabsContent value="coupons">
+            <MyCoupons />
           </TabsContent>
 
           {/* Notifications Tab */}
