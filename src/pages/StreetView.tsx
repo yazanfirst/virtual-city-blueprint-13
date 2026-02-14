@@ -1584,8 +1584,8 @@ const StreetView = () => {
 
         {/* Three Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 min-h-[50vh] lg:min-h-[70vh]">
-          {/* Left Column - Missions Panel - hidden on mobile before game starts */}
-          <div className="hidden lg:block lg:col-span-3">
+          {/* Left Column - Missions Panel */}
+          <div className="order-2 lg:order-none lg:col-span-3">
             <PanelBox title="Missions Panel" icon={Target}>
               <div className="space-y-4">
                 <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs uppercase tracking-[0.2em] text-primary">
@@ -1664,7 +1664,7 @@ const StreetView = () => {
           </div>
 
           {/* Center Column - 3D Scene or Start Screen */}
-          <div className="lg:col-span-6">
+          <div className="order-1 lg:order-none lg:col-span-6">
             <div className="cyber-card h-full min-h-[300px] sm:min-h-[400px] lg:min-h-[500px] p-0 overflow-hidden relative">
               {!hasGameStarted ? (
                 /* Start Game Screen */
@@ -1786,13 +1786,15 @@ const StreetView = () => {
                     hideMobileControls={hideMobileControls}
                   />
                   
-                  {/* Shop Proximity Indicator */}
-                  <ShopProximityIndicator
-                    nearbyShop={nearbyShop}
-                    onPress={() => {
-                      if (nearbyShop) handleShopClick(nearbyShop);
-                    }}
-                  />
+                  {/* Shop Proximity Indicator - hidden when shop modal is open */}
+                  {!showShopModal && (
+                    <ShopProximityIndicator
+                      nearbyShop={nearbyShop}
+                      onPress={() => {
+                        if (nearbyShop) handleShopClick(nearbyShop);
+                      }}
+                    />
+                  )}
                   
                   {/* Shop Detail Modal */}
                   {showShopModal && (
@@ -1807,8 +1809,8 @@ const StreetView = () => {
             </div>
           </div>
 
-          {/* Right Column - Player & Shop Info - hidden on mobile before game starts */}
-          <div className="hidden lg:flex lg:col-span-3 flex-col gap-6">
+          {/* Right Column - Player & Shop Info */}
+          <div className="order-3 lg:order-none lg:col-span-3 flex flex-col gap-4 sm:gap-6">
             <PanelBox title="Player Panel" icon={User}>
               <div className="space-y-2">
                 <div className="flex justify-between">
