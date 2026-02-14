@@ -806,7 +806,11 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
           />
         </Canvas>
       ) : (
-        <div className="flex-1 overflow-auto bg-background px-3 sm:px-4 pt-14 sm:pt-20 pb-6">
+        <div 
+          className="flex-1 overflow-y-auto overflow-x-hidden bg-background px-3 sm:px-4 pt-14 sm:pt-20 pb-6"
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', touchAction: 'pan-y' }}
+          data-control-ignore="true"
+        >
           <div className="mx-auto max-w-xl">
             <div className="mb-3 rounded-lg border border-border/60 bg-card/90 px-3 py-2 text-xs text-muted-foreground shadow-lg">
               3D view isn't available right now. Browse the shop items below.
