@@ -926,15 +926,17 @@ const StreetView = () => {
             </div>
           )}
           
-          {/* Shop Proximity Indicator */}
-          <ShopProximityIndicator 
-            nearbyShop={nearbyShop} 
-            onPress={() => {
-              if (nearbyShop) {
-                handleShopClick(nearbyShop);
-              }
-            }}
-          />
+          {/* Shop Proximity Indicator - hidden when shop modal is open */}
+          {!showShopModal && (
+            <ShopProximityIndicator 
+              nearbyShop={nearbyShop} 
+              onPress={() => {
+                if (nearbyShop) {
+                  handleShopClick(nearbyShop);
+                }
+              }}
+            />
+          )}
           
           {/* Shop Detail Modal */}
           {showShopModal && (
