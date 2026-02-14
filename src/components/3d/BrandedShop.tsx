@@ -217,6 +217,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
             occlude
             center
             scale={1.2}
+            zIndexRange={[0, 0]}
             style={{
               display: 'flex',
               flexDirection: 'column',
@@ -276,6 +277,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
             occlude
             center
             scale={1.2}
+            zIndexRange={[0, 0]}
             style={{
               pointerEvents: 'none',
             }}
@@ -303,6 +305,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
             transform
             occlude
             center
+            zIndexRange={[0, 0]}
             style={{
               pointerEvents: 'none',
             }}
@@ -333,6 +336,7 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
           transform
           occlude
           center
+          zIndexRange={[0, 0]}
           style={{ pointerEvents: 'none' }}
         >
           <div style={{
