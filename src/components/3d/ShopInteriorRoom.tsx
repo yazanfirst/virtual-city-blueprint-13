@@ -806,11 +806,40 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
           />
         </Canvas>
       ) : (
-        <div className="flex-1 overflow-auto bg-background px-4 pt-20 pb-28">
+        <div className="flex-1 overflow-auto bg-background px-3 sm:px-4 pt-14 sm:pt-20 pb-6">
           <div className="mx-auto max-w-xl">
-            <div className="mb-4 rounded-lg border border-border/60 bg-card/90 px-4 py-3 text-xs text-muted-foreground shadow-lg">
-              3D view isn’t available right now. Browse the shop items below.
+            <div className="mb-3 rounded-lg border border-border/60 bg-card/90 px-3 py-2 text-xs text-muted-foreground shadow-lg">
+              3D view isn't available right now. Browse the shop items below.
             </div>
+
+            {/* Rating inline for 2D view */}
+            {user && !isMissionMode && (
+              <div className="flex items-center justify-center gap-1.5 mb-3 py-2 rounded-xl bg-card/60 backdrop-blur-sm border border-border/50">
+                <span className="text-[10px] sm:text-xs text-muted-foreground">Rate:</span>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onMouseEnter={() => setHoverRating(star)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    onClick={() => rateShop.mutate({ shopId: shop.shopId, rating: star })}
+                    className="touch-manipulation transition-transform hover:scale-110 active:scale-95"
+                  >
+                    <Star
+                      className="h-4 w-4 sm:h-5 sm:w-5"
+                      fill={(hoverRating || ratingData?.userRating || 0) >= star ? '#fbbf24' : 'transparent'}
+                      stroke={(hoverRating || ratingData?.userRating || 0) >= star ? '#fbbf24' : '#888'}
+                    />
+                  </button>
+                ))}
+                {ratingData && ratingData.totalRatings > 0 && (
+                  <span className="text-[10px] sm:text-xs text-muted-foreground ml-1">
+                    {ratingData.averageRating.toFixed(1)} ({ratingData.totalRatings})
+                  </span>
+                )}
+              </div>
+            )}
+
             {filledSlots.length > 0 ? (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {filledSlots.map((item) => (
@@ -851,6 +880,22 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
             <div className="mt-4">
               <ShopOffersSection shopId={shop.shopId} externalLink={shop.externalLink} />
             </div>
+
+            {/* Exit button inline */}
+            <div className="mt-4 flex justify-center">
+              <button
+                type="button"
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                  onExit();
+                }}
+                className="h-10 px-4 rounded-md flex items-center justify-center gap-2 bg-secondary text-secondary-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-secondary/80"
+                data-control-ignore="true"
+              >
+                <X className="h-4 w-4" />
+                Exit Shop
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -863,24 +908,10 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
         </div>
       )}
 
-      {isFallbackActive && (
-        <div className="absolute inset-x-0 bottom-6 z-10 flex items-center justify-center px-6">
-          <button
-            type="button"
-            onPointerDown={(event) => {
-              event.stopPropagation();
-              onExit();
-            }}
-            className="h-10 px-4 rounded-md flex items-center justify-center gap-2 bg-secondary text-secondary-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-secondary/80"
-            data-control-ignore="true"
-          >
-            <X className="h-4 w-4" />
-            Exit Shop
-          </button>
-        </div>
-      )}
+      {/* Floating exit button - only for 3D fallback when NOT already inline */}
 
-      {/* Bottom hint panel with rating - minimal on landscape */}
+      {/* Bottom hint panel with rating - only for 3D view, hidden in 2D fallback */}
+      {!isFallbackActive && (
       <div className="absolute bottom-0 left-0 right-0 z-20 p-1.5 sm:p-2 lg:p-4 bg-gradient-to-t from-background via-background/95 to-transparent safe-area-bottom">
         <div className="max-w-xl mx-auto">
           {/* Star Rating - inline on landscape */}
@@ -928,6 +959,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
           )}
         </div>
       </div>
+      )}
 
       {/* Product Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
