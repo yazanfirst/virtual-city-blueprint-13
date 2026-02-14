@@ -9,7 +9,7 @@ const MerchantStreets = () => {
   const { data: streets, isLoading } = useStreets();
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-12 px-3 sm:px-4">
       <div className="container mx-auto max-w-6xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">

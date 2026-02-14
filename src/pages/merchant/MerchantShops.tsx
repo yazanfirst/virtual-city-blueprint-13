@@ -23,7 +23,7 @@ const MerchantShops = () => {
 
   if (!isLoading && (!street || !street.is_active)) {
     return (
-      <div className="min-h-screen pt-24 pb-12 px-4">
+      <div className="min-h-screen pt-20 sm:pt-24 pb-12 px-3 sm:px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-secondary/10 border border-secondary/30 mb-6">
@@ -50,10 +50,10 @@ const MerchantShops = () => {
   const availableSpots = spotsWithShops?.filter(s => !s.shop) || [];
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-12 px-3 sm:px-4">
       <div className="container mx-auto max-w-6xl">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
               <Link to="/merchant/streets">
@@ -63,18 +63,18 @@ const MerchantShops = () => {
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <Store className="h-5 w-5 text-primary" />
-                <h1 className="font-display text-3xl font-bold text-foreground">
+                <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">
                   {isLoading ? "Loading..." : `Shops in ${street?.name}`}
                 </h1>
               </div>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {availableSpots.length} spots available for rent
               </p>
             </div>
           </div>
           
           {availableSpots.length > 0 && (
-            <Button variant="cyber" onClick={() => navigate('/merchant/create-shop')}>
+            <Button variant="cyber" onClick={() => navigate('/merchant/create-shop')} className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Rent a Shop
             </Button>

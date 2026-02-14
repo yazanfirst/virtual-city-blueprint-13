@@ -193,7 +193,7 @@ const AdminDashboard = () => {
   );
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-12 px-3 sm:px-4">
       <div className="container mx-auto max-w-6xl">
         <div className="flex items-center gap-3 mb-8">
           <Shield className="h-8 w-8 text-primary" />
@@ -224,11 +224,11 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="cyber-card">
-          <TabsList className="grid w-full grid-cols-4 mb-4">
-            <TabsTrigger value="pending">Pending ({pendingShops.length})</TabsTrigger>
-            <TabsTrigger value="active">Active ({activeShops.length})</TabsTrigger>
-            <TabsTrigger value="suspended">Suspended ({suspendedShops.length})</TabsTrigger>
-            <TabsTrigger value="rejected">Rejected ({rejectedShops.length})</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4">
+            <TabsTrigger value="pending" className="text-xs sm:text-sm">Pending ({pendingShops.length})</TabsTrigger>
+            <TabsTrigger value="active" className="text-xs sm:text-sm">Active ({activeShops.length})</TabsTrigger>
+            <TabsTrigger value="suspended" className="text-xs sm:text-sm">Suspended ({suspendedShops.length})</TabsTrigger>
+            <TabsTrigger value="rejected" className="text-xs sm:text-sm">Rejected ({rejectedShops.length})</TabsTrigger>
           </TabsList>
           
           <TabsContent value="pending">

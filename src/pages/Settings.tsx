@@ -274,33 +274,33 @@ const Settings = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-24 pb-12 px-4 flex items-center justify-center">
+      <div className="min-h-screen pt-20 sm:pt-24 pb-12 px-3 sm:px-4 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-12 px-3 sm:px-4">
       <div className="container mx-auto max-w-4xl">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
           <Button variant="ghost" size="icon" asChild>
             <Link to="/">
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
           <div>
-            <h1 className="font-display text-3xl font-bold text-foreground">Settings</h1>
-            <p className="text-muted-foreground">Manage your account and preferences</p>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Settings</h1>
+            <p className="text-muted-foreground text-sm">Manage your account and preferences</p>
           </div>
         </div>
 
         {/* User Card */}
-        <div className="cyber-card mb-8">
-          <div className="flex items-center gap-4">
+        <div className="cyber-card mb-6 sm:mb-8">
+          <div className="flex items-center gap-3 sm:gap-4">
             <div className="relative">
-              <Avatar className="h-20 w-20 border-2 border-primary/30">
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-2 border-primary/30">
                 <AvatarImage src={profile.avatar_url} />
                 <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
                   {profile.display_name?.charAt(0) || user?.email?.charAt(0) || 'U'}

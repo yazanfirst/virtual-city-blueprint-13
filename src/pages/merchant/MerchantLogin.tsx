@@ -30,7 +30,7 @@ const MerchantLogin = () => {
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4 flex items-center justify-center">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-12 px-3 sm:px-4 flex items-center justify-center">
       <div className="w-full max-w-md">
         <div className="cyber-card">
           {/* Header */}
