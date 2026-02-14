@@ -117,6 +117,11 @@
     overflow: hidden;
   }
 
+  /* Allow smooth scrolling in 2D shop fallback */
+  [data-control-ignore="true"][style*="touch-action"] {
+    -webkit-overflow-scrolling: touch !important;
+  }
+
   /* Improve mobile tap responsiveness across the app */
   button,
   [role="button"],
