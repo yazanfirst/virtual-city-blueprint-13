@@ -172,7 +172,7 @@ const CreateShop = () => {
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-12 px-3 sm:px-4">
       <div className="container mx-auto max-w-4xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -193,15 +193,15 @@ const CreateShop = () => {
 
         {/* Progress Steps */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between overflow-x-auto pb-2">
             {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all ${
+              <div key={step.id} className="flex items-center shrink-0">
+                <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all ${
                   currentStep >= step.id
                     ? "bg-primary border-primary text-primary-foreground"
                     : "border-border text-muted-foreground"
                 }`}>
-                  <step.icon className="h-5 w-5" />
+                  <step.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
                 <span className={`hidden md:block ml-2 text-sm font-medium ${
                   currentStep >= step.id ? "text-primary" : "text-muted-foreground"
@@ -209,7 +209,7 @@ const CreateShop = () => {
                   {step.name}
                 </span>
                 {index < steps.length - 1 && (
-                  <div className={`w-12 md:w-24 h-0.5 mx-2 ${
+                  <div className={`w-6 sm:w-12 md:w-24 h-0.5 mx-1 sm:mx-2 ${
                     currentStep > step.id ? "bg-primary" : "bg-border"
                   }`} />
                 )}

@@ -829,7 +829,7 @@ const StreetView = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen pt-24 pb-12 px-4 flex items-center justify-center">
+      <div className="min-h-screen pt-20 sm:pt-24 pb-12 px-3 sm:px-4 flex items-center justify-center">
         <div className="animate-pulse text-primary">Loading street...</div>
       </div>
     );
@@ -837,7 +837,7 @@ const StreetView = () => {
 
   if (!street || !street.is_active) {
     return (
-      <div className="min-h-screen pt-24 pb-12 px-4">
+      <div className="min-h-screen pt-20 sm:pt-24 pb-12 px-3 sm:px-4">
         <div className="container mx-auto max-w-6xl">
           <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-secondary/10 border border-secondary/30 mb-6">
@@ -1555,7 +1555,7 @@ const StreetView = () => {
   // Normal 3-Column Layout
   return (
     <>
-      <div className="min-h-screen pt-24 pb-12 px-4">
+      <div className="min-h-screen pt-20 sm:pt-24 pb-12 px-3 sm:px-4">
         <div className="container mx-auto max-w-7xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -1583,9 +1583,9 @@ const StreetView = () => {
         </div>
 
         {/* Three Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[70vh]">
-          {/* Left Column - Missions Panel */}
-          <div className="lg:col-span-3">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 min-h-[50vh] lg:min-h-[70vh]">
+          {/* Left Column - Missions Panel - hidden on mobile before game starts */}
+          <div className="hidden lg:block lg:col-span-3">
             <PanelBox title="Missions Panel" icon={Target}>
               <div className="space-y-4">
                 <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs uppercase tracking-[0.2em] text-primary">
@@ -1665,7 +1665,7 @@ const StreetView = () => {
 
           {/* Center Column - 3D Scene or Start Screen */}
           <div className="lg:col-span-6">
-            <div className="cyber-card h-full min-h-[400px] lg:min-h-[500px] p-0 overflow-hidden relative">
+            <div className="cyber-card h-full min-h-[300px] sm:min-h-[400px] lg:min-h-[500px] p-0 overflow-hidden relative">
               {!hasGameStarted ? (
                 /* Start Game Screen */
                 <GameStartScreen 
@@ -1807,8 +1807,8 @@ const StreetView = () => {
             </div>
           </div>
 
-          {/* Right Column - Player & Shop Info */}
-          <div className="lg:col-span-3 flex flex-col gap-6">
+          {/* Right Column - Player & Shop Info - hidden on mobile before game starts */}
+          <div className="hidden lg:flex lg:col-span-3 flex-col gap-6">
             <PanelBox title="Player Panel" icon={User}>
               <div className="space-y-2">
                 <div className="flex justify-between">

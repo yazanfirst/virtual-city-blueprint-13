@@ -99,24 +99,24 @@ const MerchantDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-12 px-3 sm:px-4">
       <div className="container mx-auto max-w-6xl">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-3 mb-2">
               <LayoutDashboard className="h-6 w-6 text-primary" />
-              <h1 className="font-display text-3xl font-bold text-foreground">Merchant Dashboard</h1>
+              <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground">Merchant Dashboard</h1>
             </div>
-            <p className="text-muted-foreground">Manage your virtual shops</p>
+            <p className="text-muted-foreground text-sm sm:text-base">Manage your virtual shops</p>
           </div>
-          <Button variant="cyber" asChild>
+          <Button variant="cyber" asChild className="w-full sm:w-auto">
             <Link to="/merchant/create-shop">
               <Plus className="mr-2 h-4 w-4" /> Create Shop
             </Link>
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 mb-8">
           <div className="cyber-card">
             <Store className="h-6 w-6 text-primary mb-2" />
             <p className="text-2xl font-bold">{shops?.length || 0}</p>
@@ -169,25 +169,30 @@ const MerchantDashboard = () => {
           ) : (
             <div className="space-y-3">
               {shops.map((shop: ShopWithLocation) => (
-                <div key={shop.id} className="flex items-center justify-between p-4 bg-muted rounded-lg gap-4">
+                <div key={shop.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-muted rounded-lg gap-3 sm:gap-4">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div className="w-10 h-10 rounded bg-primary/20 flex items-center justify-center shrink-0">
                       <Store className="h-5 w-5 text-primary" />
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-medium truncate">{shop.name}</p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium truncate">{shop.name}</p>
+                        <div className="flex items-center gap-1 shrink-0 sm:hidden">
+                          {getStatusIcon(shop.status || '')}
+                        </div>
+                      </div>
                       <p className="text-sm text-muted-foreground truncate">
                         {shop.shop_spots?.streets?.name} - Spot {shop.shop_spots?.spot_label}
                       </p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="hidden sm:flex items-center gap-2 shrink-0">
                     {getStatusIcon(shop.status || '')}
                     <span className="text-sm capitalize hidden sm:inline">{shop.status?.replace('_', ' ')}</span>
                   </div>
                   
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
                     {/* Edit button for all shops except pending */}
                     {shop.status !== 'pending_review' && (
                       <Button 

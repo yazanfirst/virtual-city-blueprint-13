@@ -82,12 +82,21 @@ const GameStartScreen = ({ streetName, category, onStartGame }: GameStartScreenP
           Start Game
         </button>
 
-        <div className="text-muted-foreground text-[10px] sm:text-xs space-y-0.5 sm:space-y-1">
-          <p>Use <span className="text-foreground font-medium">WASD</span> or <span className="text-foreground font-medium">Arrow Keys</span> to move</p>
-          <p>Hold <span className="text-foreground font-medium">Left Click</span> to rotate camera</p>
-          <p>Walk to a <span className="text-foreground font-medium">shop</span> and <span className="text-foreground font-medium">click</span> to enter and explore</p>
-          <p>Press <span className="text-foreground font-medium">Space</span> to jump</p>
-        </div>
+        {deviceType === "mobile" ? (
+          <div className="text-muted-foreground text-[10px] sm:text-xs space-y-0.5 sm:space-y-1">
+            <p>Use the <span className="text-foreground font-medium">joystick</span> to move</p>
+            <p><span className="text-foreground font-medium">Drag</span> the screen to look around</p>
+            <p>Walk to a <span className="text-foreground font-medium">shop</span> and <span className="text-foreground font-medium">tap</span> to enter</p>
+            <p>Tap <span className="text-foreground font-medium">Jump</span> to jump</p>
+          </div>
+        ) : (
+          <div className="text-muted-foreground text-[10px] sm:text-xs space-y-0.5 sm:space-y-1">
+            <p>Use <span className="text-foreground font-medium">WASD</span> or <span className="text-foreground font-medium">Arrow Keys</span> to move</p>
+            <p>Hold <span className="text-foreground font-medium">Left Click</span> to rotate camera</p>
+            <p>Walk to a <span className="text-foreground font-medium">shop</span> and <span className="text-foreground font-medium">click</span> to enter and explore</p>
+            <p>Press <span className="text-foreground font-medium">Space</span> to jump</p>
+          </div>
+        )}
       </div>
     </div>
   );

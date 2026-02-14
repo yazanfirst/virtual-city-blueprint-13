@@ -251,14 +251,14 @@ const EditShop = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-24 pb-12 px-4 flex items-center justify-center">
+      <div className="min-h-screen pt-20 sm:pt-24 pb-12 px-3 sm:px-4 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pt-24 pb-12 px-4">
+    <div className="min-h-screen pt-20 sm:pt-24 pb-12 px-3 sm:px-4">
       <div className="container mx-auto max-w-4xl">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-8">
