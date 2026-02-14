@@ -691,27 +691,27 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
 
   return (
     <div className="fixed inset-0 z-[250] bg-background flex flex-col">
-      {/* Header - compact for mobile landscape */}
-      <div className="absolute top-0 left-0 right-0 z-20 px-3 py-1.5 sm:p-4 landscape:py-1 flex items-center justify-between bg-gradient-to-b from-background via-background/90 to-transparent">
-        <div className="flex items-center gap-2 min-w-0">
+      {/* Header - ultra compact for mobile landscape */}
+      <div className="absolute top-0 left-0 right-0 z-20 px-2 py-1 sm:px-3 sm:py-1.5 lg:p-4 flex items-center justify-between bg-gradient-to-b from-background via-background/90 to-transparent safe-area-top">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
           {shop.logoUrl && (
             <img 
               src={shop.logoUrl} 
               alt={shop.shopName}
-              className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg object-contain bg-muted/50 p-0.5 shrink-0"
+              className="h-7 w-7 sm:h-8 sm:w-8 lg:h-10 lg:w-10 rounded-lg object-contain bg-muted/50 p-0.5 shrink-0"
             />
           )}
           <div className="min-w-0">
-            <h1 className="font-display font-bold text-sm sm:text-lg text-foreground truncate">
+            <h1 className="font-display font-bold text-xs sm:text-sm lg:text-lg text-foreground truncate max-w-[120px] sm:max-w-[200px] lg:max-w-none">
               {shop.shopName || "Gallery"}
             </h1>
             {shop.category && (
-              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{shop.category}</p>
+              <p className="text-[9px] sm:text-[10px] lg:text-xs text-muted-foreground truncate hidden sm:block">{shop.category}</p>
             )}
           </div>
         </div>
         
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 lg:gap-2 shrink-0">
           <button
             type="button"
             onPointerDown={(event) => {
@@ -728,7 +728,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
                 setForceFallback((prev) => !prev);
               }
             }}
-            className="h-10 px-3 sm:px-4 rounded-md flex items-center justify-center gap-1.5 bg-transparent border border-border text-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-accent"
+            className="h-8 sm:h-9 lg:h-10 px-2 sm:px-3 lg:px-4 rounded-md flex items-center justify-center gap-1 text-xs bg-transparent border border-border text-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-accent"
             data-control-ignore="true"
           >
             {canRetry3d ? 'Retry 3D' : isFallbackActive ? '3D View' : '2D View'}
@@ -740,11 +740,11 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
               rel="noopener noreferrer"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => trackLinkClick(shop.shopId)}
-              className="h-10 px-3 sm:px-4 rounded-md flex items-center justify-center gap-1.5 bg-transparent border border-border text-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-accent"
+              className="h-8 sm:h-9 lg:h-10 px-2 sm:px-3 lg:px-4 rounded-md flex items-center justify-center gap-1 text-xs bg-transparent border border-border text-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-accent"
               data-control-ignore="true"
             >
-              <ExternalLink className="h-4 w-4" />
-              <span className="hidden sm:inline text-xs">Visit</span>
+              <ExternalLink className="h-3.5 w-3.5" />
+              <span className="hidden lg:inline">Visit</span>
             </a>
           )}
           <button 
@@ -753,11 +753,11 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
               e.stopPropagation();
               onExit();
             }}
-            className="h-10 px-3 sm:px-4 rounded-md flex items-center justify-center gap-1.5 bg-secondary text-secondary-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-secondary/80"
+            className="h-8 sm:h-9 lg:h-10 px-2 sm:px-3 lg:px-4 rounded-md flex items-center justify-center gap-1 text-xs bg-secondary text-secondary-foreground font-medium touch-manipulation select-none active:scale-95 transition-all hover:bg-secondary/80"
             data-control-ignore="true"
           >
-            <X className="h-4 w-4" />
-            <span className="hidden sm:inline text-xs">Exit</span>
+            <X className="h-3.5 w-3.5" />
+            <span className="hidden lg:inline">Exit</span>
           </button>
         </div>
       </div>
@@ -880,13 +880,13 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
         </div>
       )}
 
-      {/* Bottom hint panel with rating */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 p-2 sm:p-4 landscape:p-1.5 bg-gradient-to-t from-background via-background/95 to-transparent">
+      {/* Bottom hint panel with rating - minimal on landscape */}
+      <div className="absolute bottom-0 left-0 right-0 z-20 p-1.5 sm:p-2 lg:p-4 bg-gradient-to-t from-background via-background/95 to-transparent safe-area-bottom">
         <div className="max-w-xl mx-auto">
-          {/* Star Rating */}
+          {/* Star Rating - inline on landscape */}
           {user && !isMissionMode && (
-            <div className="flex items-center justify-center gap-2 mb-2 py-2 rounded-xl bg-card/60 backdrop-blur-sm border border-border/50">
-              <span className="text-xs text-muted-foreground mr-1">Rate:</span>
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-1 sm:mb-2 py-1 sm:py-2 rounded-xl bg-card/60 backdrop-blur-sm border border-border/50">
+              <span className="text-[10px] sm:text-xs text-muted-foreground">Rate:</span>
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
@@ -897,14 +897,14 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
                   className="touch-manipulation transition-transform hover:scale-110 active:scale-95"
                 >
                   <Star
-                    className="h-5 w-5"
+                    className="h-4 w-4 sm:h-5 sm:w-5"
                     fill={(hoverRating || ratingData?.userRating || 0) >= star ? '#fbbf24' : 'transparent'}
                     stroke={(hoverRating || ratingData?.userRating || 0) >= star ? '#fbbf24' : '#888'}
                   />
                 </button>
               ))}
               {ratingData && ratingData.totalRatings > 0 && (
-                <span className="text-xs text-muted-foreground ml-2">
+                <span className="text-[10px] sm:text-xs text-muted-foreground ml-1">
                   {ratingData.averageRating.toFixed(1)} ({ratingData.totalRatings})
                 </span>
               )}
@@ -912,36 +912,26 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
           )}
 
           {isLoading ? (
-            <div className="text-center py-2">
-              <p className="text-xs text-muted-foreground">Loading...</p>
+            <div className="text-center py-1">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Loading...</p>
             </div>
           ) : filledSlots.length > 0 ? (
-            <div className="text-center py-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/50">
-              <Package className="h-5 w-5 mx-auto mb-1.5" style={{ color: primary }} />
-              <p className="text-xs text-foreground font-medium">Tap any frame to see details</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                {filledSlots.length} item{filledSlots.length !== 1 ? 's' : ''} on display
+            <div className="text-center py-1.5 sm:py-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/50">
+              <p className="text-[10px] sm:text-xs text-foreground font-medium">
+                Tap any frame to see details · {filledSlots.length} item{filledSlots.length !== 1 ? 's' : ''}
               </p>
             </div>
           ) : (
-            <div className="text-center py-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/50">
-              <Package className="h-5 w-5 mx-auto mb-1.5 text-muted-foreground" />
-              <p className="text-xs text-muted-foreground">No items on display yet</p>
+            <div className="text-center py-1.5 sm:py-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/50">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">No items on display yet</p>
             </div>
           )}
-          
-          {/* Controls hint */}
-          <div className="flex items-center justify-center gap-3 mt-2 text-[10px] text-muted-foreground/70">
-            <span>Drag to look</span>
-            <span>•</span>
-            <span>Pinch to zoom</span>
-          </div>
         </div>
       </div>
 
       {/* Product Detail Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md p-0 overflow-hidden max-h-[90vh]">
+        <DialogContent className="max-w-md p-0 overflow-hidden max-h-[85vh] sm:max-h-[90vh] landscape:max-h-[95vh] landscape:max-w-sm landscape:flex landscape:flex-row">
           {selectedItem && (
             <>
               {/* Large Product Image */}
