@@ -234,7 +234,7 @@ const MerchantDashboard = () => {
                       <p className="text-xs text-muted-foreground font-mono">{item.couponCode}</p>
                     )}
                   </div>
-                  <span className="text-sm font-bold text-emerald-400 shrink-0 ml-3">{item.count} used</span>
+                  <span className="text-sm font-bold text-emerald-400 shrink-0 ml-3">{item.count} {item.count === 1 ? 'player' : 'players'} claimed</span>
                 </div>
               ))}
             </div>
