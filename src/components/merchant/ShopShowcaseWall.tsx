@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ImagePlus, Loader2, Trash2, Package, DollarSign, FileText, Sparkles, Check, X, Edit3, Link as LinkIcon } from "lucide-react";
+import { ImagePlus, Loader2, Trash2, Package, FileText, Sparkles, Check, X, Edit3, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,8 @@ import { useDeleteShopItem, useShopItems, useUpsertShopItem } from "@/hooks/useS
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { validateShopItemData } from "@/lib/validation";
+import { useProfile } from "@/hooks/useProfile";
+import { getCurrencySymbol } from "@/lib/currency";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +44,8 @@ const emptySlot: SlotState = {
 
 const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#3B82F6", accentColor = "#10B981" }) => {
   const { data: items, isLoading } = useShopItems(shopId);
+  const { profile } = useProfile();
+  const currencySymbol = getCurrencySymbol(profile?.currency);
   const upsertItem = useUpsertShopItem(shopId);
   const deleteItem = useDeleteShopItem(shopId);
   const [slots, setSlots] = useState<SlotState[]>(() => Array.from({ length: 5 }, () => ({ ...emptySlot })));
@@ -325,7 +329,7 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#
                       <p className="text-xs font-medium text-foreground truncate">{slot.title}</p>
                       {slot.price && (
                         <p className="text-xs font-bold" style={{ color: accentColor }}>
-                          ${parseFloat(slot.price).toFixed(2)}
+                          {currencySymbol}{parseFloat(slot.price).toFixed(2)}
                         </p>
                       )}
                     </div>
@@ -483,11 +487,11 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#
             {/* Price */}
             <div className="space-y-2">
               <Label htmlFor="item-price" className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                Price (USD)
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Price ({profile?.currency || 'USD'})
               </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{currencySymbol}</span>
                 <Input
                   id="item-price"
                   type="number"

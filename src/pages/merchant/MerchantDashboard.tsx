@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LayoutDashboard, Store, Plus, Clock, CheckCircle, XCircle, Trash2, PauseCircle, PlayCircle, Edit, Eye, MousePointerClick, Ticket, Globe } from "lucide-react";
+import { LayoutDashboard, Store, Plus, Clock, CheckCircle, XCircle, Trash2, PauseCircle, PlayCircle, Edit, Eye, MousePointerClick, Ticket, Globe, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMerchantShops, type ShopWithLocation } from "@/hooks/useMerchantShops";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,6 +31,7 @@ const MerchantDashboard = () => {
   const { user } = useAuth();
   const { data: shops, isLoading, refetch } = useMerchantShops();
   const { data: analytics } = useMerchantAnalyticsSummary();
+  const [showCouponBreakdown, setShowCouponBreakdown] = useState(false);
   const { profile, refetch: refetchProfile } = useProfile();
   const queryClient = useQueryClient();
   const [deleteShopId, setDeleteShopId] = useState<string | null>(null);
@@ -204,12 +205,41 @@ const MerchantDashboard = () => {
             <p className="text-2xl font-bold">{analytics?.totals.clicks || 0}</p>
             <p className="text-muted-foreground text-sm">Link Clicks</p>
           </div>
-          <div className="cyber-card">
-            <Ticket className="h-6 w-6 text-emerald-400 mb-2" />
+          <button
+            className="cyber-card text-left w-full hover:ring-1 hover:ring-primary/30 transition-all cursor-pointer"
+            onClick={() => setShowCouponBreakdown(prev => !prev)}
+          >
+            <div className="flex items-center justify-between">
+              <Ticket className="h-6 w-6 text-emerald-400 mb-2" />
+              {showCouponBreakdown ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+            </div>
             <p className="text-2xl font-bold">{analytics?.totals.redemptions || 0}</p>
             <p className="text-muted-foreground text-sm">Coupon Uses</p>
-          </div>
+          </button>
         </div>
+
+        {/* Per-coupon breakdown */}
+        {showCouponBreakdown && analytics?.perOfferRedemptions && analytics.perOfferRedemptions.length > 0 && (
+          <div className="cyber-card mb-8">
+            <h3 className="font-display text-sm font-bold mb-3 flex items-center gap-2">
+              <Ticket className="h-4 w-4 text-emerald-400" />
+              Coupon Breakdown
+            </h3>
+            <div className="space-y-2">
+              {analytics.perOfferRedemptions.map((item) => (
+                <div key={item.offerId} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{item.title}</p>
+                    {item.couponCode && (
+                      <p className="text-xs text-muted-foreground font-mono">{item.couponCode}</p>
+                    )}
+                  </div>
+                  <span className="text-sm font-bold text-emerald-400 shrink-0 ml-3">{item.count} used</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="cyber-card">
           <h2 className="font-display text-lg font-bold mb-4">Your Shops</h2>
