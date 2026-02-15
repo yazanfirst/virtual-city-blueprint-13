@@ -6,6 +6,8 @@ import { ShopBranding } from "@/hooks/use3DShops";
 import { Button } from "@/components/ui/button";
 import { ShopItem, useShopItems } from "@/hooks/useShopItems";
 import { X, ExternalLink, ChevronLeft, ChevronRight, Package, ShoppingBag, Star } from "lucide-react";
+import { formatPrice } from "@/lib/currency";
+import { useProfile } from "@/hooks/useProfile";
 import ShopOffersSection from "@/components/3d/ShopOffersSection";
 import { useGhostHuntStore } from "@/stores/ghostHuntStore";
 import { trackLinkClick } from "@/hooks/useTrackLinkClick";
@@ -576,6 +578,7 @@ function RoomCameraClamp({
 const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorRoomProps) => {
   const { data: items = [], isLoading } = useShopItems(shop.shopId);
   const { user } = useAuth();
+  const { profile } = useProfile();
   const { data: ratingData } = useShopRating(shop.shopId);
   const rateShop = useRateShop();
   const {

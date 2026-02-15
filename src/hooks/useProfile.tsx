@@ -7,6 +7,7 @@ interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   business_name: string | null;
+  currency: string;
 }
 
 export function useProfile() {
@@ -29,7 +30,7 @@ export function useProfile() {
       // Explicitly select only safe profile fields
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, display_name, avatar_url, business_name')
+        .select('id, display_name, avatar_url, business_name, currency')
         .eq('id', user.id)
         .single();
 

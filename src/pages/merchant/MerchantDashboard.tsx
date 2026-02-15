@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LayoutDashboard, Store, Plus, Clock, CheckCircle, XCircle, Trash2, PauseCircle, PlayCircle, Edit, Eye, MousePointerClick, Ticket } from "lucide-react";
+import { LayoutDashboard, Store, Plus, Clock, CheckCircle, XCircle, Trash2, PauseCircle, PlayCircle, Edit, Eye, MousePointerClick, Ticket, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMerchantShops, type ShopWithLocation } from "@/hooks/useMerchantShops";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,6 +8,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useMerchantAnalyticsSummary } from "@/hooks/useShopAnalytics";
+import { useProfile } from "@/hooks/useProfile";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,8 +31,41 @@ const MerchantDashboard = () => {
   const { user } = useAuth();
   const { data: shops, isLoading, refetch } = useMerchantShops();
   const { data: analytics } = useMerchantAnalyticsSummary();
+  const { profile, refetch: refetchProfile } = useProfile();
   const queryClient = useQueryClient();
   const [deleteShopId, setDeleteShopId] = useState<string | null>(null);
+
+  const CURRENCIES = [
+    { value: 'USD', label: '$ USD' },
+    { value: 'EUR', label: '€ EUR' },
+    { value: 'GBP', label: '£ GBP' },
+    { value: 'AED', label: 'د.إ AED' },
+    { value: 'SAR', label: '﷼ SAR' },
+    { value: 'EGP', label: 'E£ EGP' },
+    { value: 'TRY', label: '₺ TRY' },
+    { value: 'INR', label: '₹ INR' },
+    { value: 'JPY', label: '¥ JPY' },
+    { value: 'KWD', label: 'د.ك KWD' },
+    { value: 'QAR', label: 'ر.ق QAR' },
+    { value: 'BHD', label: 'BD BHD' },
+    { value: 'OMR', label: 'ر.ع OMR' },
+    { value: 'CAD', label: 'C$ CAD' },
+    { value: 'AUD', label: 'A$ AUD' },
+  ];
+
+  const handleCurrencyChange = async (currency: string) => {
+    if (!user) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ currency })
+      .eq('id', user.id);
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to update currency.', variant: 'destructive' });
+    } else {
+      toast({ title: 'Currency Updated', description: `Your currency is now ${currency}.` });
+      refetchProfile();
+    }
+  };
 
   const activeShops = shops?.filter(s => s.status === 'active') || [];
   const pendingShops = shops?.filter(s => s.status === 'pending_review') || [];
@@ -109,11 +150,26 @@ const MerchantDashboard = () => {
             </div>
             <p className="text-muted-foreground text-sm sm:text-base">Manage your virtual shops</p>
           </div>
-          <Button variant="cyber" asChild className="w-full sm:w-auto">
-            <Link to="/merchant/create-shop">
-              <Plus className="mr-2 h-4 w-4" /> Create Shop
-            </Link>
-          </Button>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4 text-muted-foreground" />
+              <Select value={profile?.currency || 'USD'} onValueChange={handleCurrencyChange}>
+                <SelectTrigger className="w-[120px] h-9 bg-muted">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map(c => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="cyber" asChild className="flex-1 sm:flex-initial">
+              <Link to="/merchant/create-shop">
+                <Plus className="mr-2 h-4 w-4" /> Create Shop
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-4 mb-8">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, ToggleLeft, ToggleRight, Edit2, Save, X, Coins, Percent, Tag } from "lucide-react";
+import { Plus, Trash2, ToggleLeft, ToggleRight, Edit2, Save, X, Coins, Percent, Tag, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,10 @@ import {
   MerchantOffer,
   CreateOfferInput,
 } from "@/hooks/useMerchantOffers";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/hooks/useProfile";
+import { getCurrencySymbol } from "@/lib/currency";
 
 interface OfferManagementProps {
   shopId: string;
@@ -52,6 +56,28 @@ const OfferManagement = ({ shopId }: OfferManagementProps) => {
   const createOffer = useCreateOffer();
   const updateOffer = useUpdateOffer();
   const deleteOffer = useDeleteOffer();
+  const { profile } = useProfile();
+  const currencySymbol = getCurrencySymbol(profile?.currency);
+
+  // Per-offer redemption counts
+  const offerIds = offers.map(o => o.id);
+  const { data: redemptionCounts = {} } = useQuery({
+    queryKey: ['offer-redemption-counts', offerIds],
+    queryFn: async () => {
+      if (offerIds.length === 0) return {};
+      const { data, error } = await supabase
+        .from('offer_redemptions')
+        .select('offer_id')
+        .in('offer_id', offerIds);
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      (data ?? []).forEach(r => {
+        counts[r.offer_id] = (counts[r.offer_id] || 0) + 1;
+      });
+      return counts;
+    },
+    enabled: offerIds.length > 0,
+  });
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -153,12 +179,12 @@ const OfferManagement = ({ shopId }: OfferManagementProps) => {
                   <span className="text-xs font-bold text-primary">
                     {offer.discount_type === "percentage"
                       ? `${offer.discount_value}%`
-                      : `$${Number(offer.discount_value).toFixed(0)}`}
+                      : `${currencySymbol}${Number(offer.discount_value).toFixed(0)}`}
                   </span>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+              <div className="flex items-center gap-3 text-[10px] text-muted-foreground flex-wrap">
                 <span className="flex items-center gap-1">
                   <Coins className="h-3 w-3 text-yellow-500" />
                   {offer.coin_price} coins
@@ -166,6 +192,10 @@ const OfferManagement = ({ shopId }: OfferManagementProps) => {
                 <span>Lvl {offer.min_player_level}+</span>
                 <span>Daily: {offer.daily_limit}</span>
                 <span>Per player: {offer.per_player_limit}</span>
+                <span className="flex items-center gap-1 text-emerald-500 font-medium">
+                  <Users className="h-3 w-3" />
+                  {redemptionCounts[offer.id] || 0} claimed
+                </span>
               </div>
 
               <div className="flex items-center gap-1.5 pt-1">
@@ -306,7 +336,7 @@ const OfferManagement = ({ shopId }: OfferManagementProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label>Min Order Value ($)</Label>
+              <Label>Min Order Value ({currencySymbol})</Label>
               <Input
                 type="number"
                 min={0}
