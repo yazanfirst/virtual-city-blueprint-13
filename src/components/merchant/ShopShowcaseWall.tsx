@@ -51,8 +51,24 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#
   const [slots, setSlots] = useState<SlotState[]>(() => Array.from({ length: 5 }, () => ({ ...emptySlot })));
   const [savingSlot, setSavingSlot] = useState<number | null>(null);
   const [editingSlot, setEditingSlot] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState<SlotState>({ ...emptySlot });
+  const [editForm, setEditFormRaw] = useState<SlotState>({ ...emptySlot });
   const uploadRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const getDraftKey = (slotIndex: number) => `showcaseEdit-${shopId}-${slotIndex}`;
+
+  const setEditForm: React.Dispatch<React.SetStateAction<SlotState>> = (update) => {
+    setEditFormRaw(prev => {
+      const next = typeof update === 'function' ? update(prev) : update;
+      if (editingSlot !== null) {
+        try { sessionStorage.setItem(getDraftKey(editingSlot), JSON.stringify(next)); } catch {}
+      }
+      return next;
+    });
+  };
+
+  const clearDraft = (slotIndex: number) => {
+    try { sessionStorage.removeItem(getDraftKey(slotIndex)); } catch {}
+  };
 
   // Get user ID for storage path
   const [userId, setUserId] = useState<string | null>(null);
@@ -80,6 +96,7 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#
           : { ...emptySlot };
       });
     setSlots(next);
+    // If dialog is open, don't let refetch overwrite editForm — draft in sessionStorage takes priority
   }, [items]);
 
   const handleFileUpload = async (file: File) => {
@@ -143,12 +160,21 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#
 
   const openEditDialog = (slotIndex: number) => {
     setEditingSlot(slotIndex);
-    setEditForm({ ...slots[slotIndex] });
+    // Restore draft from sessionStorage if available
+    try {
+      const saved = sessionStorage.getItem(getDraftKey(slotIndex));
+      if (saved) {
+        setEditFormRaw(JSON.parse(saved));
+        return;
+      }
+    } catch {}
+    setEditFormRaw({ ...slots[slotIndex] });
   };
 
   const closeEditDialog = () => {
+    if (editingSlot !== null) clearDraft(editingSlot);
     setEditingSlot(null);
-    setEditForm({ ...emptySlot });
+    setEditFormRaw({ ...emptySlot });
   };
 
   const handleSave = async () => {
@@ -189,7 +215,9 @@ const ShopShowcaseWall: React.FC<ShowcaseWallProps> = ({ shopId, brandColor = "#
         title: "Item saved!",
         description: `${editForm.title} is now displayed on your showcase wall.`,
       });
-      closeEditDialog();
+      if (editingSlot !== null) clearDraft(editingSlot);
+      setEditingSlot(null);
+      setEditFormRaw({ ...emptySlot });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to save item.";
       toast({
