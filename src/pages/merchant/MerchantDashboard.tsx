@@ -55,11 +55,12 @@ const MerchantDashboard = () => {
 
   const handleCurrencyChange = async (currency: string) => {
     if (!user) return;
-    const { error } = await supabase
-      .from('profiles')
-      .update({ currency })
-      .eq('id', user.id);
-    if (error) {
+    // Update profile and all owned shops
+    const [profileRes, shopsRes] = await Promise.all([
+      supabase.from('profiles').update({ currency } as any).eq('id', user.id),
+      supabase.from('shops').update({ currency } as any).eq('merchant_id', user.id),
+    ]);
+    if (profileRes.error || shopsRes.error) {
       toast({ title: 'Error', description: 'Failed to update currency.', variant: 'destructive' });
     } else {
       toast({ title: 'Currency Updated', description: `Your currency is now ${currency}.` });

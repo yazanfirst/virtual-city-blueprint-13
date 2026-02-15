@@ -4,6 +4,8 @@ import { Html, OrbitControls, Text } from "@react-three/drei";
 import * as THREE from "three";
 import { ShopBranding } from "@/hooks/use3DShops";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { ShopItem, useShopItems } from "@/hooks/useShopItems";
 import { X, ExternalLink, ChevronLeft, ChevronRight, Package, ShoppingBag, Star } from "lucide-react";
 import { formatPrice } from "@/lib/currency";
@@ -173,6 +175,7 @@ const OrnateFrame = ({
   primary,
   isSelected,
   onSelect,
+  currency,
 }: {
   config: FrameSpotConfig;
   item?: ShopItem;
@@ -180,6 +183,7 @@ const OrnateFrame = ({
   primary: string;
   isSelected: boolean;
   onSelect: (slot: number) => void;
+  currency: string;
 }) => {
   const hasItem = Boolean(item?.title);
   const frameColor = hasItem ? "#c9a227" : "#4a3f35";
@@ -287,7 +291,7 @@ const OrnateFrame = ({
                   className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[10px] font-bold text-white shadow-lg"
                   style={{ backgroundColor: accent }}
                 >
-                  ${Number(item.price).toFixed(2)}
+                  {formatPrice(Number(item.price), currency)}
                 </div>
               )}
               
@@ -322,6 +326,7 @@ const InteriorScene = ({
   rechargeCollected,
   onCollectRecharge,
   onSceneReady,
+  currency,
 }: {
   shop: ShopBranding;
   items: (ShopItem | undefined)[];
@@ -333,6 +338,7 @@ const InteriorScene = ({
   rechargeCollected: { emf: boolean; flashlight: boolean; trap: boolean };
   onCollectRecharge: (type: 'emf' | 'flashlight' | 'trap') => void;
   onSceneReady: () => void;
+  currency: string;
 }) => {
   const brickTexture = useBrickTexture();
   const accent = shop.accentColor || "#10B981";
@@ -430,6 +436,7 @@ const InteriorScene = ({
           primary={primary}
           isSelected={selectedSlot === config.slot}
           onSelect={onSelectItem}
+          currency={currency}
         />
       ))}
 
@@ -579,6 +586,21 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
   const { data: items = [], isLoading } = useShopItems(shop.shopId);
   const { user } = useAuth();
   const { profile } = useProfile();
+
+  // Get the shop's currency (set by merchant)
+  const { data: shopCurrency } = useQuery({
+    queryKey: ['shop-currency', shop.shopId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('shops')
+        .select('currency')
+        .eq('id', shop.shopId!)
+        .single();
+      return (data as any)?.currency || 'USD';
+    },
+    enabled: !!shop.shopId,
+    staleTime: 60000,
+  });
   const { data: ratingData } = useShopRating(shop.shopId);
   const rateShop = useRateShop();
   const {
@@ -790,6 +812,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
               rechargeCollected={rechargeCollected}
               onCollectRecharge={handleCollectRecharge}
               onSceneReady={() => setSceneReady(true)}
+              currency={shopCurrency || 'USD'}
             />
           </React.Suspense>
 
@@ -872,7 +895,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
                     </div>
                     <div className="font-medium text-foreground truncate">{item?.title ?? 'Item'}</div>
                     {item?.price != null && (
-                      <div className="text-[10px] text-primary">${Number(item.price).toFixed(2)}</div>
+                      <div className="text-[10px] text-primary">{formatPrice(Number(item.price), shopCurrency || 'USD')}</div>
                     )}
                   </button>
                 ))}
@@ -996,7 +1019,7 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
                     className="absolute top-4 right-4 px-3 py-1.5 rounded-full text-sm font-bold text-white shadow-lg"
                     style={{ backgroundColor: accent }}
                   >
-                    ${Number(selectedItem.price).toFixed(2)}
+                    {formatPrice(Number(selectedItem.price), shopCurrency || 'USD')}
                   </div>
                 )}
               </div>

@@ -462,6 +462,7 @@ export type Database = {
           branch_label: string | null
           category: string | null
           created_at: string | null
+          currency: string
           duplicate_brand: boolean | null
           external_link: string | null
           facade_template: Database["public"]["Enums"]["facade_template"] | null
@@ -484,6 +485,7 @@ export type Database = {
           branch_label?: string | null
           category?: string | null
           created_at?: string | null
+          currency?: string
           duplicate_brand?: boolean | null
           external_link?: string | null
           facade_template?:
@@ -508,6 +510,7 @@ export type Database = {
           branch_label?: string | null
           category?: string | null
           created_at?: string | null
+          currency?: string
           duplicate_brand?: boolean | null
           external_link?: string | null
           facade_template?:
