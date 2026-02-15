@@ -93,28 +93,44 @@ export function useMerchantAnalyticsSummary() {
         .select('id, name')
         .eq('merchant_id', user.id);
 
-      if (!shops || shops.length === 0) return { shops: [], totals: { visits: 0, clicks: 0, redemptions: 0 } };
+      if (!shops || shops.length === 0) return { shops: [], totals: { visits: 0, clicks: 0, redemptions: 0 }, perOfferRedemptions: [] };
 
       const shopIds = shops.map(s => s.id);
 
-      const [visitsRes, clicksRes] = await Promise.all([
+      const [visitsRes, clicksRes, offersRes] = await Promise.all([
         supabase.from('player_shop_visits').select('id', { count: 'exact', head: true }).in('shop_id', shopIds),
         supabase.from('shop_link_clicks').select('id', { count: 'exact', head: true }).in('shop_id', shopIds),
+        supabase.from('merchant_offers').select('id, title, coupon_code').in('shop_id', shopIds),
       ]);
 
-      // Get all offers for these shops
-      const { data: offers } = await supabase
-        .from('merchant_offers')
-        .select('id')
-        .in('shop_id', shopIds);
-
+      const offers = offersRes.data || [];
       let totalRedemptions = 0;
-      if (offers && offers.length > 0) {
-        const { count } = await supabase
+      const perOfferRedemptions: { offerId: string; title: string; couponCode: string | null; count: number }[] = [];
+
+      if (offers.length > 0) {
+        const offerIds = offers.map(o => o.id);
+        const { data: redemptions } = await supabase
           .from('offer_redemptions')
-          .select('id', { count: 'exact', head: true })
-          .in('offer_id', offers.map(o => o.id));
-        totalRedemptions = count || 0;
+          .select('offer_id')
+          .in('offer_id', offerIds);
+
+        const counts: Record<string, number> = {};
+        (redemptions ?? []).forEach(r => {
+          counts[r.offer_id] = (counts[r.offer_id] || 0) + 1;
+        });
+
+        totalRedemptions = Object.values(counts).reduce((a, b) => a + b, 0);
+
+        offers.forEach(o => {
+          if (counts[o.id]) {
+            perOfferRedemptions.push({
+              offerId: o.id,
+              title: o.title,
+              couponCode: o.coupon_code,
+              count: counts[o.id],
+            });
+          }
+        });
       }
 
       return {
@@ -124,6 +140,7 @@ export function useMerchantAnalyticsSummary() {
           clicks: clicksRes.count || 0,
           redemptions: totalRedemptions,
         },
+        perOfferRedemptions,
       };
     },
     enabled: !!user,
