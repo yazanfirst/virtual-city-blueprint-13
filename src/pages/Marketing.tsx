@@ -5,7 +5,6 @@ import {
   Gamepad2,
   Store,
   Coins,
-  Target,
   Ghost,
   Skull,
   BarChart3,
@@ -20,6 +19,34 @@ import {
 const Marketing = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* ── NAVBAR ── */}
+      <nav className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 h-16">
+          <Link to="/" className="flex items-center gap-3">
+            <img
+              src="/virtual-city-logo.svg"
+              alt="Virtual Shop City"
+              className="h-10 w-10 rounded-lg border border-primary/30"
+            />
+            <span className="font-display text-lg font-bold text-primary tracking-wide">
+              Virtual Shop City
+            </span>
+          </Link>
+
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/auth">Open a Shop</Link>
+            </Button>
+            <Button variant="hero" size="sm" asChild>
+              <Link to="/city-map">
+                Enter City
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </nav>
+
       {/* ── HERO ── */}
       <section className="relative overflow-hidden py-24 md:py-36 px-4">
         <div className="absolute inset-0 bg-grid opacity-20" />
@@ -33,9 +60,9 @@ const Marketing = () => {
           </div>
 
           <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6 text-glow">
-            Walk a 3D Street.
+            Don't Scroll.
             <br />
-            <span className="text-primary">Shop for Real.</span>
+            <span className="text-primary">Get In.</span>
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
@@ -47,7 +74,7 @@ const Marketing = () => {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button variant="hero" size="xl" asChild>
               <Link to="/city-map">
-                Start Playing Free
+                Enter City
                 <ChevronRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
@@ -71,7 +98,6 @@ const Marketing = () => {
               </div>
               <p className="text-muted-foreground text-sm">Demo Video Coming Soon</p>
             </div>
-            {/* Replace the div above with an actual video/embed when ready */}
           </div>
         </div>
       </section>
@@ -101,18 +127,18 @@ const Marketing = () => {
                 desc: "Walk into real branded storefronts and browse actual products on showcase walls.",
               },
               {
-                icon: Target,
-                title: "Shop Missions",
-                desc: "Answer questions about the shops — forces you to discover what each store offers.",
+                icon: Skull,
+                title: "Survive & Answer",
+                desc: "Escape zombies, dodge traps, reach the target shop — then answer questions about what you found.",
               },
               {
-                icon: Skull,
-                title: "Zombie & Ghost Hunts",
-                desc: "Kill zombies, catch ghosts with a flashlight, avoid traps — earn coins for every win.",
+                icon: Ghost,
+                title: "Hunt Ghosts",
+                desc: "Use your flashlight to reveal and capture ghosts hiding in the darkness. Watch out for jumpscares.",
               },
               {
                 icon: Coins,
-                title: "Redeem Real Coupons",
+                title: "Redeem Coupons",
                 desc: "Spend earned coins on real discount codes from the merchants on the street.",
               },
             ].map((f) => (
@@ -144,42 +170,36 @@ const Marketing = () => {
       <section className="py-16 md:py-24 px-4 border-t border-border">
         <div className="max-w-5xl mx-auto">
           <h2 className="font-display text-3xl md:text-4xl font-bold text-center mb-12 text-glow">
-            4 Mission Types. Unlimited Fun.
+            3 Mission Types. Unlimited Fun.
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
-                icon: Target,
-                title: "Shop Quiz",
-                desc: "Answer questions about the shops on the street. Forces you to explore every storefront to find the answers.",
-                color: "text-primary",
-              },
-              {
                 icon: Skull,
-                title: "Zombie Hunt",
-                desc: "Zombies invade Fashion Street. Kill them while dodging fire pits, swinging axes, and thorns. Survive to earn big rewards.",
+                title: "Zombie Escape",
+                desc: "Zombies invade Fashion Street. Escape them, dodge fire pits, swinging axes, and thorns. Reach the target shop, then answer questions about what's inside to complete the mission.",
                 color: "text-destructive",
               },
               {
                 icon: Ghost,
                 title: "Ghost Hunt",
-                desc: "Use your flashlight to reveal and capture ghosts hiding in the darkness. Watch out for jumpscares.",
+                desc: "Use your EMF detector to locate invisible ghosts, reveal them with your flashlight, and capture them before time runs out. Watch out for jumpscares.",
                 color: "text-secondary",
               },
               {
                 icon: Zap,
                 title: "Mirror World",
-                desc: "The street flips into a dark twisted dimension. Find reality anchors to escape before time runs out.",
+                desc: "The street flips into a dark twisted dimension. Find reality anchors to escape before time runs out. Avoid mirror shadows that stalk you.",
                 color: "text-accent",
               },
             ].map((m) => (
-              <div key={m.title} className="cyber-card flex gap-4 items-start">
-                <div className="w-10 h-10 rounded-lg bg-card border border-border flex items-center justify-center shrink-0">
-                  <m.icon className={`h-5 w-5 ${m.color}`} />
+              <div key={m.title} className="cyber-card flex flex-col gap-4 items-center text-center">
+                <div className="w-12 h-12 rounded-lg bg-card border border-border flex items-center justify-center">
+                  <m.icon className={`h-6 w-6 ${m.color}`} />
                 </div>
                 <div>
-                  <h3 className="font-display text-lg font-semibold mb-1">{m.title}</h3>
+                  <h3 className="font-display text-lg font-semibold mb-2">{m.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{m.desc}</p>
                 </div>
               </div>
@@ -241,9 +261,7 @@ const Marketing = () => {
               <div
                 key={f.title}
                 className="relative overflow-hidden rounded-lg border border-border bg-card p-6 transition-all duration-300 hover:border-secondary/50"
-                style={{
-                  boxShadow: "none",
-                }}
+                style={{ boxShadow: "none" }}
                 onMouseEnter={(e) =>
                   (e.currentTarget.style.boxShadow =
                     "0 0 20px hsl(270 60% 60% / 0.2)")
@@ -260,7 +278,7 @@ const Marketing = () => {
           <div className="text-center mt-10">
             <Button variant="secondary" size="lg" asChild>
               <Link to="/auth">
-                Become a Merchant
+                Open a Shop
                 <ChevronRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
@@ -302,7 +320,7 @@ const Marketing = () => {
           </p>
           <Button variant="hero" size="xl" asChild>
             <Link to="/city-map">
-              Enter Virtual Shop City
+              Enter City
               <ChevronRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
