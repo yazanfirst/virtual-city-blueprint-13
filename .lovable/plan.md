@@ -1,28 +1,49 @@
 
 
-## Problem
+## Fix Routing + Unify Branding (Logo)
 
-When editing a product in the Showcase Wall dialog, if you switch to another browser tab (e.g., to copy a product description) and come back, all your form data disappears. This happens because React Query automatically refetches data when the browser window regains focus, which triggers a re-render and can reset the form state.
+### 1. Swap Homepage and Marketing Page
 
-## Solution
+**Current state:**
+- `/` loads `Index.tsx` (simple hero page with Building2 icon)
+- `/marketing` loads `Marketing.tsx` (the full landing page with SVG logo)
 
-Persist the edit form data in `sessionStorage` while the dialog is open, following the same pattern already used in the `EditShop.tsx` page. This way, even if the component re-renders or data refetches, the user's in-progress edits are preserved.
+**Change:**
+- `/` will load `Marketing.tsx` (the full landing page becomes the homepage)
+- `/marketing` will redirect to `/` (using React Router's `Navigate` component)
+- Remove old `Index.tsx` (no longer needed)
 
-## Technical Details
+### 2. Create a Shared Logo Component
 
-**File: `src/components/merchant/ShopShowcaseWall.tsx`**
+**Current state:**
+- The Navbar (`Navbar.tsx`) uses a `Building2` Lucide icon as the logo
+- The Marketing page uses `/virtual-city-logo.svg` (the correct logo)
 
-1. **Add a sessionStorage key** based on `shopId` and the slot index being edited (e.g., `showcaseEdit-{shopId}-{slotIndex}`).
+**Change:**
+- Create `src/components/Logo.tsx` -- a shared component rendering the SVG logo with the "Virtual Shop City" text
+- Props: optional `size` (sm/md) for different contexts
 
-2. **On opening the edit dialog** (`openEditDialog`): Check sessionStorage for a saved draft. If one exists, restore it into `editForm` instead of loading from the current slot data.
+### 3. Update Navbar to Use the Shared Logo
 
-3. **On every form field change**: Save the current `editForm` state to sessionStorage automatically (debounced or immediate).
+Replace the `Building2` icon block in `Navbar.tsx` with the new `<Logo />` component, matching the marketing page's look (SVG image + text).
 
-4. **On successful save**: Clear the sessionStorage draft for that slot.
+### 4. Update Marketing Page to Use Shared Logo
 
-5. **On dialog close (cancel)**: Clear the sessionStorage draft (user intentionally discarded changes).
+Replace the inline logo markup in Marketing.tsx's navbar section with the shared `<Logo />` component.
 
-6. **Prevent React Query refetch from overwriting the edit state**: Add a guard in the `useEffect` that syncs `items` to `slots` so it does not interfere with the active `editForm` state while the dialog is open.
+### 5. Fix Internal Links
 
-This ensures that switching tabs, refreshing, or any background data refetch will not lose the merchant's in-progress product edits.
+- Marketing page "Enter City" buttons: already point to `/city-map` (correct)
+- Marketing page "Open a Shop" button: already points to `/auth` (correct merchant entry point)
+- Marketing page internal nav logo link: update from `to="/"` (already correct after swap)
+
+### Technical Summary
+
+| File | Action |
+|------|--------|
+| `src/components/Logo.tsx` | **Create** -- shared logo component using `/virtual-city-logo.svg` |
+| `src/App.tsx` | Swap routes: `/` renders Marketing, `/marketing` redirects to `/` via `Navigate`, remove Index import |
+| `src/pages/Index.tsx` | **Delete** (replaced by Marketing as homepage) |
+| `src/components/Navbar.tsx` | Replace Building2 icon with `<Logo />` component |
+| `src/pages/Marketing.tsx` | Replace inline logo with `<Logo />` component |
 
