@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useGameStore } from '@/stores/gameStore';
+import { usePlayerStore } from '@/stores/playerStore';
 
 interface PlayerProgress {
   user_id: string;
@@ -89,10 +90,12 @@ export function usePlayerProgress() {
     loadProgress();
   }, [user, loadFromServer, loadVisitedShops]);
 
-  // Reset loaded state on logout
+  // Reset loaded state and game stores on logout
   useEffect(() => {
     if (!user) {
       loadedRef.current = false;
+      useGameStore.getState().resetGame();
+      usePlayerStore.getState().resetPlayer();
     }
   }, [user]);
 
