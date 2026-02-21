@@ -147,7 +147,7 @@ serve(async (req) => {
     if (deleteError) {
       console.error('Error deleting auth user:', deleteError.message);
       return new Response(
-        JSON.stringify({ error: 'Failed to delete account', details: deleteError.message }),
+        JSON.stringify({ error: 'Failed to delete account. Please try again.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -163,7 +163,7 @@ serve(async (req) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Unexpected error in delete-account:', errorMessage);
     return new Response(
-      JSON.stringify({ error: 'Internal server error', details: errorMessage }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
