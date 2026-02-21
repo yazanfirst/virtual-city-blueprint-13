@@ -8,6 +8,14 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import Marketing from "./pages/Marketing";
 import Auth from "./pages/Auth";
+import { useAuth } from "@/hooks/useAuth";
+
+const AuthAwareHome = () => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (user) return <Navigate to="/city-map" replace />;
+  return <Marketing />;
+};
 import CityMap from "./pages/CityMap";
 import StreetView from "./pages/StreetView";
 import Settings from "./pages/Settings";
@@ -31,7 +39,7 @@ const App = () => (
           <Navbar />
           <Routes>
             {/* Public routes */}
-            <Route path="/" element={<Marketing />} />
+            <Route path="/" element={<AuthAwareHome />} />
             <Route path="/marketing" element={<Navigate to="/" replace />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/city-map" element={<CityMap />} />

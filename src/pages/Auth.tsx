@@ -45,7 +45,7 @@ const Auth = () => {
       if (userRole === 'merchant' || userRole === 'admin') {
         navigate('/merchant/dashboard');
       } else {
-        navigate('/');
+        navigate('/city-map');
       }
     }
   }, [user, loading, userRole, navigate]);
