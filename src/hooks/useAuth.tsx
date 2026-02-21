@@ -1,6 +1,8 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useGameStore } from '@/stores/gameStore';
+import { usePlayerStore } from '@/stores/playerStore';
 
 type UserRole = 'merchant' | 'admin' | 'player';
 
@@ -137,6 +139,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setUserRole(null);
+    useGameStore.getState().resetGame();
+    usePlayerStore.getState().resetPlayer();
   };
 
   const value = {
