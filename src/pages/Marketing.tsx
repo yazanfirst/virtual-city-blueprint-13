@@ -51,15 +51,19 @@ const Marketing = () => {
             Now Live — Fashion Street is Open
           </div>
 
-          <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6 text-glow">
-            Don't Scroll.
+          <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-4 text-glow">
+            From Scroll
             <br />
-            <span className="text-primary">Get In.</span>
+            <span className="text-primary">to Stroll.</span>
           </h1>
 
+          <p className="font-display text-xl md:text-2xl lg:text-3xl font-semibold text-foreground/90 mb-6">
+            Walk the city. Play the shops. Earn real rewards.
+          </p>
+
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-            Virtual Shop City is a browser-based 3D world where you explore real branded
-            storefronts, complete missions, earn coins, and redeem{" "}
+            Virtual Shop City is a browser-based 3D world where you walk through real branded
+            streets, complete missions, earn coins, and redeem{" "}
             <strong className="text-foreground">real discount coupons</strong> — no download required.
           </p>
 
