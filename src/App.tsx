@@ -18,6 +18,7 @@ import CreateShop from "./pages/merchant/CreateShop";
 import EditShop from "./pages/merchant/EditShop";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import Marketing from "./pages/Marketing";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <Routes>
             {/* Public routes */}
             <Route path="/" element={<Index />} />
+            <Route path="/marketing" element={<Marketing />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/city-map" element={<CityMap />} />
             <Route path="/city/:streetId" element={<StreetView />} />
