@@ -606,6 +606,7 @@ export type Database = {
           branch_label: string
           category: string
           created_at: string
+          currency: string
           duplicate_brand: boolean
           external_link: string
           facade_template: Database["public"]["Enums"]["facade_template"]

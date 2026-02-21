@@ -19,6 +19,7 @@ export interface PublicShop {
   texture_template: string | null;
   texture_url: string | null;
   status: string | null;
+  currency: string | null;
   duplicate_brand: boolean | null;
   branch_label: string | null;
   branch_justification: string | null;
@@ -112,6 +113,7 @@ export interface ShopBranding {
   signageFont?: string | null;
   textureTemplate?: string | null;
   textureUrl?: string | null;
+  currency?: string;
 }
 
 export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): ShopBranding[] {
@@ -137,6 +139,7 @@ export function transformToShopBranding(spotsWithShops: SpotWithActiveShop[]): S
         signageFont: spot.shop.signage_font || 'classic',
         textureTemplate: spot.shop.texture_template || null,
         textureUrl: spot.shop.texture_url || null,
+        currency: spot.shop.currency || 'USD',
       };
     }
 
