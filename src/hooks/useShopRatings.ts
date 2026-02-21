@@ -25,19 +25,31 @@ export function useShopRating(shopId?: string) {
     queryFn: async () => {
       if (!shopId) return { averageRating: 0, totalRatings: 0, userRating: null };
 
+      // Fetch only ratings (not user_ids) for aggregate calculation
       const { data: ratings, error } = await supabase
         .from('shop_ratings')
-        .select('rating, user_id')
+        .select('rating')
         .eq('shop_id', shopId);
+
+      // Separately fetch the current user's own rating
+      let userRatingValue: number | null = null;
+      if (user?.id) {
+        const { data: myRating } = await supabase
+          .from('shop_ratings')
+          .select('rating')
+          .eq('shop_id', shopId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        userRatingValue = myRating?.rating ?? null;
+      }
 
       if (error) throw error;
 
       const totalRatings = ratings?.length || 0;
       const sum = ratings?.reduce((acc, r) => acc + r.rating, 0) || 0;
       const averageRating = totalRatings > 0 ? sum / totalRatings : 0;
-      const userRating = ratings?.find(r => r.user_id === user?.id)?.rating ?? null;
 
-      return { averageRating, totalRatings, userRating };
+      return { averageRating, totalRatings, userRating: userRatingValue };
     },
     enabled: !!shopId,
     staleTime: 30000,
