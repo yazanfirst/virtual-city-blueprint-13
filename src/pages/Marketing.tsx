@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import {
   ChevronRight,
@@ -22,16 +23,7 @@ const Marketing = () => {
       {/* ── NAVBAR ── */}
       <nav className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 h-16">
-          <Link to="/" className="flex items-center gap-3">
-            <img
-              src="/virtual-city-logo.svg"
-              alt="Virtual Shop City"
-              className="h-10 w-10 rounded-lg border border-primary/30"
-            />
-            <span className="font-display text-lg font-bold text-primary tracking-wide">
-              Virtual Shop City
-            </span>
-          </Link>
+          <Logo />
 
           <div className="flex items-center gap-3">
             <Button variant="outline" size="sm" asChild>

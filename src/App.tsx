@@ -2,11 +2,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
-import Index from "./pages/Index";
+import Marketing from "./pages/Marketing";
 import Auth from "./pages/Auth";
 import CityMap from "./pages/CityMap";
 import StreetView from "./pages/StreetView";
@@ -18,7 +18,6 @@ import CreateShop from "./pages/merchant/CreateShop";
 import EditShop from "./pages/merchant/EditShop";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
-import Marketing from "./pages/Marketing";
 
 const queryClient = new QueryClient();
 
@@ -32,8 +31,8 @@ const App = () => (
           <Navbar />
           <Routes>
             {/* Public routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/marketing" element={<Marketing />} />
+            <Route path="/" element={<Marketing />} />
+            <Route path="/marketing" element={<Navigate to="/" replace />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/city-map" element={<CityMap />} />
             <Route path="/city/:streetId" element={<StreetView />} />
