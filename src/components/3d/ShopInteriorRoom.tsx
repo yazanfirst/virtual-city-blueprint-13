@@ -4,8 +4,6 @@ import { Html, OrbitControls, Text } from "@react-three/drei";
 import * as THREE from "three";
 import { ShopBranding } from "@/hooks/use3DShops";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { ShopItem, useShopItems } from "@/hooks/useShopItems";
 import { X, ExternalLink, ChevronLeft, ChevronRight, Package, ShoppingBag, Star } from "lucide-react";
 import { formatPrice } from "@/lib/currency";
@@ -587,20 +585,8 @@ const ShopInteriorRoom = ({ shop, onExit, isMissionMode = false }: ShopInteriorR
   const { user } = useAuth();
   const { profile } = useProfile();
 
-  // Get the shop's currency (set by merchant)
-  const { data: shopCurrency } = useQuery({
-    queryKey: ['shop-currency', shop.shopId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('shops')
-        .select('currency')
-        .eq('id', shop.shopId!)
-        .single();
-      return (data as any)?.currency || 'USD';
-    },
-    enabled: !!shop.shopId,
-    staleTime: 60000,
-  });
+  // Currency comes from the RPC via shop branding data
+  const shopCurrency = shop.currency || 'USD';
   const { data: ratingData } = useShopRating(shop.shopId);
   const rateShop = useRateShop();
   const {
