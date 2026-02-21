@@ -1,42 +1,35 @@
 
+## Fix: Product Prices Not Showing Merchant's Currency
 
-## Fix Authenticated Routing Behavior
+### Root Cause
 
-### Changes Overview
+The shop's currency (e.g., "AED") is stored in the database correctly, but players can't see it because:
 
-Four files need updates to properly separate marketing pages from authenticated app pages.
+1. The RPC function `get_active_or_suspended_public_shops_for_spots` (which players use to load shop data) does NOT include the `currency` column -- it was never added.
+2. `ShopInteriorRoom` tries a separate direct query to the `shops` table to get currency, but **RLS blocks it** for non-merchant users (the SELECT policy only allows shop owners and admins). So it silently falls back to "USD".
 
-### 1. Marketing page (`src/App.tsx`) -- Wrap "/" with auth-aware redirect
+### Fix
 
-Replace the plain `<Marketing />` route with a wrapper component that checks auth state:
-- If user is NOT authenticated: show the Marketing landing page
-- If user IS authenticated: redirect to `/city-map`
+**Step 1: Add `currency` to the RPC function** (SQL migration)
 
-### 2. Auth page redirect fix (`src/pages/Auth.tsx`)
+Update `get_active_or_suspended_public_shops_for_spots` to include `s.currency` in its SELECT list.
 
-Currently on line 48, after login, players are redirected to `'/'`. Change this to `'/city-map'` so authenticated players go straight to the city map instead of the marketing page.
+**Step 2: Add `currency` to `PublicShop` interface** (`src/hooks/use3DShops.ts`)
 
-### 3. Logo dynamic linking (`src/components/Logo.tsx`)
+Add `currency: string | null` to the `PublicShop` type.
 
-The Logo component already supports a `linkTo` prop. No changes needed to the component itself.
+**Step 3: Add `currency` to `ShopBranding` interface and transform** (`src/hooks/use3DShops.ts`)
 
-### 4. Navbar logo link (`src/components/Navbar.tsx`)
+Add `currency?: string` to `ShopBranding` and pass it through in `transformToShopBranding`.
 
-Pass `linkTo` to the `<Logo>` based on auth state:
-- Not logged in: `linkTo="/"`
-- Logged in: `linkTo="/city-map"`
+**Step 4: Use the already-loaded currency in `ShopInteriorRoom`** (`src/components/3d/ShopInteriorRoom.tsx`)
 
-### 5. Marketing page navbar logo (`src/pages/Marketing.tsx`)
+Remove the separate (RLS-blocked) query for `shop-currency` and use `shop.currency` instead (which now comes from the RPC via the branding data).
 
-The marketing page has its own navbar with a `<Logo />`. Since this page is only shown to non-authenticated users, the default `linkTo="/"` is correct -- no change needed.
-
-### Technical Details
+### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/App.tsx` | Create `AuthAwareHome` component that renders `<Marketing />` or `<Navigate to="/city-map" />` based on auth state; use it at `/` route |
-| `src/pages/Auth.tsx` | Line 48: change `navigate('/')` to `navigate('/city-map')` |
-| `src/components/Navbar.tsx` | Pass `linkTo={user ? "/city-map" : "/"}` to `<Logo />` |
-| `src/components/Logo.tsx` | No changes needed (already has `linkTo` prop) |
-| `src/pages/Marketing.tsx` | No changes needed |
-
+| New SQL migration | Add `currency` to the RPC function |
+| `src/hooks/use3DShops.ts` | Add `currency` to `PublicShop`, `ShopBranding`, and transform function |
+| `src/components/3d/ShopInteriorRoom.tsx` | Remove the separate currency query; use `shop.currency` from branding data |
