@@ -1,35 +1,50 @@
 
-## Fix: Product Prices Not Showing Merchant's Currency
+## Fix: Reset Game State on Sign Out
 
-### Root Cause
+### Problem
+When a user signs out, their game data (Level, Coins, XP) remains in the Zustand store memory. The next visitor (or the same person before signing in again) sees the previous user's progress in the Player Panel. This is because `signOut()` in `useAuth.tsx` only clears authentication state but never calls `resetGame()` on the game store or `resetPlayer()` on the player store.
 
-The shop's currency (e.g., "AED") is stored in the database correctly, but players can't see it because:
+### Solution
+Reset all Zustand stores when the user signs out or when the auth state changes to "signed out". There are two places to fix:
 
-1. The RPC function `get_active_or_suspended_public_shops_for_spots` (which players use to load shop data) does NOT include the `currency` column -- it was never added.
-2. `ShopInteriorRoom` tries a separate direct query to the `shops` table to get currency, but **RLS blocks it** for non-merchant users (the SELECT policy only allows shop owners and admins). So it silently falls back to "USD".
+**1. `src/hooks/usePlayerProgress.ts`** -- Reset game store on logout
 
-### Fix
+The hook already detects logout (`if (!user)`) but only resets `loadedRef`. It needs to also call `resetGame()` to clear coins/XP/level back to defaults (100 coins, 0 XP, Level 1).
 
-**Step 1: Add `currency` to the RPC function** (SQL migration)
+```
+useEffect(() => {
+  if (!user) {
+    loadedRef.current = false;
+    useGameStore.getState().resetGame();    // <-- add this
+    usePlayerStore.getState().resetPlayer(); // <-- add this
+  }
+}, [user]);
+```
 
-Update `get_active_or_suspended_public_shops_for_spots` to include `s.currency` in its SELECT list.
+**2. `src/hooks/useAuth.tsx`** -- Belt-and-suspenders reset in signOut
 
-**Step 2: Add `currency` to `PublicShop` interface** (`src/hooks/use3DShops.ts`)
+As a safety net, also reset the stores directly in the `signOut` function so that even if the hook hasn't re-rendered yet, the data is cleared immediately:
 
-Add `currency: string | null` to the `PublicShop` type.
+```typescript
+import { useGameStore } from '@/stores/gameStore';
+import { usePlayerStore } from '@/stores/playerStore';
 
-**Step 3: Add `currency` to `ShopBranding` interface and transform** (`src/hooks/use3DShops.ts`)
+const signOut = async () => {
+  await supabase.auth.signOut();
+  setUser(null);
+  setSession(null);
+  setUserRole(null);
+  useGameStore.getState().resetGame();
+  usePlayerStore.getState().resetPlayer();
+};
+```
 
-Add `currency?: string` to `ShopBranding` and pass it through in `transformToShopBranding`.
+### Technical Details
+- `resetGame()` sets coins=100, xp=0, level=1, and clears visited shops and collected coins
+- `resetPlayer()` resets position, camera, jump counter, and shop interior state
+- Both stores already have these reset functions -- they just are never called on sign out
+- No database changes needed -- this is purely a client-side state cleanup issue
 
-**Step 4: Use the already-loaded currency in `ShopInteriorRoom`** (`src/components/3d/ShopInteriorRoom.tsx`)
-
-Remove the separate (RLS-blocked) query for `shop-currency` and use `shop.currency` instead (which now comes from the RPC via the branding data).
-
-### Files Changed
-
-| File | Change |
-|------|--------|
-| New SQL migration | Add `currency` to the RPC function |
-| `src/hooks/use3DShops.ts` | Add `currency` to `PublicShop`, `ShopBranding`, and transform function |
-| `src/components/3d/ShopInteriorRoom.tsx` | Remove the separate currency query; use `shop.currency` from branding data |
+### Files to Edit
+- `src/hooks/useAuth.tsx` -- import stores and call reset in `signOut()`
+- `src/hooks/usePlayerProgress.ts` -- call `resetGame()` and `resetPlayer()` in the logout effect
