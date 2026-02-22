@@ -40,7 +40,7 @@ const Marketing = () => {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="relative overflow-hidden py-28 md:py-40 px-4">
+      <section className="relative overflow-hidden py-20 md:py-28 px-4">
         {/* Background layers */}
         <div className="absolute inset-0 bg-grid opacity-15" />
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background/70 to-background" />
@@ -68,7 +68,7 @@ const Marketing = () => {
             Walk the city. Play the shops. Earn real rewards.
           </p>
 
-          <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed">
+          <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed">
             Virtual Shop City is a browser-based 3D world where you walk through real branded
             streets, complete missions, earn coins, and redeem{" "}
             <strong className="text-foreground">real discount coupons</strong> — no download required.
@@ -89,7 +89,7 @@ const Marketing = () => {
       </section>
 
       {/* ── DEMO VIDEO ── */}
-      <section className="relative py-16 md:py-24 px-4">
+      <section className="relative py-10 md:py-16 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-center gap-2 mb-3">
             <Sparkles className="h-4 w-4 text-primary animate-pulse" />
