@@ -12,20 +12,19 @@ import {
   BarChart3,
   Users,
   Zap,
-  
   Star,
   ShieldCheck,
   TrendingUp,
+  Sparkles,
 } from "lucide-react";
 
 const Marketing = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* ── NAVBAR ── */}
-      <nav className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
+      <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 h-16">
           <Logo />
-
           <div className="flex items-center gap-3">
             <Button variant="outline" size="sm" asChild>
               <Link to="/auth">Open a Shop</Link>
@@ -41,28 +40,35 @@ const Marketing = () => {
       </nav>
 
       {/* ── HERO ── */}
-      <section className="relative overflow-hidden py-24 md:py-36 px-4">
-        <div className="absolute inset-0 bg-grid opacity-20" />
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/80 to-background" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] bg-primary/8 blur-[140px] rounded-full pointer-events-none" />
+      <section className="relative overflow-hidden py-28 md:py-40 px-4">
+        {/* Background layers */}
+        <div className="absolute inset-0 bg-grid opacity-15" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/70 to-background" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[700px] bg-primary/10 blur-[160px] rounded-full pointer-events-none animate-pulse-slow" />
+        <div className="absolute bottom-0 left-1/4 w-[500px] h-[400px] bg-secondary/8 blur-[120px] rounded-full pointer-events-none animate-pulse-slow" style={{ animationDelay: '2s' }} />
+
+        {/* Floating accent orbs */}
+        <div className="absolute top-20 right-[15%] w-2 h-2 rounded-full bg-primary/60 animate-float" />
+        <div className="absolute top-40 left-[10%] w-1.5 h-1.5 rounded-full bg-secondary/50 animate-float-delayed" />
+        <div className="absolute bottom-32 right-[25%] w-1 h-1 rounded-full bg-primary/40 animate-float" style={{ animationDelay: '1s' }} />
 
         <div className="relative z-10 max-w-4xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary text-sm font-medium mb-8">
-            <Zap className="h-4 w-4" />
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary text-sm font-medium mb-8 backdrop-blur-sm">
+            <Zap className="h-4 w-4 animate-pulse" />
             Now Live — Fashion Street is Open
           </div>
 
-          <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-4 text-glow">
+          <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-5 text-glow-strong">
             From Scroll
             <br />
             <span className="text-primary">to Stroll.</span>
           </h1>
 
-          <p className="font-display text-xl md:text-2xl lg:text-3xl font-semibold text-foreground/90 mb-6">
+          <p className="font-display text-xl md:text-2xl lg:text-3xl font-semibold text-foreground/85 mb-6">
             Walk the city. Play the shops. Earn real rewards.
           </p>
 
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
+          <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed">
             Virtual Shop City is a browser-based 3D world where you walk through real branded
             streets, complete missions, earn coins, and redeem{" "}
             <strong className="text-foreground">real discount coupons</strong> — no download required.
@@ -84,11 +90,16 @@ const Marketing = () => {
 
       {/* ── DEMO VIDEO ── */}
       <section className="relative py-16 md:py-24 px-4">
-      <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+            <span className="text-xs font-display uppercase tracking-widest text-primary/70">Preview</span>
+            <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+          </div>
           <h2 className="font-display text-3xl md:text-4xl font-bold text-center mb-10 text-glow">
             See It in Action
           </h2>
-          <div className="relative aspect-video rounded-xl border border-border bg-card overflow-hidden">
+          <div className="relative aspect-video rounded-2xl border border-primary/20 bg-card overflow-hidden video-glow">
             <video
               className="w-full h-full object-cover"
               autoPlay
@@ -97,14 +108,19 @@ const Marketing = () => {
               playsInline
               src={demoVideo}
             />
+            {/* Corner accents */}
+            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary/50 rounded-tl-2xl" />
+            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary/50 rounded-tr-2xl" />
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-primary/50 rounded-bl-2xl" />
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary/50 rounded-br-2xl" />
           </div>
         </div>
       </section>
 
       {/* ── HOW IT WORKS (Players) ── */}
-      <section className="py-16 md:py-24 px-4" id="players">
+      <section className="py-20 md:py-28 px-4 border-t section-divider" id="players">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary text-xs font-display uppercase tracking-widest mb-4">
               <Gamepad2 className="h-3.5 w-3.5" />
               For Players
@@ -112,41 +128,45 @@ const Marketing = () => {
             <h2 className="font-display text-3xl md:text-5xl font-bold text-glow">
               Play. Earn. Save Money.
             </h2>
-            <p className="text-muted-foreground mt-4 max-w-xl mx-auto">
+            <p className="text-muted-foreground mt-4 max-w-xl mx-auto leading-relaxed">
               Explore Fashion Street in 3D, complete missions, and use your earned coins to
               unlock real coupons from real brands.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
               {
                 icon: Store,
                 title: "Explore Shops",
                 desc: "Walk into real branded storefronts and browse actual products on showcase walls.",
+                delay: 0,
               },
               {
                 icon: Skull,
                 title: "Survive & Answer",
                 desc: "Escape zombies, dodge traps, reach the target shop — then answer questions about what you found.",
+                delay: 1,
               },
               {
                 icon: Ghost,
                 title: "Hunt Ghosts",
                 desc: "Use your flashlight to reveal and capture ghosts hiding in the darkness. Watch out for jumpscares.",
+                delay: 2,
               },
               {
                 icon: Coins,
                 title: "Redeem Coupons",
                 desc: "Spend earned coins on real discount codes from the merchants on the street.",
+                delay: 3,
               },
             ].map((f) => (
               <div
                 key={f.title}
-                className="cyber-card flex flex-col items-center text-center gap-3"
+                className="cyber-card flex flex-col items-center text-center gap-4 group"
               >
-                <div className="w-12 h-12 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center">
-                  <f.icon className="h-6 w-6 text-primary" />
+                <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center transition-all duration-300 group-hover:bg-primary/20 group-hover:scale-110 group-hover:border-primary/40">
+                  <f.icon className="h-7 w-7 text-primary transition-transform duration-300 group-hover:scale-110" />
                 </div>
                 <h3 className="font-display text-lg font-semibold">{f.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
@@ -154,7 +174,7 @@ const Marketing = () => {
             ))}
           </div>
 
-          <div className="text-center mt-10">
+          <div className="text-center mt-12">
             <Button variant="hero" size="lg" asChild>
               <Link to="/city-map">
                 Start Playing Now
@@ -166,11 +186,14 @@ const Marketing = () => {
       </section>
 
       {/* ── MISSIONS BREAKDOWN ── */}
-      <section className="py-16 md:py-24 px-4 border-t border-border">
+      <section className="py-20 md:py-28 px-4 border-t section-divider">
         <div className="max-w-5xl mx-auto">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-center mb-12 text-glow">
+          <h2 className="font-display text-3xl md:text-4xl font-bold text-center mb-4 text-glow">
             3 Mission Types. Unlimited Fun.
           </h2>
+          <p className="text-muted-foreground text-center max-w-lg mx-auto mb-14">
+            Each mission pushes you into the shops — that's how you discover the brands and earn rewards.
+          </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
@@ -179,23 +202,33 @@ const Marketing = () => {
                 title: "Zombie Escape",
                 desc: "Zombies invade Fashion Street. Escape them, dodge fire pits, swinging axes, and thorns. Reach the target shop, then answer questions about what's inside to complete the mission.",
                 color: "text-destructive",
+                borderHover: "hover:border-destructive/40",
+                glow: "hover:shadow-[0_0_30px_hsl(0_84%_60%/0.15)]",
               },
               {
                 icon: Ghost,
                 title: "Ghost Hunt",
                 desc: "Use your EMF detector to locate invisible ghosts, reveal them with your flashlight, and capture them before time runs out. Watch out for jumpscares.",
                 color: "text-secondary",
+                borderHover: "hover:border-secondary/40",
+                glow: "hover:shadow-[0_0_30px_hsl(270_60%_60%/0.15)]",
               },
               {
                 icon: Zap,
                 title: "Mirror World",
                 desc: "The street flips into a dark twisted dimension. Find reality anchors to escape before time runs out. Avoid mirror shadows that stalk you.",
                 color: "text-accent",
+                borderHover: "hover:border-accent/40",
+                glow: "hover:shadow-[0_0_30px_hsl(174_72%_40%/0.15)]",
               },
             ].map((m) => (
-              <div key={m.title} className="cyber-card flex flex-col gap-4 items-center text-center">
-                <div className="w-12 h-12 rounded-lg bg-card border border-border flex items-center justify-center">
-                  <m.icon className={`h-6 w-6 ${m.color}`} />
+              <div
+                key={m.title}
+                className={`relative overflow-hidden rounded-xl border border-border bg-card p-7 flex flex-col gap-5 items-center text-center transition-all duration-500 ${m.borderHover} ${m.glow} group`}
+              >
+                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
+                <div className="w-14 h-14 rounded-xl bg-card border border-border flex items-center justify-center transition-all duration-300 group-hover:scale-110">
+                  <m.icon className={`h-7 w-7 ${m.color} transition-transform duration-300`} />
                 </div>
                 <div>
                   <h3 className="font-display text-lg font-semibold mb-2">{m.title}</h3>
@@ -208,23 +241,23 @@ const Marketing = () => {
       </section>
 
       {/* ── FOR MERCHANTS ── */}
-      <section className="py-16 md:py-24 px-4 border-t border-border" id="merchants">
+      <section className="py-20 md:py-28 px-4 border-t section-divider" id="merchants">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-secondary/30 bg-secondary/5 text-secondary text-xs font-display uppercase tracking-widest mb-4">
               <Store className="h-3.5 w-3.5" />
               For Merchants
             </div>
             <h2 className="font-display text-3xl md:text-5xl font-bold">
-              Your Brand. <span className="text-secondary">In 3D.</span>
+              Your Brand. <span className="text-secondary text-glow-secondary">In 3D.</span>
             </h2>
-            <p className="text-muted-foreground mt-4 max-w-xl mx-auto">
+            <p className="text-muted-foreground mt-4 max-w-xl mx-auto leading-relaxed">
               Rent a spot on Fashion Street and get a fully branded 3D storefront.
               Players are literally required to explore your shop to complete missions.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
               {
                 icon: Store,
@@ -259,22 +292,19 @@ const Marketing = () => {
             ].map((f) => (
               <div
                 key={f.title}
-                className="relative overflow-hidden rounded-lg border border-border bg-card p-6 transition-all duration-300 hover:border-secondary/50"
-                style={{ boxShadow: "none" }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.boxShadow =
-                    "0 0 20px hsl(270 60% 60% / 0.2)")
-                }
-                onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
+                className="relative overflow-hidden rounded-xl border border-border bg-card p-6 transition-all duration-500 hover:border-secondary/40 hover:shadow-[0_0_30px_hsl(270_60%_60%/0.12)] group"
               >
-                <f.icon className="h-8 w-8 text-secondary mb-3" />
-                <h3 className="font-display text-lg font-semibold mb-1">{f.title}</h3>
+                <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-secondary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="w-12 h-12 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center mb-4 transition-all duration-300 group-hover:bg-secondary/20 group-hover:scale-105">
+                  <f.icon className="h-6 w-6 text-secondary" />
+                </div>
+                <h3 className="font-display text-lg font-semibold mb-1.5">{f.title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
 
-          <div className="text-center mt-10">
+          <div className="text-center mt-12">
             <Button variant="secondary" size="lg" asChild>
               <Link to="/auth">
                 Open a Shop
@@ -286,19 +316,20 @@ const Marketing = () => {
       </section>
 
       {/* ── SOCIAL PROOF / STATS ── */}
-      <section className="py-16 md:py-20 px-4 border-t border-border">
+      <section className="py-20 md:py-24 px-4 border-t section-divider">
         <div className="max-w-3xl mx-auto">
-          <div className="grid grid-cols-3 gap-6 text-center">
+          <div className="grid grid-cols-3 gap-8 text-center">
             {[
-              { value: "Free", label: "To Play" },
-              { value: "100%", label: "Browser-Based" },
-              { value: "Real", label: "Discount Coupons" },
+              { value: "Free", label: "To Play", icon: Sparkles },
+              { value: "100%", label: "Browser-Based", icon: Zap },
+              { value: "Real", label: "Discount Coupons", icon: Coins },
             ].map((s) => (
-              <div key={s.label}>
-                <div className="font-display text-3xl md:text-4xl font-bold text-primary text-glow">
+              <div key={s.label} className="flex flex-col items-center gap-2">
+                <s.icon className="h-5 w-5 text-primary/50 mb-1" />
+                <div className="font-display text-3xl md:text-5xl font-bold text-primary text-glow-strong">
                   {s.value}
                 </div>
-                <div className="text-sm text-muted-foreground mt-1">{s.label}</div>
+                <div className="text-sm text-muted-foreground">{s.label}</div>
               </div>
             ))}
           </div>
@@ -306,14 +337,16 @@ const Marketing = () => {
       </section>
 
       {/* ── FINAL CTA ── */}
-      <section className="relative py-20 md:py-28 px-4 border-t border-border overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent" />
+      <section className="relative py-24 md:py-32 px-4 border-t section-divider overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-t from-primary/8 via-transparent to-transparent" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-primary/6 blur-[140px] rounded-full pointer-events-none" />
+        
         <div className="relative z-10 max-w-2xl mx-auto text-center">
-          <Star className="h-10 w-10 text-primary mx-auto mb-6 animate-pulse" />
-          <h2 className="font-display text-3xl md:text-5xl font-bold mb-4 text-glow">
+          <Star className="h-12 w-12 text-primary mx-auto mb-8 animate-pulse" />
+          <h2 className="font-display text-3xl md:text-5xl font-bold mb-5 text-glow-strong">
             Fashion Street is Live Now
           </h2>
-          <p className="text-muted-foreground mb-8 text-lg">
+          <p className="text-muted-foreground mb-10 text-lg leading-relaxed">
             Walk in, explore the shops, complete missions, and start earning real rewards.
             No download. No signup required to explore.
           </p>
