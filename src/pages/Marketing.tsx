@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import demoVideo from "@/assets/demo-video.mp4";
 import Logo from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +12,7 @@ import {
   BarChart3,
   Users,
   Zap,
-  Play,
+  
   Star,
   ShieldCheck,
   TrendingUp,
@@ -83,17 +84,19 @@ const Marketing = () => {
 
       {/* ── DEMO VIDEO ── */}
       <section className="relative py-16 md:py-24 px-4">
-        <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto">
           <h2 className="font-display text-3xl md:text-4xl font-bold text-center mb-10 text-glow">
             See It in Action
           </h2>
-          <div className="relative aspect-video rounded-xl border border-border bg-card overflow-hidden group cursor-pointer">
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/60 backdrop-blur-sm transition-all group-hover:bg-muted/40">
-              <div className="w-20 h-20 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center glow-primary-strong mb-4 transition-transform group-hover:scale-110">
-                <Play className="h-8 w-8 text-primary ml-1" />
-              </div>
-              <p className="text-muted-foreground text-sm">Demo Video Coming Soon</p>
-            </div>
+          <div className="relative aspect-video rounded-xl border border-border bg-card overflow-hidden">
+            <video
+              className="w-full h-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+              src={demoVideo}
+            />
           </div>
         </div>
       </section>
