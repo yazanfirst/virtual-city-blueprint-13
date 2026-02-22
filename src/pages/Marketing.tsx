@@ -84,7 +84,7 @@ const Marketing = () => {
 
       {/* ── DEMO VIDEO ── */}
       <section className="relative py-16 md:py-24 px-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-2xl mx-auto">
           <h2 className="font-display text-3xl md:text-4xl font-bold text-center mb-10 text-glow">
             See It in Action
           </h2>
