@@ -63,7 +63,7 @@ const LowPolyCharacter = ({
   });
 
   return (
-    <group ref={groupRef} position={position} rotation={[0, rotation, 0]}>
+    <group ref={groupRef} position={position} rotation={[0, rotation, 0]} castShadow>
       {/* Head - sphere */}
       <mesh position={[0, 1.55, 0]} material={materials.skin}>
         <sphereGeometry args={[0.22, 12, 10]} />
