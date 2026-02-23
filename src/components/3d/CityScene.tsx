@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useMemo, useRef, useState, useCallback, useEffect } from "react";
+import React, { Suspense, useMemo, useRef, useState, useCallback, useEffect, useLayoutEffect } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
@@ -203,6 +203,19 @@ const cloudPositions = [
   { x: 45, y: 52, z: 15, scale: 1.8 },
   { x: -50, y: 58, z: -50, scale: 2.2 },
   { x: 60, y: 45, z: -20, scale: 1.4 },
+];
+
+const roadDetailPatches = [
+  { x: 0, z: 35, scale: 1.7, rot: 0.3, tone: "#3B4453" },
+  { x: 1.4, z: 12, scale: 1.4, rot: 2.0, tone: "#313A48" },
+  { x: -1.8, z: -8, scale: 1.2, rot: 0.5, tone: "#414B5B" },
+  { x: 0.3, z: -31, scale: 1.9, rot: 1.2, tone: "#343E4B" },
+  { x: -0.4, z: -52, scale: 1.3, rot: 2.7, tone: "#2E3745" },
+  { x: 24, z: 0.4, scale: 1.1, rot: 0.2, tone: "#3A4554" },
+  { x: 37, z: -0.6, scale: 1.4, rot: 0.9, tone: "#303B4A" },
+  { x: 52, z: 0.5, scale: 1.5, rot: 2.5, tone: "#3F4A5A" },
+  { x: -23, z: -0.5, scale: 1.2, rot: 1.6, tone: "#2F3948" },
+  { x: -48, z: 0.2, scale: 1.6, rot: 2.8, tone: "#3C4655" },
 ];
 
 export default function CityScene({
@@ -923,6 +936,36 @@ function CameraUpController({ mirrorWorldActive }: { mirrorWorldActive: boolean 
   return null;
 }
 
+function InstancedRoadDetails({ isNight }: { isNight: boolean }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    const temp = new THREE.Object3D();
+
+    roadDetailPatches.forEach((patch, i) => {
+      temp.position.set(patch.x, 0.018, patch.z);
+      temp.rotation.set(-Math.PI / 2, patch.rot, 0);
+      temp.scale.set(1.8 * patch.scale, 0.9 * patch.scale, 1);
+      temp.updateMatrix();
+      ref.current!.setMatrixAt(i, temp.matrix);
+      ref.current!.setColorAt(i, new THREE.Color(isNight ? patch.tone : "#4A5568"));
+    });
+
+    ref.current.instanceMatrix.needsUpdate = true;
+    if (ref.current.instanceColor) {
+      ref.current.instanceColor.needsUpdate = true;
+    }
+  }, [isNight]);
+
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, roadDetailPatches.length]}>
+      <circleGeometry args={[1, 10]} />
+      <meshStandardMaterial roughness={0.3} metalness={isNight ? 0.25 : 0.1} />
+    </instancedMesh>
+  );
+}
+
 function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer, mirrorWorldActive }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
@@ -960,6 +1003,8 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       <GradientSky isNight={isNight} />
       {!isNight && cloudPositions.map((c, i) => <Cloud key={i} position={[c.x, c.y, c.z]} scale={c.scale} />)}
 
+      <fog attach="fog" args={[isNight ? "#0A1020" : "#D7E8FF", isNight ? 120 : 170, isNight ? 260 : 320]} />
+
       {/* Lighting */}
       <ambientLight intensity={isNight ? 1.3 : 1.0} />
       <hemisphereLight color={isNight ? "#8090B0" : "#ffffff"} groundColor={isNight ? "#4A5A6A" : "#88AA88"} intensity={isNight ? 1.2 : 0.7} />
@@ -968,49 +1013,50 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {/* Ground */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, -10]}>
         <planeGeometry args={[250, 250]} />
-        <meshLambertMaterial color={isNight ? "#2A4A2A" : COLORS.grass} />
+        <meshStandardMaterial color={isNight ? "#1F3323" : COLORS.grass} roughness={0.95} metalness={0.03} />
       </mesh>
 
       {/* === MAIN BOULEVARD (North-South) === */}
       {/* North section */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 32]}>
         <planeGeometry args={[14, 50]} />
-        <meshLambertMaterial color={COLORS.road} />
+        <meshStandardMaterial color={isNight ? "#2D3748" : COLORS.road} roughness={0.7} metalness={isNight ? 0.22 : 0.08} />
       </mesh>
       {/* South section */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -38]}>
         <planeGeometry args={[14, 55]} />
-        <meshLambertMaterial color={COLORS.road} />
+        <meshStandardMaterial color={isNight ? "#2D3748" : COLORS.road} roughness={0.7} metalness={isNight ? 0.22 : 0.08} />
       </mesh>
+      <InstancedRoadDetails isNight={isNight} />
       {/* Lane markings - north */}
       {Array.from({ length: 10 }).map((_, i) => <LaneMarking key={`n-${i}`} position={[0, 0.02, 52 - i * 5]} />)}
       {/* Lane markings - south */}
       {Array.from({ length: 12 }).map((_, i) => <LaneMarking key={`s-${i}`} position={[0, 0.02, -18 - i * 5]} />)}
       {/* Sidewalks */}
-      <mesh position={[-10, 0.12, 32]}><boxGeometry args={[6, 0.24, 50]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
-      <mesh position={[10, 0.12, 32]}><boxGeometry args={[6, 0.24, 50]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
-      <mesh position={[-10, 0.12, -38]}><boxGeometry args={[6, 0.24, 55]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
-      <mesh position={[10, 0.12, -38]}><boxGeometry args={[6, 0.24, 55]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
+      <mesh position={[-10, 0.12, 32]}><boxGeometry args={[6, 0.24, 50]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.92} metalness={0.02} /></mesh>
+      <mesh position={[10, 0.12, 32]}><boxGeometry args={[6, 0.24, 50]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.92} metalness={0.02} /></mesh>
+      <mesh position={[-10, 0.12, -38]}><boxGeometry args={[6, 0.24, 55]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.92} metalness={0.02} /></mesh>
+      <mesh position={[10, 0.12, -38]}><boxGeometry args={[6, 0.24, 55]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.92} metalness={0.02} /></mesh>
 
       {/* === CROSS STREET (East-West) === */}
       {/* East section */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[48, 0.01, 0]}>
         <planeGeometry args={[60, 14]} />
-        <meshLambertMaterial color={COLORS.road} />
+        <meshStandardMaterial color={isNight ? "#2D3748" : COLORS.road} roughness={0.72} metalness={isNight ? 0.22 : 0.08} />
       </mesh>
       {/* West section */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-48, 0.01, 0]}>
         <planeGeometry args={[60, 14]} />
-        <meshLambertMaterial color={COLORS.road} />
+        <meshStandardMaterial color={isNight ? "#2D3748" : COLORS.road} roughness={0.72} metalness={isNight ? 0.22 : 0.08} />
       </mesh>
       {/* Lane markings */}
       {Array.from({ length: 12 }).map((_, i) => <LaneMarking key={`e-${i}`} position={[20 + i * 5, 0.02, 0]} rotation={Math.PI / 2} />)}
       {Array.from({ length: 12 }).map((_, i) => <LaneMarking key={`w-${i}`} position={[-20 - i * 5, 0.02, 0]} rotation={Math.PI / 2} />)}
       {/* Sidewalks */}
-      <mesh position={[48, 0.12, 10]}><boxGeometry args={[60, 0.24, 6]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
-      <mesh position={[48, 0.12, -10]}><boxGeometry args={[60, 0.24, 6]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
-      <mesh position={[-48, 0.12, 10]}><boxGeometry args={[60, 0.24, 6]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
-      <mesh position={[-48, 0.12, -10]}><boxGeometry args={[60, 0.24, 6]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
+      <mesh position={[48, 0.12, 10]}><boxGeometry args={[60, 0.24, 6]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.92} metalness={0.02} /></mesh>
+      <mesh position={[48, 0.12, -10]}><boxGeometry args={[60, 0.24, 6]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.92} metalness={0.02} /></mesh>
+      <mesh position={[-48, 0.12, 10]}><boxGeometry args={[60, 0.24, 6]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.92} metalness={0.02} /></mesh>
+      <mesh position={[-48, 0.12, -10]}><boxGeometry args={[60, 0.24, 6]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.92} metalness={0.02} /></mesh>
 
       {/* === ROUNDABOUT === */}
       <Roundabout isNight={isNight} />
