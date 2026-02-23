@@ -1022,7 +1022,11 @@ function InstancedRoadFromModel({ isNight }: { isNight: boolean }) {
   }
 
   return (
-    <instancedMesh ref={ref} args={[roadGeometry, roadMaterial, roadSegmentInstances.length]} frustumCulled />
+    <instancedMesh
+      ref={ref}
+      args={[roadGeometry, roadMaterial, roadSegmentInstances.length]}
+      frustumCulled={false}
+    />
   );
 }
 
