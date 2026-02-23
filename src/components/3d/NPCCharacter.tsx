@@ -11,7 +11,6 @@ type NPCProps = {
   name?: string;
 };
 
-// Low-poly NPC that walks in one direction and respawns
 export default function NPCCharacter({ 
   startPosition, 
   endPosition, 
@@ -21,21 +20,28 @@ export default function NPCCharacter({
   name = 'Villager'
 }: NPCProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const leftArmRef = useRef<THREE.Mesh>(null);
-  const rightArmRef = useRef<THREE.Mesh>(null);
-  const leftLegRef = useRef<THREE.Mesh>(null);
-  const rightLegRef = useRef<THREE.Mesh>(null);
+  const leftArmRef = useRef<THREE.Group>(null);
+  const rightArmRef = useRef<THREE.Group>(null);
+  const leftLegRef = useRef<THREE.Group>(null);
+  const rightLegRef = useRef<THREE.Group>(null);
   
   const progressRef = useRef(0);
-  const walkPhaseRef = useRef(Math.random() * Math.PI * 2); // Random start phase
+  const walkPhaseRef = useRef(Math.random() * Math.PI * 2);
   const [visible, setVisible] = useState(true);
   const respawnTimerRef = useRef(0);
 
-  const skinColor = useMemo(() => new THREE.Color('#E8B89D'), []);
-  const hairColor = useMemo(() => new THREE.Color(isNight ? '#2A2A3A' : '#3A2A1A'), [isNight]);
-  const clothingMaterial = useMemo(() => new THREE.MeshLambertMaterial({ color: clothingColor }), [clothingColor]);
+  const materials = useMemo(() => ({
+    skin: new THREE.MeshStandardMaterial({ color: '#e8b89d', roughness: 0.7, metalness: 0.05 }),
+    clothing: new THREE.MeshStandardMaterial({ color: clothingColor, roughness: 0.6, metalness: 0.1 }),
+    clothingDark: new THREE.MeshStandardMaterial({ 
+      color: new THREE.Color(clothingColor).multiplyScalar(0.7), roughness: 0.6 
+    }),
+    pants: new THREE.MeshStandardMaterial({ color: '#3a3a4a', roughness: 0.7 }),
+    hair: new THREE.MeshStandardMaterial({ color: isNight ? '#2A2A3A' : '#3A2A1A', roughness: 0.9 }),
+    shoes: new THREE.MeshStandardMaterial({ color: '#2a2a2a', roughness: 0.5, metalness: 0.1 }),
+    eye: new THREE.MeshBasicMaterial({ color: isNight ? '#6A8ACC' : '#3A3A3A' }),
+  }), [clothingColor, isNight]);
 
-  // Calculate facing direction once
   const facingAngle = useMemo(() => {
     return Math.atan2(
       endPosition[0] - startPosition[0],
@@ -46,10 +52,9 @@ export default function NPCCharacter({
   useFrame((_, delta) => {
     if (!groupRef.current) return;
 
-    // If not visible, wait for respawn
     if (!visible) {
       respawnTimerRef.current += delta;
-      if (respawnTimerRef.current > 3 + Math.random() * 4) { // 3-7 seconds respawn
+      if (respawnTimerRef.current > 3 + Math.random() * 4) {
         respawnTimerRef.current = 0;
         progressRef.current = 0;
         setVisible(true);
@@ -57,23 +62,19 @@ export default function NPCCharacter({
       return;
     }
 
-    // Move forward only
     progressRef.current += speed * delta * 60;
     
-    // When reaching the end, disappear
     if (progressRef.current >= 1) {
       setVisible(false);
       return;
     }
 
-    // Interpolate position
     const x = startPosition[0] + (endPosition[0] - startPosition[0]) * progressRef.current;
     const z = startPosition[2] + (endPosition[2] - startPosition[2]) * progressRef.current;
     
     groupRef.current.position.set(x, startPosition[1], z);
     groupRef.current.rotation.y = facingAngle;
 
-    // Walking animation - smooth and natural
     walkPhaseRef.current += delta * 6;
     const swing = Math.sin(walkPhaseRef.current) * 0.35;
 
@@ -87,59 +88,86 @@ export default function NPCCharacter({
 
   return (
     <group ref={groupRef} position={startPosition}>
-      {/* Body */}
-      <mesh position={[0, 0.7, 0]}>
-        <boxGeometry args={[0.35, 0.5, 0.2]} />
-        <primitive object={clothingMaterial} attach="material" />
-      </mesh>
-      
       {/* Head */}
-      <mesh position={[0, 1.15, 0]}>
-        <boxGeometry args={[0.25, 0.3, 0.25]} />
-        <meshLambertMaterial color={skinColor} />
+      <mesh position={[0, 1.18, 0]} material={materials.skin}>
+        <sphereGeometry args={[0.17, 10, 8]} />
       </mesh>
-      
       {/* Hair */}
-      <mesh position={[0, 1.35, 0]}>
-        <boxGeometry args={[0.27, 0.12, 0.27]} />
-        <meshLambertMaterial color={hairColor} />
+      <mesh position={[0, 1.3, -0.02]} material={materials.hair}>
+        <sphereGeometry args={[0.18, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2]} />
       </mesh>
       
       {/* Eyes */}
-      <mesh position={[-0.06, 1.18, 0.13]}>
-        <boxGeometry args={[0.04, 0.04, 0.02]} />
-        <meshBasicMaterial color={isNight ? '#6A8ACC' : '#3A3A3A'} />
+      <mesh position={[-0.06, 1.2, 0.14]} material={materials.eye}>
+        <sphereGeometry args={[0.025, 6, 6]} />
       </mesh>
-      <mesh position={[0.06, 1.18, 0.13]}>
-        <boxGeometry args={[0.04, 0.04, 0.02]} />
-        <meshBasicMaterial color={isNight ? '#6A8ACC' : '#3A3A3A'} />
+      <mesh position={[0.06, 1.2, 0.14]} material={materials.eye}>
+        <sphereGeometry args={[0.025, 6, 6]} />
+      </mesh>
+      
+      {/* Neck */}
+      <mesh position={[0, 1.0, 0]} material={materials.skin}>
+        <cylinderGeometry args={[0.06, 0.07, 0.06, 6]} />
+      </mesh>
+      
+      {/* Torso */}
+      <mesh position={[0, 0.72, 0]} material={materials.clothing}>
+        <capsuleGeometry args={[0.15, 0.28, 4, 8]} />
       </mesh>
       
       {/* Left Arm */}
-      <mesh ref={leftArmRef} position={[-0.25, 0.65, 0]}>
-        <boxGeometry args={[0.12, 0.4, 0.12]} />
-        <meshLambertMaterial color={skinColor} />
-      </mesh>
+      <group ref={leftArmRef} position={[-0.22, 0.88, 0]}>
+        <mesh position={[0, -0.1, 0]} material={materials.clothing}>
+          <capsuleGeometry args={[0.05, 0.15, 4, 6]} />
+        </mesh>
+        <mesh position={[0, -0.28, 0]} material={materials.skin}>
+          <capsuleGeometry args={[0.045, 0.1, 4, 6]} />
+        </mesh>
+        <mesh position={[0, -0.38, 0]} material={materials.skin}>
+          <sphereGeometry args={[0.04, 6, 6]} />
+        </mesh>
+      </group>
       
       {/* Right Arm */}
-      <mesh ref={rightArmRef} position={[0.25, 0.65, 0]}>
-        <boxGeometry args={[0.12, 0.4, 0.12]} />
-        <meshLambertMaterial color={skinColor} />
-      </mesh>
+      <group ref={rightArmRef} position={[0.22, 0.88, 0]}>
+        <mesh position={[0, -0.1, 0]} material={materials.clothing}>
+          <capsuleGeometry args={[0.05, 0.15, 4, 6]} />
+        </mesh>
+        <mesh position={[0, -0.28, 0]} material={materials.skin}>
+          <capsuleGeometry args={[0.045, 0.1, 4, 6]} />
+        </mesh>
+        <mesh position={[0, -0.38, 0]} material={materials.skin}>
+          <sphereGeometry args={[0.04, 6, 6]} />
+        </mesh>
+      </group>
       
       {/* Left Leg */}
-      <mesh ref={leftLegRef} position={[-0.1, 0.25, 0]}>
-        <boxGeometry args={[0.12, 0.35, 0.12]} />
-        <primitive object={clothingMaterial} attach="material" />
-      </mesh>
+      <group ref={leftLegRef} position={[-0.08, 0.35, 0]}>
+        <mesh position={[0, -0.03, 0]} material={materials.pants}>
+          <capsuleGeometry args={[0.06, 0.15, 4, 6]} />
+        </mesh>
+        <mesh position={[0, -0.22, 0]} material={materials.pants}>
+          <capsuleGeometry args={[0.05, 0.1, 4, 6]} />
+        </mesh>
+        <mesh position={[0, -0.32, 0.03]} material={materials.shoes}>
+          <boxGeometry args={[0.1, 0.06, 0.16]} />
+        </mesh>
+      </group>
       
       {/* Right Leg */}
-      <mesh ref={rightLegRef} position={[0.1, 0.25, 0]}>
-        <boxGeometry args={[0.12, 0.35, 0.12]} />
-        <primitive object={clothingMaterial} attach="material" />
-      </mesh>
+      <group ref={rightLegRef} position={[0.08, 0.35, 0]}>
+        <mesh position={[0, -0.03, 0]} material={materials.pants}>
+          <capsuleGeometry args={[0.06, 0.15, 4, 6]} />
+        </mesh>
+        <mesh position={[0, -0.22, 0]} material={materials.pants}>
+          <capsuleGeometry args={[0.05, 0.1, 4, 6]} />
+        </mesh>
+        <mesh position={[0, -0.32, 0.03]} material={materials.shoes}>
+          <boxGeometry args={[0.1, 0.06, 0.16]} />
+        </mesh>
+      </group>
 
-      {/* Night glow effect */}
+      {/* Night glow */}
       {isNight && (
         <pointLight position={[0, 1, 0]} intensity={0.3} distance={3} color="#FFE4B5" />
       )}

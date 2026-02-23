@@ -18,173 +18,170 @@ const LowPolyCharacter = ({
   isWalking = false,
 }: LowPolyCharacterProps) => {
   const groupRef = useRef<THREE.Group>(null);
-  const leftArmRef = useRef<THREE.Mesh>(null);
-  const rightArmRef = useRef<THREE.Mesh>(null);
-  const leftLegRef = useRef<THREE.Mesh>(null);
-  const rightLegRef = useRef<THREE.Mesh>(null);
+  const leftArmRef = useRef<THREE.Group>(null);
+  const rightArmRef = useRef<THREE.Group>(null);
+  const leftLegRef = useRef<THREE.Group>(null);
+  const rightLegRef = useRef<THREE.Group>(null);
 
-  // Memoized materials for performance
   const materials = useMemo(() => ({
-    skin: new THREE.MeshStandardMaterial({ color: '#f5d0c5' }),
-    clothing: new THREE.MeshStandardMaterial({ color: clothingColor }),
-    hood: new THREE.MeshStandardMaterial({ color: '#2d3748' }),
-    pants: new THREE.MeshStandardMaterial({ color: '#1a202c' }),
-    shoes: new THREE.MeshStandardMaterial({ color: '#2d2d2d' }),
-    eyeWhite: new THREE.MeshStandardMaterial({ color: '#ffffff' }),
-    eyeGlow: new THREE.MeshStandardMaterial({
-      color: '#00ffff',
-      emissive: '#00ffff',
-      emissiveIntensity: isNight ? 2 : 0,
+    skin: new THREE.MeshStandardMaterial({ color: '#e8b89d', roughness: 0.7, metalness: 0.05 }),
+    clothing: new THREE.MeshStandardMaterial({ color: clothingColor, roughness: 0.6, metalness: 0.1 }),
+    clothingDark: new THREE.MeshStandardMaterial({ 
+      color: new THREE.Color(clothingColor).multiplyScalar(0.7), roughness: 0.6, metalness: 0.1 
     }),
+    pants: new THREE.MeshStandardMaterial({ color: '#2d3748', roughness: 0.7, metalness: 0.05 }),
+    shoes: new THREE.MeshStandardMaterial({ color: '#1a1a2e', roughness: 0.5, metalness: 0.15 }),
+    hair: new THREE.MeshStandardMaterial({ color: '#2a1810', roughness: 0.9, metalness: 0 }),
+    eyeWhite: new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 }),
+    eyeIris: new THREE.MeshStandardMaterial({
+      color: isNight ? '#00ffff' : '#3a6ea5',
+      emissive: isNight ? '#00ffff' : '#000000',
+      emissiveIntensity: isNight ? 1.5 : 0,
+      roughness: 0.2,
+    }),
+    mouth: new THREE.MeshStandardMaterial({ color: '#8b5e5e', roughness: 0.8 }),
   }), [clothingColor, isNight]);
 
-  // Animation - idle bobbing or walking
   useFrame((state) => {
     const time = state.clock.elapsedTime;
     
     if (groupRef.current) {
       if (isWalking) {
-        // Walking bob - faster and more pronounced
-        groupRef.current.position.y = position[1] + Math.abs(Math.sin(time * 8)) * 0.08;
+        groupRef.current.position.y = position[1] + Math.abs(Math.sin(time * 8)) * 0.06;
       } else {
-        // Idle bob - subtle breathing
-        groupRef.current.position.y = position[1] + Math.sin(time * 2) * 0.03;
+        groupRef.current.position.y = position[1] + Math.sin(time * 2) * 0.02;
       }
     }
 
-    // Arm animation
-    if (leftArmRef.current && rightArmRef.current) {
-      if (isWalking) {
-        // Walking arm swing - opposite to legs
-        leftArmRef.current.rotation.x = Math.sin(time * 8) * 0.6;
-        rightArmRef.current.rotation.x = Math.sin(time * 8 + Math.PI) * 0.6;
-      } else {
-        // Idle arm sway
-        leftArmRef.current.rotation.x = Math.sin(time * 1.5) * 0.1;
-        rightArmRef.current.rotation.x = Math.sin(time * 1.5 + Math.PI) * 0.1;
-      }
-    }
+    const swingSpeed = isWalking ? 8 : 1.5;
+    const swingAmount = isWalking ? 0.6 : 0.08;
 
-    // Leg animation
-    if (leftLegRef.current && rightLegRef.current) {
-      if (isWalking) {
-        // Walking leg swing
-        leftLegRef.current.rotation.x = Math.sin(time * 8 + Math.PI) * 0.5;
-        rightLegRef.current.rotation.x = Math.sin(time * 8) * 0.5;
-      } else {
-        // Idle - legs stay still
-        leftLegRef.current.rotation.x = 0;
-        rightLegRef.current.rotation.x = 0;
-      }
-    }
+    if (leftArmRef.current) leftArmRef.current.rotation.x = Math.sin(time * swingSpeed) * swingAmount;
+    if (rightArmRef.current) rightArmRef.current.rotation.x = Math.sin(time * swingSpeed + Math.PI) * swingAmount;
+    if (leftLegRef.current) leftLegRef.current.rotation.x = Math.sin(time * swingSpeed + Math.PI) * (isWalking ? 0.5 : 0);
+    if (rightLegRef.current) rightLegRef.current.rotation.x = Math.sin(time * swingSpeed) * (isWalking ? 0.5 : 0);
   });
 
   return (
     <group ref={groupRef} position={position} rotation={[0, rotation, 0]}>
-      {/* Hood/Hair - dark curved shape behind head */}
-      <mesh position={[0, 1.55, -0.1]} material={materials.hood}>
-        <boxGeometry args={[0.5, 0.45, 0.35]} />
+      {/* Head - sphere */}
+      <mesh position={[0, 1.55, 0]} material={materials.skin}>
+        <sphereGeometry args={[0.22, 12, 10]} />
       </mesh>
 
-      {/* Head */}
-      <mesh position={[0, 1.5, 0]} material={materials.skin}>
-        <boxGeometry args={[0.4, 0.45, 0.4]} />
+      {/* Hair - rounded cap on top */}
+      <mesh position={[0, 1.7, -0.04]} material={materials.hair}>
+        <sphereGeometry args={[0.23, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+      </mesh>
+      {/* Hair back */}
+      <mesh position={[0, 1.55, -0.1]} material={materials.hair}>
+        <sphereGeometry args={[0.2, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
       </mesh>
 
-      {/* Left Eye */}
-      <mesh position={[-0.1, 1.52, 0.2]} material={isNight ? materials.eyeGlow : materials.eyeWhite}>
-        <sphereGeometry args={[0.06, 8, 8]} />
+      {/* Eyes */}
+      <mesh position={[-0.08, 1.57, 0.18]} material={materials.eyeWhite}>
+        <sphereGeometry args={[0.04, 8, 6]} />
+      </mesh>
+      <mesh position={[0.08, 1.57, 0.18]} material={materials.eyeWhite}>
+        <sphereGeometry args={[0.04, 8, 6]} />
+      </mesh>
+      {/* Pupils */}
+      <mesh position={[-0.08, 1.57, 0.215]} material={materials.eyeIris}>
+        <sphereGeometry args={[0.025, 6, 6]} />
+      </mesh>
+      <mesh position={[0.08, 1.57, 0.215]} material={materials.eyeIris}>
+        <sphereGeometry args={[0.025, 6, 6]} />
       </mesh>
 
-      {/* Right Eye */}
-      <mesh position={[0.1, 1.52, 0.2]} material={isNight ? materials.eyeGlow : materials.eyeWhite}>
-        <sphereGeometry args={[0.06, 8, 8]} />
+      {/* Mouth */}
+      <mesh position={[0, 1.46, 0.2]} material={materials.mouth}>
+        <boxGeometry args={[0.08, 0.02, 0.02]} />
       </mesh>
 
-      {/* Eye pupils (only visible in day) */}
-      {!isNight && (
-        <>
-          <mesh position={[-0.1, 1.52, 0.25]}>
-            <sphereGeometry args={[0.03, 6, 6]} />
-            <meshBasicMaterial color="#1a1a1a" />
-          </mesh>
-          <mesh position={[0.1, 1.52, 0.25]}>
-            <sphereGeometry args={[0.03, 6, 6]} />
-            <meshBasicMaterial color="#1a1a1a" />
-          </mesh>
-        </>
-      )}
-
-      {/* Torso/Hoodie */}
-      <mesh position={[0, 1.0, 0]} material={materials.clothing}>
-        <boxGeometry args={[0.5, 0.6, 0.3]} />
+      {/* Neck */}
+      <mesh position={[0, 1.35, 0]} material={materials.skin}>
+        <cylinderGeometry args={[0.08, 0.1, 0.1, 8]} />
       </mesh>
 
-      {/* Hood detail on torso */}
-      <mesh position={[0, 1.25, 0.12]} material={materials.hood}>
-        <boxGeometry args={[0.3, 0.15, 0.1]} />
+      {/* Torso - capsule-like (cylinder + spheres) */}
+      <mesh position={[0, 1.05, 0]} material={materials.clothing}>
+        <cylinderGeometry args={[0.22, 0.2, 0.5, 10]} />
+      </mesh>
+      {/* Torso top cap */}
+      <mesh position={[0, 1.3, 0]} material={materials.clothing}>
+        <sphereGeometry args={[0.22, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2]} />
+      </mesh>
+      {/* Torso bottom */}
+      <mesh position={[0, 0.8, 0]} material={materials.clothingDark}>
+        <sphereGeometry args={[0.2, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2]} />
+      </mesh>
+
+      {/* Hoodie collar detail */}
+      <mesh position={[0, 1.32, 0.1]} material={materials.clothingDark}>
+        <boxGeometry args={[0.2, 0.08, 0.08]} />
       </mesh>
 
       {/* Left Arm */}
-      <mesh
-        ref={leftArmRef}
-        position={[-0.35, 1.0, 0]}
-        material={materials.clothing}
-      >
-        <boxGeometry args={[0.15, 0.5, 0.15]} />
-      </mesh>
-
-      {/* Left Hand */}
-      <mesh position={[-0.35, 0.7, 0]} material={materials.skin}>
-        <boxGeometry args={[0.12, 0.12, 0.12]} />
-      </mesh>
+      <group ref={leftArmRef} position={[-0.3, 1.2, 0]}>
+        {/* Upper arm */}
+        <mesh position={[0, -0.12, 0]} material={materials.clothing}>
+          <capsuleGeometry args={[0.07, 0.2, 4, 8]} />
+        </mesh>
+        {/* Forearm */}
+        <mesh position={[0, -0.35, 0]} material={materials.skin}>
+          <capsuleGeometry args={[0.06, 0.15, 4, 8]} />
+        </mesh>
+        {/* Hand */}
+        <mesh position={[0, -0.48, 0]} material={materials.skin}>
+          <sphereGeometry args={[0.055, 6, 6]} />
+        </mesh>
+      </group>
 
       {/* Right Arm */}
-      <mesh
-        ref={rightArmRef}
-        position={[0.35, 1.0, 0]}
-        material={materials.clothing}
-      >
-        <boxGeometry args={[0.15, 0.5, 0.15]} />
-      </mesh>
-
-      {/* Right Hand */}
-      <mesh position={[0.35, 0.7, 0]} material={materials.skin}>
-        <boxGeometry args={[0.12, 0.12, 0.12]} />
-      </mesh>
+      <group ref={rightArmRef} position={[0.3, 1.2, 0]}>
+        <mesh position={[0, -0.12, 0]} material={materials.clothing}>
+          <capsuleGeometry args={[0.07, 0.2, 4, 8]} />
+        </mesh>
+        <mesh position={[0, -0.35, 0]} material={materials.skin}>
+          <capsuleGeometry args={[0.06, 0.15, 4, 8]} />
+        </mesh>
+        <mesh position={[0, -0.48, 0]} material={materials.skin}>
+          <sphereGeometry args={[0.055, 6, 6]} />
+        </mesh>
+      </group>
 
       {/* Left Leg */}
-      <group position={[-0.12, 0.35, 0]}>
-        <mesh ref={leftLegRef} material={materials.pants}>
-          <boxGeometry args={[0.18, 0.5, 0.2]} />
+      <group ref={leftLegRef} position={[-0.1, 0.55, 0]}>
+        {/* Upper leg */}
+        <mesh position={[0, -0.05, 0]} material={materials.pants}>
+          <capsuleGeometry args={[0.08, 0.2, 4, 8]} />
+        </mesh>
+        {/* Lower leg */}
+        <mesh position={[0, -0.3, 0]} material={materials.pants}>
+          <capsuleGeometry args={[0.065, 0.15, 4, 8]} />
+        </mesh>
+        {/* Shoe */}
+        <mesh position={[0, -0.45, 0.04]} material={materials.shoes}>
+          <boxGeometry args={[0.13, 0.08, 0.2]} />
         </mesh>
       </group>
 
       {/* Right Leg */}
-      <group position={[0.12, 0.35, 0]}>
-        <mesh ref={rightLegRef} material={materials.pants}>
-          <boxGeometry args={[0.18, 0.5, 0.2]} />
+      <group ref={rightLegRef} position={[0.1, 0.55, 0]}>
+        <mesh position={[0, -0.05, 0]} material={materials.pants}>
+          <capsuleGeometry args={[0.08, 0.2, 4, 8]} />
+        </mesh>
+        <mesh position={[0, -0.3, 0]} material={materials.pants}>
+          <capsuleGeometry args={[0.065, 0.15, 4, 8]} />
+        </mesh>
+        <mesh position={[0, -0.45, 0.04]} material={materials.shoes}>
+          <boxGeometry args={[0.13, 0.08, 0.2]} />
         </mesh>
       </group>
 
-      {/* Left Foot */}
-      <mesh position={[-0.12, 0.08, 0.05]} material={materials.shoes}>
-        <boxGeometry args={[0.18, 0.1, 0.28]} />
-      </mesh>
-
-      {/* Right Foot */}
-      <mesh position={[0.12, 0.08, 0.05]} material={materials.shoes}>
-        <boxGeometry args={[0.18, 0.1, 0.28]} />
-      </mesh>
-
-      {/* Night glow effect under character */}
+      {/* Night glow */}
       {isNight && (
-        <pointLight
-          position={[0, 0.2, 0]}
-          color="#00ffff"
-          intensity={0.5}
-          distance={2}
-        />
+        <pointLight position={[0, 0.5, 0]} color="#00ffff" intensity={0.4} distance={2} />
       )}
     </group>
   );
