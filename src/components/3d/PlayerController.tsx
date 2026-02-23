@@ -183,8 +183,8 @@ const PlayerController = ({
   }, [position]);
 
   // Camera settings - PUBG style
-  const cameraDistance = viewMode === "firstPerson" ? 0 : 10;
-  const cameraHeight = viewMode === "firstPerson" ? 2.5 : 4;
+  const cameraDistance = viewMode === "firstPerson" ? 0 : 6;
+  const cameraHeight = viewMode === "firstPerson" ? 2.5 : 2.5;
 
   const getSurfaceHeight = useCallback((x: number, z: number): { height: number; requiresJump: boolean } => {
     let surface = { height: 0.25, requiresJump: false };
@@ -550,7 +550,7 @@ const PlayerController = ({
 
       camera.position.set(camX, camY, camZ);
       // Look at player upper body, not feet
-      camera.lookAt(playerPos.x, playerPos.y + 1.8, playerPos.z);
+      camera.lookAt(playerPos.x, playerPos.y + 1.5, playerPos.z);
     }
   });
 
