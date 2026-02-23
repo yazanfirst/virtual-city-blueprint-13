@@ -333,7 +333,8 @@ export default function CityScene({
         className={`h-full w-full ${mirrorWorldActive ? 'mirror-world-canvas' : ''}`}
         style={{ touchAction: "none" }}
         camera={{ position: [0, 10, 50], fov: 50 }}
-        gl={{ antialias: false, powerPreference: "high-performance" }}
+        gl={{ antialias: true, powerPreference: "high-performance" }}
+        shadows="basic"
         onCreated={handleCreated}
       >
         <Suspense fallback={null}>
@@ -451,17 +452,17 @@ function Cloud({ position, scale = 1 }: { position: [number, number, number]; sc
 function Tree({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
-      <mesh position={[0, 1.5, 0]}>
+      <mesh position={[0, 1.5, 0]} castShadow>
         <cylinderGeometry args={[0.2, 0.3, 3, 6]} />
-        <meshLambertMaterial color="#5A3A1A" />
+        <meshStandardMaterial color="#5A3A1A" roughness={0.9} />
       </mesh>
-      <mesh position={[0, 4, 0]}>
+      <mesh position={[0, 4, 0]} castShadow>
         <icosahedronGeometry args={[1.8, 0]} />
-        <meshLambertMaterial color="#3A7A3A" />
+        <meshStandardMaterial color="#3A7A3A" roughness={0.8} />
       </mesh>
-      <mesh position={[0.5, 5, 0.3]}>
+      <mesh position={[0.5, 5, 0.3]} castShadow>
         <icosahedronGeometry args={[1.3, 0]} />
-        <meshLambertMaterial color="#4A8A4A" />
+        <meshStandardMaterial color="#4A8A4A" roughness={0.8} />
       </mesh>
     </group>
   );
@@ -483,14 +484,14 @@ function Shop({ position, color, rotation = 0, isNight }: {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
       {/* Main body */}
-      <mesh position={[0, 3, 0]}>
+      <mesh position={[0, 3, 0]} castShadow receiveShadow>
         <boxGeometry args={[8, 6, 8]} />
-        <meshLambertMaterial color={isNight ? "#3A3A4A" : color} />
+        <meshStandardMaterial color={isNight ? "#3A3A4A" : color} roughness={0.75} metalness={0.05} />
       </mesh>
       {/* Roof */}
-      <mesh position={[0, 6.2, 0]}>
+      <mesh position={[0, 6.2, 0]} castShadow>
         <boxGeometry args={[8.4, 0.4, 8.4]} />
-        <meshLambertMaterial color={isNight ? "#2A2A3A" : darker} />
+        <meshStandardMaterial color={isNight ? "#2A2A3A" : darker} roughness={0.6} />
       </mesh>
       {/* FRONT FACE (z+) - Windows */}
       {[-2, 2].map((wx, i) => (
@@ -559,9 +560,9 @@ function TallBuilding({ position, height, color, isNight }: {
   const rows = Math.floor(height / 3.5);
   return (
     <group position={position}>
-      <mesh position={[0, height / 2, 0]}>
+      <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[10, height, 10]} />
-        <meshLambertMaterial color={isNight ? "#3A3A4A" : color} />
+        <meshStandardMaterial color={isNight ? "#3A3A4A" : color} roughness={0.7} metalness={0.05} />
       </mesh>
       {/* Windows on all sides */}
       {Array.from({ length: rows }).map((_, row) => (
@@ -960,15 +961,32 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       <GradientSky isNight={isNight} />
       {!isNight && cloudPositions.map((c, i) => <Cloud key={i} position={[c.x, c.y, c.z]} scale={c.scale} />)}
 
+      {/* Fog for depth & atmosphere */}
+      <fog attach="fog" args={[isNight ? '#0A1428' : '#B8D8F0', 30, 160]} />
+
       {/* Lighting */}
-      <ambientLight intensity={isNight ? 1.3 : 1.0} />
-      <hemisphereLight color={isNight ? "#8090B0" : "#ffffff"} groundColor={isNight ? "#4A5A6A" : "#88AA88"} intensity={isNight ? 1.2 : 0.7} />
-      <directionalLight position={[50, 70, 40]} intensity={isNight ? 0.8 : 1.6} color={isNight ? "#8090B0" : "#FFF8E8"} />
+      <ambientLight intensity={isNight ? 1.0 : 0.6} />
+      <hemisphereLight color={isNight ? "#8090B0" : "#87CEEB"} groundColor={isNight ? "#4A5A6A" : "#5A8A5A"} intensity={isNight ? 1.0 : 0.5} />
+      <directionalLight
+        position={[40, 60, 30]}
+        intensity={isNight ? 0.6 : 1.8}
+        color={isNight ? "#8090B0" : "#FFF5E0"}
+        castShadow
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+        shadow-camera-left={-80}
+        shadow-camera-right={80}
+        shadow-camera-top={80}
+        shadow-camera-bottom={-80}
+        shadow-camera-near={1}
+        shadow-camera-far={200}
+        shadow-bias={-0.001}
+      />
 
       {/* Ground */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, -10]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, -10]} receiveShadow>
         <planeGeometry args={[250, 250]} />
-        <meshLambertMaterial color={isNight ? "#2A4A2A" : COLORS.grass} />
+        <meshStandardMaterial color={isNight ? "#2A4A2A" : COLORS.grass} roughness={0.9} metalness={0} />
       </mesh>
 
       {/* === MAIN BOULEVARD (North-South) === */}
@@ -987,10 +1005,10 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {/* Lane markings - south */}
       {Array.from({ length: 12 }).map((_, i) => <LaneMarking key={`s-${i}`} position={[0, 0.02, -18 - i * 5]} />)}
       {/* Sidewalks */}
-      <mesh position={[-10, 0.12, 32]}><boxGeometry args={[6, 0.24, 50]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
-      <mesh position={[10, 0.12, 32]}><boxGeometry args={[6, 0.24, 50]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
-      <mesh position={[-10, 0.12, -38]}><boxGeometry args={[6, 0.24, 55]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
-      <mesh position={[10, 0.12, -38]}><boxGeometry args={[6, 0.24, 55]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
+      <mesh position={[-10, 0.12, 32]} receiveShadow><boxGeometry args={[6, 0.24, 50]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
+      <mesh position={[10, 0.12, 32]} receiveShadow><boxGeometry args={[6, 0.24, 50]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
+      <mesh position={[-10, 0.12, -38]} receiveShadow><boxGeometry args={[6, 0.24, 55]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
+      <mesh position={[10, 0.12, -38]} receiveShadow><boxGeometry args={[6, 0.24, 55]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
 
       {/* === CROSS STREET (East-West) === */}
       {/* East section */}
@@ -1007,10 +1025,10 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {Array.from({ length: 12 }).map((_, i) => <LaneMarking key={`e-${i}`} position={[20 + i * 5, 0.02, 0]} rotation={Math.PI / 2} />)}
       {Array.from({ length: 12 }).map((_, i) => <LaneMarking key={`w-${i}`} position={[-20 - i * 5, 0.02, 0]} rotation={Math.PI / 2} />)}
       {/* Sidewalks */}
-      <mesh position={[48, 0.12, 10]}><boxGeometry args={[60, 0.24, 6]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
-      <mesh position={[48, 0.12, -10]}><boxGeometry args={[60, 0.24, 6]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
-      <mesh position={[-48, 0.12, 10]}><boxGeometry args={[60, 0.24, 6]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
-      <mesh position={[-48, 0.12, -10]}><boxGeometry args={[60, 0.24, 6]} /><meshLambertMaterial color={COLORS.sidewalk} /></mesh>
+      <mesh position={[48, 0.12, 10]} receiveShadow><boxGeometry args={[60, 0.24, 6]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
+      <mesh position={[48, 0.12, -10]} receiveShadow><boxGeometry args={[60, 0.24, 6]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
+      <mesh position={[-48, 0.12, 10]} receiveShadow><boxGeometry args={[60, 0.24, 6]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
+      <mesh position={[-48, 0.12, -10]} receiveShadow><boxGeometry args={[60, 0.24, 6]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
 
       {/* === ROUNDABOUT === */}
       <Roundabout isNight={isNight} />

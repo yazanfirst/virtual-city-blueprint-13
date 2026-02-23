@@ -176,6 +176,10 @@ const PlayerController = ({
   const wasOnRoofRef = useRef(false);
 
   const { camera } = useThree();
+  // Smooth camera lerp refs
+  const smoothCamPos = useRef(new THREE.Vector3());
+  const smoothCamTarget = useRef(new THREE.Vector3());
+  const cameraInitialized = useRef(false);
 
   // Keep position in sync if store updates externally
   useEffect(() => {
@@ -548,9 +552,22 @@ const PlayerController = ({
         camZ = playerPos.z + offsetZ;
       }
 
-      camera.position.set(camX, camY, camZ);
-      // Look at player upper body, not feet
-      camera.lookAt(playerPos.x, playerPos.y + 1.5, playerPos.z);
+      // Smooth lerp for cinematic camera motion
+      const targetCamPos = new THREE.Vector3(camX, camY, camZ);
+      const targetLookAt = new THREE.Vector3(playerPos.x, playerPos.y + 1.5, playerPos.z);
+      
+      if (!cameraInitialized.current) {
+        smoothCamPos.current.copy(targetCamPos);
+        smoothCamTarget.current.copy(targetLookAt);
+        cameraInitialized.current = true;
+      }
+      
+      const lerpSpeed = 0.08;
+      smoothCamPos.current.lerp(targetCamPos, lerpSpeed);
+      smoothCamTarget.current.lerp(targetLookAt, lerpSpeed);
+      
+      camera.position.copy(smoothCamPos.current);
+      camera.lookAt(smoothCamTarget.current);
     }
   });
 
