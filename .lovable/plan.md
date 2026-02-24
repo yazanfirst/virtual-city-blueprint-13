@@ -1,50 +1,87 @@
 
-## Fix: Reset Game State on Sign Out
 
-### Problem
-When a user signs out, their game data (Level, Coins, XP) remains in the Zustand store memory. The next visitor (or the same person before signing in again) sees the previous user's progress in the Player Panel. This is because `signOut()` in `useAuth.tsx` only clears authentication state but never calls `resetGame()` on the game store or `resetPlayer()` on the player store.
+## Yes, I Can Push It Significantly Further
 
-### Solution
-Reset all Zustand stores when the user signs out or when the auth state changes to "signed out". There are two places to fix:
+The last plan used basic primitives (spheres, capsules, torus). I can achieve a much more professional result by using **custom BufferGeometry** and **LatheGeometry** to create smooth, sculpted shapes that look closer to a real game character rather than assembled primitives.
 
-**1. `src/hooks/usePlayerProgress.ts`** -- Reset game store on logout
+### What Makes This Plan Better
 
-The hook already detects logout (`if (!user)`) but only resets `loadedRef`. It needs to also call `resetGame()` to clear coins/XP/level back to defaults (100 coins, 0 XP, Level 1).
+| Aspect | Previous Plan | This Plan |
+|--------|--------------|-----------|
+| Hood | Generic sphere scaled on Y | Custom **LatheGeometry** with a sculpted silhouette profile -- pointed top, flowing sides, deep front overhang |
+| Torso | Capsule + cylinder stack | **LatheGeometry** with tapered waist, broad shoulders -- actual hoodie silhouette |
+| Face void | Flat recessed sphere | **RingGeometry** + recessed sphere creating a deep tunnel effect inside the hood |
+| Eyes | Basic spheres | **Octahedron** eyes (angular, menacing) with double-layer glow halos + animated pulsing emissive intensity |
+| Neon accents | Torus rings | Custom **TubeGeometry** following curved paths along sleeves and across the chest -- organic flow lines, not perfect circles |
+| Hands | Simple spheres | **Icosahedron** gloved fists -- faceted, stylized |
+| Boots | Capsules | **LatheGeometry** with a proper boot profile -- tapered ankle, rounded sole |
+| Hood drape | None | Extra back-drape mesh using scaled sphere section to create fabric hanging behind shoulders |
+| Animated glow | Static emissive | **Pulsing emissive intensity** on eyes and accent lines via `useFrame` -- subtle breathing rhythm |
 
-```
-useEffect(() => {
-  if (!user) {
-    loadedRef.current = false;
-    useGameStore.getState().resetGame();    // <-- add this
-    usePlayerStore.getState().resetPlayer(); // <-- add this
-  }
-}, [user]);
-```
+### Technical Approach: LatheGeometry
 
-**2. `src/hooks/useAuth.tsx`** -- Belt-and-suspenders reset in signOut
+`LatheGeometry` rotates a 2D profile curve around the Y axis to create smooth, sculpted shapes. This is how professional procedural characters are built:
 
-As a safety net, also reset the stores directly in the `signOut` function so that even if the hook hasn't re-rendered yet, the data is cleared immediately:
-
-```typescript
-import { useGameStore } from '@/stores/gameStore';
-import { usePlayerStore } from '@/stores/playerStore';
-
-const signOut = async () => {
-  await supabase.auth.signOut();
-  setUser(null);
-  setSession(null);
-  setUserRole(null);
-  useGameStore.getState().resetGame();
-  usePlayerStore.getState().resetPlayer();
-};
+```text
+Hood profile (side view):        Torso profile:
+                                  
+    *  (pointed tip)                ╭─╮  (shoulders)
+   / \                             │  │
+  /   \                            │  │
+ /     \  (flowing sides)          │  ╰╮ (slight waist taper)
+│       │                          │   │
+│       │  (face opening)          │  ╭╯ (hip flare)
+ ╲     ╱                           ╰──╯
+  ╲___╱   (collar)
 ```
 
-### Technical Details
-- `resetGame()` sets coins=100, xp=0, level=1, and clears visited shops and collected coins
-- `resetPlayer()` resets position, camera, jump counter, and shop interior state
-- Both stores already have these reset functions -- they just are never called on sign out
-- No database changes needed -- this is purely a client-side state cleanup issue
+This produces smooth, professional silhouettes impossible with basic primitives.
 
-### Files to Edit
-- `src/hooks/useAuth.tsx` -- import stores and call reset in `signOut()`
-- `src/hooks/usePlayerProgress.ts` -- call `resetGame()` and `resetPlayer()` in the logout effect
+### Materials (Enhanced)
+
+| Part | Geometry | Color | Emissive | Special |
+|------|----------|-------|----------|---------|
+| Hood | LatheGeometry (custom profile) | `#111118` | -- | `roughness: 0.92` matte fabric feel |
+| Hood inner lining | Cylinder (slightly smaller) | `#0a0a10` | -- | Darker interior layer |
+| Hood back drape | Scaled sphere section | `#111118` | -- | Fabric hanging behind |
+| Face void | Sphere (deep recess) + Ring rim | `#030306` | -- | Near-black tunnel |
+| Eyes | Octahedron x2 | `#00e5ff` | `#00e5ff` @ 4.0 | **Pulsing** via useFrame |
+| Eye glow halo | Sphere x2 (transparent) | `#00e5ff` | `#00e5ff` @ 2.0 | `opacity: 0.15`, soft bloom |
+| Torso | LatheGeometry (hoodie profile) | `#111118` | -- | Proper shoulder/waist shape |
+| Chest accent | TubeGeometry (curved path) | `#00e5ff` | `#00e5ff` @ 2.5 | Flowing line across chest |
+| Sleeve accents | TubeGeometry x4 (spiral path) | `#00e5ff` | `#00e5ff` @ 2.5 | Organic curves, not circles |
+| Pocket | Curved TubeGeometry | `#00e5ff` | `#00e5ff` @ 2.0 | Arc on front torso |
+| Arms | Capsule (tapered radii) | `#111118` | -- | Wider at shoulder, thinner at wrist |
+| Hands | Icosahedron (detail 0) | `#0a0a14` | -- | Faceted glove fists |
+| Pants | Capsule (tapered) | `#0c0c16` | -- | Slightly different dark tone |
+| Boots | LatheGeometry (boot profile) | `#08080e` | `#00e5ff` @ 0.2 | Sculpted sole shape, faint glow |
+
+### Animation Additions (within existing useFrame)
+
+- **Eye pulse**: `emissiveIntensity = 3.0 + Math.sin(time * 3) * 1.0` -- subtle breathing glow
+- **Accent pulse**: `emissiveIntensity = 2.0 + Math.sin(time * 2) * 0.5` -- slow neon throb
+- All existing walk/idle/swing animations preserved exactly
+
+### What Stays Identical
+
+- All 5 refs, same positions
+- `useFrame` callback structure (adding eye/accent pulse lines only)
+- Component props API
+- Pivot points for arms/legs
+- Overall height (~1.8 units)
+- Export, usage in PlayerController line 577
+
+### File Changed
+
+**`src/components/3d/LowPolyCharacter.tsx`** -- single file rewrite of geometry + materials. Animation system preserved with minor additions for glow pulsing.
+
+### Performance
+
+- LatheGeometry and TubeGeometry are created once in `useMemo` -- no per-frame cost
+- Segment counts kept at 12-16 (same performance tier as current spheres/capsules)
+- ~30 mesh nodes total (marginal increase from current 25)
+- No dynamic lights -- all glow via emissive materials
+- No external assets loaded
+
+This is the maximum quality achievable with procedural Three.js geometry. The only way to go higher would be importing an external GLB model.
+
