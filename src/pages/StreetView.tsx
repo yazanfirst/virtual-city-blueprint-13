@@ -234,6 +234,8 @@ const StreetView = () => {
     showJumpScare ||
     showGhostHuntFailed ||
     showGhostHuntComplete ||
+    showZombieComplete ||
+    showMissionPause ||
     ghostHunt.phase === 'briefing' ||
     mirrorWorld.phase === 'briefing' ||
     mirrorWorld.phase === 'completed' ||
@@ -910,6 +912,7 @@ const StreetView = () => {
             onZombieTouchPlayer={handleZombieTouchPlayer}
             onTrapHitPlayer={handleTrapHitPlayer}
             hideMobileControls={hideMobileControls}
+            frozen={!!isAnyPopupOpen}
           />
           
           {/* Health Display (Lives) - for zombie missions */}
@@ -1786,6 +1789,7 @@ const StreetView = () => {
                     onZombieTouchPlayer={handleZombieTouchPlayer}
                     onTrapHitPlayer={handleTrapHitPlayer}
                     hideMobileControls={hideMobileControls}
+                    frozen={!!isAnyPopupOpen}
                   />
                   
                   {/* Shop Proximity Indicator - hidden when shop modal is open */}
