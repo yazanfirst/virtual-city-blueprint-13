@@ -2,7 +2,6 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import LowPolyCharacter from './LowPolyCharacter';
-import BoxyCharacter from './BoxyCharacter';
 import { usePlayerStore } from '@/stores/playerStore';
 import { useMirrorWorldStore } from '@/stores/mirrorWorldStore';
 import { playSounds } from '@/hooks/useGameAudio';
@@ -148,7 +147,6 @@ type PlayerControllerProps = {
   joystickInput?: { x: number; y: number };
   viewMode?: "thirdPerson" | "firstPerson";
   cameraRotation?: { azimuth: number; polar: number };
-  frozen?: boolean;
 };
 
 const PlayerController = ({
@@ -157,7 +155,6 @@ const PlayerController = ({
   joystickInput = { x: 0, y: 0 },
   viewMode = "thirdPerson",
   cameraRotation = { azimuth: 0, polar: Math.PI / 4 },
-  frozen = false,
 }: PlayerControllerProps) => {
   const groupRef = useRef<THREE.Group>(null);
   const verticalVelocityRef = useRef(0);
@@ -359,43 +356,6 @@ const PlayerController = ({
   // Movement and camera logic
   useFrame(() => {
     if (!groupRef.current) return;
-    if (frozen) {
-      // Still update camera but skip all movement
-      groupRef.current.position.copy(positionRef.current);
-      // Camera update (duplicated below) — keep camera tracking even when frozen
-      const playerPos = positionRef.current;
-      if (viewMode === "firstPerson") {
-        const eyeHeight = 2.5;
-        camera.position.set(playerPos.x, playerPos.y + eyeHeight, playerPos.z);
-        const verticalAngle = cameraRotation.polar - Math.PI / 2;
-        const lookDistance = 20;
-        camera.lookAt(
-          playerPos.x - Math.sin(cameraRotation.azimuth) * lookDistance * Math.cos(verticalAngle),
-          playerPos.y + eyeHeight + Math.sin(verticalAngle) * lookDistance,
-          playerPos.z - Math.cos(cameraRotation.azimuth) * lookDistance * Math.cos(verticalAngle)
-        );
-      } else {
-        const verticalAngle = cameraRotation.polar;
-        const horizontalDist = cameraDistance * Math.cos(verticalAngle * 0.5);
-        const verticalDist = cameraHeight + cameraDistance * Math.sin(verticalAngle);
-        const targetCamPos = new THREE.Vector3(
-          playerPos.x + Math.sin(cameraRotation.azimuth) * horizontalDist,
-          playerPos.y + verticalDist,
-          playerPos.z + Math.cos(cameraRotation.azimuth) * horizontalDist
-        );
-        const targetLookAt = new THREE.Vector3(playerPos.x, playerPos.y + 1.5, playerPos.z);
-        if (!cameraInitialized.current) {
-          smoothCamPos.current.copy(targetCamPos);
-          smoothCamTarget.current.copy(targetLookAt);
-          cameraInitialized.current = true;
-        }
-        smoothCamPos.current.lerp(targetCamPos, 0.08);
-        smoothCamTarget.current.lerp(targetLookAt, 0.08);
-        camera.position.copy(smoothCamPos.current);
-        camera.lookAt(smoothCamTarget.current);
-      }
-      return;
-    }
 
     const direction = new THREE.Vector3();
 
@@ -611,29 +571,16 @@ const PlayerController = ({
     }
   });
 
-  const { characterType } = usePlayerStore();
-  const isWalkingAndNotFrozen = isWalking && !frozen;
-
   return (
     <group ref={groupRef} position={position}>
       {viewMode !== "firstPerson" && (
-        characterType === 'boxy' ? (
-          <BoxyCharacter
-            position={[0, 0, 0]}
-            rotation={characterRotation}
-            clothingColor="#4a5568"
-            isNight={isNight}
-            isWalking={isWalkingAndNotFrozen}
-          />
-        ) : (
-          <LowPolyCharacter
-            position={[0, 0, 0]}
-            rotation={characterRotation}
-            clothingColor="#4a5568"
-            isNight={isNight}
-            isWalking={isWalkingAndNotFrozen}
-          />
-        )
+        <LowPolyCharacter
+          position={[0, 0, 0]}
+          rotation={characterRotation}
+          clothingColor="#4a5568"
+          isNight={isNight}
+          isWalking={isWalking}
+        />
       )}
     </group>
   );

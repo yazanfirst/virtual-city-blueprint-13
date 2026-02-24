@@ -9,15 +9,12 @@ type SavedOutsideState = {
   cameraRotation: { azimuth: number; polar: number };
 };
 
-export type CharacterType = 'hooded' | 'boxy';
-
 type PlayerState = {
   position: [number, number, number];
   cameraRotation: { azimuth: number; polar: number };
   jumpCounter: number;
   isInsideShop: boolean;
   savedOutsideState: SavedOutsideState | null;
-  characterType: CharacterType;
   setPosition: (position: [number, number, number]) => void;
   setCameraRotation: (rotation: { azimuth: number; polar: number }) => void;
   incrementJump: () => void;
@@ -25,7 +22,6 @@ type PlayerState = {
   resetPlayer: () => void;
   enterShop: () => void;
   exitShop: () => void;
-  setCharacterType: (type: CharacterType) => void;
 };
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -34,9 +30,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   jumpCounter: 0,
   isInsideShop: false,
   savedOutsideState: null,
-  characterType: 'hooded' as CharacterType,
   incrementJump: () => set((state) => ({ jumpCounter: state.jumpCounter + 1 })),
-  setCharacterType: (type) => set({ characterType: type }),
 
   setPosition: (position) => set({ position }),
   setCameraRotation: (cameraRotation) => set({ cameraRotation }),

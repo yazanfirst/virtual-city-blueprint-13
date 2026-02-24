@@ -36,7 +36,6 @@ type CitySceneProps = {
   onZombieTouchPlayer?: () => void;
   onTrapHitPlayer?: () => void;
   hideMobileControls?: boolean;
-  frozen?: boolean;
 };
 
 type InnerProps = {
@@ -49,7 +48,6 @@ type InnerProps = {
   onZombieTouchPlayer?: () => void;
   onTrapHitPlayer?: () => void;
   mirrorWorldActive: boolean;
-  frozen?: boolean;
 };
 
 // Pastel color palette
@@ -217,7 +215,6 @@ export default function CityScene({
   onZombieTouchPlayer,
   onTrapHitPlayer,
   hideMobileControls = false,
-  frozen = false,
 }: CitySceneProps) {
   // Use forced time of day if provided (for mission night mode)
   const effectiveTimeOfDay = forcedTimeOfDay ?? timeOfDay;
@@ -352,7 +349,6 @@ export default function CityScene({
             onZombieTouchPlayer={onZombieTouchPlayer}
             onTrapHitPlayer={onTrapHitPlayer}
             mirrorWorldActive={showMirrorWorld}
-            frozen={frozen}
           />
           {showMirrorWorld && (
             <>
@@ -928,7 +924,7 @@ function CameraUpController({ mirrorWorldActive }: { mirrorWorldActive: boolean 
   return null;
 }
 
-function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer, mirrorWorldActive, frozen }: InnerProps) {
+function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shopBrandings, onShopClick, onZombieTouchPlayer, onTrapHitPlayer, mirrorWorldActive }: InnerProps) {
   const { scene } = useThree();
   const isNight = timeOfDay === "night";
   const collectCoin = useGameStore((state) => state.collectCoin);
@@ -1174,7 +1170,6 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
         joystickInput={joystickInput} 
         viewMode={cameraView}
         cameraRotation={cameraRotation}
-        frozen={frozen}
       />
     </>
   );
