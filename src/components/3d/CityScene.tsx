@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useMemo, useRef, useState, useCallback, useEffect } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { Text } from "@react-three/drei";
 import * as THREE from "three";
 import PlayerController from "./PlayerController";
@@ -32,7 +32,7 @@ type CitySceneProps = {
   cameraView?: CameraView;
   shopBrandings?: ShopBranding[];
   onShopClick?: (branding: ShopBranding) => void;
-  forcedTimeOfDay?: "day" | "night" | null; // For mission control
+  forcedTimeOfDay?: "day" | "night" | null;
   onZombieTouchPlayer?: () => void;
   onTrapHitPlayer?: () => void;
   hideMobileControls?: boolean;
@@ -72,7 +72,6 @@ const COLORS = {
 
 // ============ CITY LAYOUT - PROPERLY ORGANIZED ============
 
-// Main Boulevard Shops (North-South) - FACING THE ROAD
 const mainBoulevardShops = [
   { x: 18, z: 40, color: COLORS.yellow, rotation: -Math.PI / 2 },
   { x: 18, z: 28, color: COLORS.blue, rotation: -Math.PI / 2 },
@@ -90,7 +89,6 @@ const mainBoulevardShops = [
   { x: -18, z: -52, color: COLORS.rust, rotation: Math.PI / 2 },
 ];
 
-// Cross Street Shops (East-West) - FACING THE ROAD
 const crossStreetShops = [
   { x: 35, z: 18, color: COLORS.rust, rotation: Math.PI },
   { x: 47, z: 18, color: COLORS.purple, rotation: Math.PI },
@@ -106,7 +104,6 @@ const crossStreetShops = [
   { x: -59, z: -18, color: COLORS.green, rotation: 0 },
 ];
 
-// Tall Background Buildings
 const tallBuildings = [
   { x: 32, z: 45, height: 26, color: COLORS.beige },
   { x: 32, z: 20, height: 22, color: COLORS.cream },
@@ -123,7 +120,6 @@ const tallBuildings = [
   { x: -70, z: 25, height: 22, color: COLORS.beige },
 ];
 
-// Trees
 const treePositions = [
   { x: 10, z: 45 }, { x: 10, z: 33 }, { x: 10, z: 21 },
   { x: 10, z: -21 }, { x: 10, z: -33 }, { x: 10, z: -45 },
@@ -137,7 +133,6 @@ const treePositions = [
   { x: 58, z: 45 }, { x: 55, z: 48 },
 ];
 
-// Street Lamps
 const lampPositions = [
   { x: -10, z: 38 }, { x: 10, z: 38 }, { x: -10, z: 24 }, { x: 10, z: 24 },
   { x: -10, z: -24 }, { x: 10, z: -24 }, { x: -10, z: -38 }, { x: 10, z: -38 },
@@ -148,7 +143,6 @@ const lampPositions = [
   { x: -30, z: -10 }, { x: -42, z: -10 }, { x: -54, z: -10 },
 ];
 
-// Benches
 const benchPositions = [
   { x: 9, z: 40, rotation: -Math.PI / 2 },
   { x: -9, z: 40, rotation: Math.PI / 2 },
@@ -158,19 +152,16 @@ const benchPositions = [
   { x: -45, z: 38, rotation: -Math.PI / 4 },
 ];
 
-// Lakes
 const lakes = [
   { x: -55, z: -48, scaleX: 9, scaleZ: 7 },
   { x: 58, z: 48, scaleX: 8, scaleZ: 6 },
 ];
 
-// District Gates
 const districtGates = [
   { x: 78, z: 0, rotation: -Math.PI / 2, name: "ELECTRONICS", color: "#4A7FB5" },
   { x: -78, z: 0, rotation: Math.PI / 2, name: "FOOD STREET", color: "#8B6B4A" },
 ];
 
-// Billboards
 const billboards = [
   { x: 25, z: 50, rotation: -Math.PI / 6 },
   { x: -25, z: 50, rotation: Math.PI / 6 },
@@ -178,7 +169,6 @@ const billboards = [
   { x: -68, z: 20, rotation: Math.PI / 3 },
 ];
 
-// Collectible coins scattered around
 const coinPositions = [
   { id: 'coin1', x: 5, z: 25, type: 'coin' as const },
   { id: 'coin2', x: -5, z: 35, type: 'coin' as const },
@@ -195,7 +185,6 @@ const coinPositions = [
   { id: 'coin10', x: 8, z: -45, type: 'coin' as const },
 ];
 
-// Clouds
 const cloudPositions = [
   { x: -35, y: 50, z: -25, scale: 2.0 },
   { x: 30, y: 55, z: -40, scale: 1.7 },
@@ -216,7 +205,6 @@ export default function CityScene({
   onTrapHitPlayer,
   hideMobileControls = false,
 }: CitySceneProps) {
-  // Use forced time of day if provided (for mission night mode)
   const effectiveTimeOfDay = forcedTimeOfDay ?? timeOfDay;
   const deviceType = useDeviceType();
   const isMobile = deviceType === 'mobile';
@@ -225,7 +213,6 @@ export default function CityScene({
   const ghostHunt = useGhostHuntStore();
   const [joystickInput, setJoystickInput] = useState({ x: 0, y: 0 });
   
-  // Use store for camera rotation to persist across game mode changes
   const { cameraRotation, setCameraRotation, incrementJump } = usePlayerStore();
   
   const lastMousePosRef = useRef({ x: 0, y: 0 });
@@ -242,50 +229,36 @@ export default function CityScene({
   const handleCameraMove = useCallback((deltaX: number, deltaY: number) => {
     setCameraRotation({
       azimuth: cameraRotation.azimuth + deltaX,
-      // Polar range: 0.1 (looking up at sky) to 1.6 (looking down) - full vertical freedom
       polar: Math.max(0.1, Math.min(1.6, cameraRotation.polar + deltaY)),
     });
   }, [cameraRotation, setCameraRotation]);
 
-  // Desktop mouse controls for camera rotation - LEFT CLICK to orbit
+  // Desktop mouse controls
   useEffect(() => {
     if (isMobile) return;
 
     const handleMouseDown = (e: MouseEvent) => {
-      if (e.button === 0) { // Left click
+      if (e.button === 0) {
         isMouseDownRef.current = true;
         lastMousePosRef.current = { x: e.clientX, y: e.clientY };
       }
     };
-
     const handleMouseUp = (e: MouseEvent) => {
-      if (e.button === 0) {
-        isMouseDownRef.current = false;
-      }
+      if (e.button === 0) isMouseDownRef.current = false;
     };
-
     const handleMouseMove = (e: MouseEvent) => {
       if (!isMouseDownRef.current) return;
-      
-      // Calculate delta from last position
       const deltaX = (e.clientX - lastMousePosRef.current.x) * 0.003;
       const deltaY = (e.clientY - lastMousePosRef.current.y) * 0.003;
-      
-      // Apply camera rotation only when mouse is held down
       handleCameraMove(-deltaX, deltaY);
-      
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
     };
-
-    const handleContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-    };
+    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
 
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('contextmenu', handleContextMenu);
-
     return () => {
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
@@ -297,24 +270,14 @@ export default function CityScene({
   const showMirrorWorld = mirrorWorld.isActive && mirrorWorld.phase !== 'inactive' && !mission.isActive && !ghostHunt.isActive;
   const mirrorWorldActive = mirrorWorld.isActive && mirrorWorld.phase === 'hunting' && !mission.isActive && !ghostHunt.isActive;
 
-  // WebGL context loss recovery
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [contextLost, setContextLost] = useState(false);
 
   const handleCreated = useCallback((state: any) => {
     const canvas = state.gl.domElement as HTMLCanvasElement;
     canvasRef.current = canvas;
-
-    const onLost = (e: Event) => {
-      e.preventDefault();
-      console.warn('[CityScene] WebGL context lost – waiting for restore…');
-      setContextLost(true);
-    };
-    const onRestored = () => {
-      console.info('[CityScene] WebGL context restored');
-      setContextLost(false);
-    };
-
+    const onLost = (e: Event) => { e.preventDefault(); console.warn('[CityScene] WebGL context lost'); setContextLost(true); };
+    const onRestored = () => { console.info('[CityScene] WebGL context restored'); setContextLost(false); };
     canvas.addEventListener('webglcontextlost', onLost);
     canvas.addEventListener('webglcontextrestored', onRestored);
   }, []);
@@ -378,10 +341,7 @@ export default function CityScene({
         />
       )}
       {!isMobile && (
-        <div
-          className="pointer-events-none absolute bottom-4 right-4 flex flex-col items-end"
-          style={{ zIndex: 55 }}
-        >
+        <div className="pointer-events-none absolute bottom-4 right-4 flex flex-col items-end" style={{ zIndex: 55 }}>
           <button
             type="button"
             onClick={handleJump}
@@ -448,30 +408,213 @@ function Cloud({ position, scale = 1 }: { position: [number, number, number]; sc
   );
 }
 
-// Tree
-function Tree({ position }: { position: [number, number, number] }) {
+// ============ INSTANCED COMPONENTS ============
+
+// Instanced Trees — replaces 28 individual Tree components (84 meshes → 3 draw calls)
+const trunkGeo = new THREE.CylinderGeometry(0.2, 0.3, 3, 6);
+const canopy1Geo = new THREE.IcosahedronGeometry(1.8, 0);
+const canopy2Geo = new THREE.IcosahedronGeometry(1.3, 0);
+const trunkMat = new THREE.MeshStandardMaterial({ color: "#5A3A1A", roughness: 0.9 });
+const canopy1Mat = new THREE.MeshStandardMaterial({ color: "#3A7A3A", roughness: 0.8 });
+const canopy2Mat = new THREE.MeshStandardMaterial({ color: "#4A8A4A", roughness: 0.8 });
+
+function InstancedTrees() {
+  const trunkRef = useRef<THREE.InstancedMesh>(null);
+  const canopy1Ref = useRef<THREE.InstancedMesh>(null);
+  const canopy2Ref = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const count = treePositions.length;
+
+  useEffect(() => {
+    treePositions.forEach((pos, i) => {
+      // Trunk at Y=1.5
+      dummy.position.set(pos.x, 1.5, pos.z);
+      dummy.scale.set(1, 1, 1);
+      dummy.rotation.set(0, 0, 0);
+      dummy.updateMatrix();
+      trunkRef.current!.setMatrixAt(i, dummy.matrix);
+
+      // Main canopy at Y=4
+      dummy.position.set(pos.x, 4, pos.z);
+      dummy.updateMatrix();
+      canopy1Ref.current!.setMatrixAt(i, dummy.matrix);
+
+      // Secondary canopy at Y=5, offset X+0.5, Z+0.3
+      dummy.position.set(pos.x + 0.5, 5, pos.z + 0.3);
+      dummy.updateMatrix();
+      canopy2Ref.current!.setMatrixAt(i, dummy.matrix);
+    });
+    trunkRef.current!.instanceMatrix.needsUpdate = true;
+    canopy1Ref.current!.instanceMatrix.needsUpdate = true;
+    canopy2Ref.current!.instanceMatrix.needsUpdate = true;
+  }, [dummy, count]);
+
   return (
-    <group position={position}>
-      <mesh position={[0, 1.5, 0]} castShadow>
-        <cylinderGeometry args={[0.2, 0.3, 3, 6]} />
-        <meshStandardMaterial color="#5A3A1A" roughness={0.9} />
-      </mesh>
-      <mesh position={[0, 4, 0]} castShadow>
-        <icosahedronGeometry args={[1.8, 0]} />
-        <meshStandardMaterial color="#3A7A3A" roughness={0.8} />
-      </mesh>
-      <mesh position={[0.5, 5, 0.3]} castShadow>
-        <icosahedronGeometry args={[1.3, 0]} />
-        <meshStandardMaterial color="#4A8A4A" roughness={0.8} />
-      </mesh>
-    </group>
+    <>
+      <instancedMesh ref={trunkRef} args={[trunkGeo, trunkMat, count]} castShadow />
+      <instancedMesh ref={canopy1Ref} args={[canopy1Geo, canopy1Mat, count]} castShadow />
+      <instancedMesh ref={canopy2Ref} args={[canopy2Geo, canopy2Mat, count]} castShadow />
+    </>
   );
 }
 
-// Shop Building - FRONT FACES THE ROAD
-function Shop({ position, color, rotation = 0, isNight }: { 
-  position: [number, number, number]; 
-  color: string; 
+// Instanced Lamps — replaces 22 individual Lamp components (44 meshes → 2 draw calls)
+const poleGeo = new THREE.CylinderGeometry(0.1, 0.12, 6, 6);
+const bulbGeo = new THREE.SphereGeometry(0.4, 6, 6);
+const poleMat = new THREE.MeshBasicMaterial({ color: "#2A2A2A" });
+
+function InstancedLamps({ isNight }: { isNight: boolean }) {
+  const poleRef = useRef<THREE.InstancedMesh>(null);
+  const bulbRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const count = lampPositions.length;
+
+  const bulbMat = useMemo(() => new THREE.MeshBasicMaterial({ color: isNight ? "#FFD080" : "#E8E8E8" }), [isNight]);
+
+  useEffect(() => {
+    lampPositions.forEach((pos, i) => {
+      // Pole at Y=3
+      dummy.position.set(pos.x, 3, pos.z);
+      dummy.scale.set(1, 1, 1);
+      dummy.rotation.set(0, 0, 0);
+      dummy.updateMatrix();
+      poleRef.current!.setMatrixAt(i, dummy.matrix);
+
+      // Bulb at Y=6.2
+      dummy.position.set(pos.x, 6.2, pos.z);
+      dummy.updateMatrix();
+      bulbRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    poleRef.current!.instanceMatrix.needsUpdate = true;
+    bulbRef.current!.instanceMatrix.needsUpdate = true;
+  }, [dummy, count]);
+
+  return (
+    <>
+      <instancedMesh ref={poleRef} args={[poleGeo, poleMat, count]} />
+      <instancedMesh ref={bulbRef} args={[bulbGeo, bulbMat, count]} />
+    </>
+  );
+}
+
+// Instanced Lane Markings — replaces 46 individual LaneMarking meshes → 2 draw calls
+const laneGeo = new THREE.PlaneGeometry(0.4, 3.5);
+const laneMat = new THREE.MeshBasicMaterial({ color: "#FFFFFF" });
+
+function InstancedLaneMarkings() {
+  const vertRef = useRef<THREE.InstancedMesh>(null);
+  const horizRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  // Vertical markings (north + south): rotation [-PI/2, 0, 0]
+  const vertPositions = useMemo(() => {
+    const arr: [number, number, number][] = [];
+    // North
+    for (let i = 0; i < 10; i++) arr.push([0, 0.02, 52 - i * 5]);
+    // South
+    for (let i = 0; i < 12; i++) arr.push([0, 0.02, -18 - i * 5]);
+    return arr;
+  }, []);
+
+  // Horizontal markings (east + west): rotation [-PI/2, PI/2, 0]
+  const horizPositions = useMemo(() => {
+    const arr: [number, number, number][] = [];
+    // East
+    for (let i = 0; i < 12; i++) arr.push([20 + i * 5, 0.02, 0]);
+    // West
+    for (let i = 0; i < 12; i++) arr.push([-20 - i * 5, 0.02, 0]);
+    return arr;
+  }, []);
+
+  useEffect(() => {
+    // Vertical
+    dummy.rotation.set(-Math.PI / 2, 0, 0);
+    vertPositions.forEach((pos, i) => {
+      dummy.position.set(pos[0], pos[1], pos[2]);
+      dummy.updateMatrix();
+      vertRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    vertRef.current!.instanceMatrix.needsUpdate = true;
+
+    // Horizontal
+    dummy.rotation.set(-Math.PI / 2, Math.PI / 2, 0);
+    horizPositions.forEach((pos, i) => {
+      dummy.position.set(pos[0], pos[1], pos[2]);
+      dummy.updateMatrix();
+      horizRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    horizRef.current!.instanceMatrix.needsUpdate = true;
+  }, [dummy, vertPositions, horizPositions]);
+
+  return (
+    <>
+      <instancedMesh ref={vertRef} args={[laneGeo, laneMat, vertPositions.length]} />
+      <instancedMesh ref={horizRef} args={[laneGeo, laneMat, horizPositions.length]} />
+    </>
+  );
+}
+
+// Instanced Tall Building Windows — replaces ~400+ individual window meshes → 2 draw calls
+const frontWinGeo = new THREE.BoxGeometry(1.5, 2, 0.1);
+const sideWinGeo = new THREE.BoxGeometry(0.1, 2, 1.5);
+
+function InstancedTallBuildingWindows({ isNight }: { isNight: boolean }) {
+  const frontRef = useRef<THREE.InstancedMesh>(null);
+  const sideRef = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+
+  const winMat = useMemo(() => new THREE.MeshLambertMaterial({
+    color: isNight ? "#5A7A9A" : "#6A8A9A",
+    emissive: new THREE.Color(isNight ? "#3366AA" : "#000000"),
+    emissiveIntensity: isNight ? 0.35 : 0,
+  }), [isNight]);
+
+  const { frontPositions, sidePositions } = useMemo(() => {
+    const fp: [number, number, number][] = [];
+    const sp: [number, number, number][] = [];
+    tallBuildings.forEach(b => {
+      const rows = Math.floor(b.height / 3.5);
+      for (let row = 0; row < rows; row++) {
+        const y = 3 + row * 3.5;
+        [-3, 0, 3].forEach(wx => {
+          fp.push([b.x + wx, y, b.z + 5.05]);
+          sp.push([b.x + 5.05, y, b.z + wx]);
+        });
+      }
+    });
+    return { frontPositions: fp, sidePositions: sp };
+  }, []);
+
+  useEffect(() => {
+    dummy.rotation.set(0, 0, 0);
+    dummy.scale.set(1, 1, 1);
+    frontPositions.forEach((pos, i) => {
+      dummy.position.set(pos[0], pos[1], pos[2]);
+      dummy.updateMatrix();
+      frontRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    frontRef.current!.instanceMatrix.needsUpdate = true;
+
+    sidePositions.forEach((pos, i) => {
+      dummy.position.set(pos[0], pos[1], pos[2]);
+      dummy.updateMatrix();
+      sideRef.current!.setMatrixAt(i, dummy.matrix);
+    });
+    sideRef.current!.instanceMatrix.needsUpdate = true;
+  }, [dummy, frontPositions, sidePositions]);
+
+  return (
+    <>
+      <instancedMesh ref={frontRef} args={[frontWinGeo, winMat, frontPositions.length]} />
+      <instancedMesh ref={sideRef} args={[sideWinGeo, winMat, sidePositions.length]} />
+    </>
+  );
+}
+
+// Shop Building - FRONT FACES THE ROAD (used for spots without branding data)
+function Shop({ position, color, rotation = 0, isNight }: {
+  position: [number, number, number];
+  color: string;
   rotation?: number;
   isNight: boolean;
 }) {
@@ -483,56 +626,45 @@ function Shop({ position, color, rotation = 0, isNight }: {
   
   return (
     <group position={position} rotation={[0, rotation, 0]}>
-      {/* Main body */}
       <mesh position={[0, 3, 0]} castShadow receiveShadow>
         <boxGeometry args={[8, 6, 8]} />
         <meshStandardMaterial color={isNight ? "#3A3A4A" : color} roughness={0.75} metalness={0.05} />
       </mesh>
-      {/* Roof */}
       <mesh position={[0, 6.2, 0]} castShadow>
         <boxGeometry args={[8.4, 0.4, 8.4]} />
         <meshStandardMaterial color={isNight ? "#2A2A3A" : darker} roughness={0.6} />
       </mesh>
-      {/* FRONT FACE (z+) - Windows */}
       {[-2, 2].map((wx, i) => (
         <mesh key={`win-${i}`} position={[wx, 4.2, 4.05]}>
           <boxGeometry args={[1.5, 1.5, 0.1]} />
           <meshLambertMaterial color="#5A6A7A" emissive={isNight ? "#4488AA" : "#000000"} emissiveIntensity={isNight ? 0.6 : 0} />
         </mesh>
       ))}
-      {/* FRONT FACE - Storefront window */}
       <mesh position={[0.8, 1.8, 4.05]}>
         <boxGeometry args={[4, 2.8, 0.1]} />
         <meshLambertMaterial color={isNight ? "#6A9ACC" : "#87CEEB"} emissive={isNight ? "#5588BB" : "#000000"} emissiveIntensity={isNight ? 0.5 : 0} />
       </mesh>
-      {/* FRONT FACE - Door */}
       <mesh position={[-2.8, 1.5, 4.05]}>
         <boxGeometry args={[1.5, 3, 0.1]} />
         <meshLambertMaterial color="#4A3A2A" />
       </mesh>
-      {/* Awning */}
       <mesh position={[0, 3.5, 4.8]} rotation={[-0.2, 0, 0]}>
         <boxGeometry args={[7, 0.1, 1.5]} />
         <meshLambertMaterial color={darker} />
       </mesh>
-      {/* FOR RENT Signboard - OPTIMIZED for performance */}
       <group position={[0, 5.2, 4.3]}>
-        {/* Sign board background */}
         <mesh>
           <boxGeometry args={[4.5, 1.3, 0.2]} />
           <meshBasicMaterial color={isNight ? "#1A0015" : "#1A1A2A"} />
         </mesh>
-        {/* Neon border - uses meshBasicMaterial for performance + glow look */}
         <mesh position={[0, 0, 0.11]}>
           <boxGeometry args={[4.6, 1.4, 0.02]} />
           <meshBasicMaterial color={isNight ? "#FF1493" : "#882244"} />
         </mesh>
-        {/* Inner cyan border */}
         <mesh position={[0, 0, 0.12]}>
           <boxGeometry args={[4.0, 0.9, 0.02]} />
           <meshBasicMaterial color={isNight ? "#00FFFF" : "#006666"} />
         </mesh>
-        {/* FOR RENT text */}
         <Text 
           position={[0, 0, 0.15]} 
           fontSize={0.4} 
@@ -544,60 +676,24 @@ function Shop({ position, color, rotation = 0, isNight }: {
         >
           FOR RENT
         </Text>
-        {/* Removed individual point lights for performance */}
       </group>
     </group>
   );
 }
 
-// Tall Building
-function TallBuilding({ position, height, color, isNight }: { 
-  position: [number, number, number]; 
+// Tall Building — body only, windows are instanced globally
+function TallBuilding({ position, height, color, isNight }: {
+  position: [number, number, number];
   height: number;
   color: string;
   isNight: boolean;
 }) {
-  const rows = Math.floor(height / 3.5);
   return (
     <group position={position}>
       <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
         <boxGeometry args={[10, height, 10]} />
         <meshStandardMaterial color={isNight ? "#3A3A4A" : color} roughness={0.7} metalness={0.05} />
       </mesh>
-      {/* Windows on all sides */}
-      {Array.from({ length: rows }).map((_, row) => (
-        <React.Fragment key={row}>
-          {[-3, 0, 3].map((wx, col) => (
-            <mesh key={`f-${row}-${col}`} position={[wx, 3 + row * 3.5, 5.05]}>
-              <boxGeometry args={[1.5, 2, 0.1]} />
-              <meshLambertMaterial color={isNight ? "#5A7A9A" : "#6A8A9A"} emissive={isNight ? "#3366AA" : "#000000"} emissiveIntensity={isNight ? 0.35 : 0} />
-            </mesh>
-          ))}
-          {[-3, 0, 3].map((wz, col) => (
-            <mesh key={`s-${row}-${col}`} position={[5.05, 3 + row * 3.5, wz]}>
-              <boxGeometry args={[0.1, 2, 1.5]} />
-              <meshLambertMaterial color={isNight ? "#5A7A9A" : "#6A8A9A"} emissive={isNight ? "#3366AA" : "#000000"} emissiveIntensity={isNight ? 0.35 : 0} />
-            </mesh>
-          ))}
-        </React.Fragment>
-      ))}
-    </group>
-  );
-}
-
-// Street Lamp - OPTIMIZED (no individual point lights)
-function Lamp({ position, isNight }: { position: [number, number, number]; isNight: boolean }) {
-  return (
-    <group position={position}>
-      <mesh position={[0, 3, 0]}>
-        <cylinderGeometry args={[0.1, 0.12, 6, 6]} />
-        <meshBasicMaterial color="#2A2A2A" />
-      </mesh>
-      <mesh position={[0, 6.2, 0]}>
-        <sphereGeometry args={[0.4, 6, 6]} />
-        <meshBasicMaterial color={isNight ? "#FFD080" : "#E8E8E8"} />
-      </mesh>
-      {/* Removed individual lamp lights for performance - using global ambient instead */}
     </group>
   );
 }
@@ -631,27 +727,23 @@ function Lake({ position, scaleX, scaleZ }: { position: [number, number, number]
   );
 }
 
-// District Gate - proper arch at street end
-function DistrictGate({ position, rotation, name, color }: { 
-  position: [number, number, number]; 
-  rotation: number; 
+// District Gate
+function DistrictGate({ position, rotation, name, color }: {
+  position: [number, number, number];
+  rotation: number;
   name: string;
   color: string;
 }) {
   return (
     <group position={position} rotation={[0, rotation, 0]}>
-      {/* Pillars */}
       <mesh position={[-5, 4, 0]}><boxGeometry args={[1.5, 8, 1.5]} /><meshLambertMaterial color={color} /></mesh>
       <mesh position={[5, 4, 0]}><boxGeometry args={[1.5, 8, 1.5]} /><meshLambertMaterial color={color} /></mesh>
-      {/* Arch */}
       <mesh position={[0, 9, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[5, 0.8, 6, 16, Math.PI]} />
         <meshLambertMaterial color={color} />
       </mesh>
-      {/* Sign board */}
       <mesh position={[0, 10.5, 0.5]}><boxGeometry args={[7, 1.5, 0.3]} /><meshLambertMaterial color={color} /></mesh>
       <Text position={[0, 10.5, 0.7]} fontSize={0.6} color="#FFFFFF" anchorX="center" anchorY="middle">{name}</Text>
-      {/* Coming Soon */}
       <mesh position={[0, 1.5, 0]}><boxGeometry args={[6, 1.2, 0.2]} /><meshLambertMaterial color="#2A4A6A" /></mesh>
       <Text position={[0, 1.5, 0.15]} fontSize={0.4} color="#FFCC00" anchorX="center" anchorY="middle">COMING SOON</Text>
     </group>
@@ -669,25 +761,21 @@ function Billboard({ position, rotation, isNight }: { position: [number, number,
   );
 }
 
-// Animated fountain water stream component
+// Fountain Water
 function FountainWater({ isNight }: { isNight: boolean }) {
   const groupRef = useRef<THREE.Group>(null);
   
-  // Animate water streams
   useEffect(() => {
     let animationId: number;
     let time = 0;
-    
     const animate = () => {
       time += 0.03;
       if (groupRef.current) {
-        // Gentle pulsing animation for water height
         const pulse = Math.sin(time * 2) * 0.1 + 1;
         groupRef.current.scale.y = pulse;
       }
       animationId = requestAnimationFrame(animate);
     };
-    
     animate();
     return () => cancelAnimationFrame(animationId);
   }, []);
@@ -697,165 +785,85 @@ function FountainWater({ isNight }: { isNight: boolean }) {
   
   return (
     <group ref={groupRef}>
-      {/* Central water jet - main upward stream */}
       <mesh position={[0, 4.8, 0]}>
         <coneGeometry args={[0.15, 1.8, 8]} />
-        <meshLambertMaterial 
-          color={waterColor} 
-          transparent 
-          opacity={0.7}
-          emissive={waterEmissive}
-          emissiveIntensity={isNight ? 0.4 : 0.1}
-        />
+        <meshLambertMaterial color={waterColor} transparent opacity={0.7} emissive={waterEmissive} emissiveIntensity={isNight ? 0.4 : 0.1} />
       </mesh>
-      
-      {/* Water spray at top - splashing effect */}
       <mesh position={[0, 5.6, 0]}>
         <sphereGeometry args={[0.25, 8, 6]} />
-        <meshLambertMaterial 
-          color={waterColor} 
-          transparent 
-          opacity={0.5}
-          emissive={waterEmissive}
-          emissiveIntensity={isNight ? 0.3 : 0.05}
-        />
+        <meshLambertMaterial color={waterColor} transparent opacity={0.5} emissive={waterEmissive} emissiveIntensity={isNight ? 0.3 : 0.05} />
       </mesh>
-      
-      {/* Falling water curtain - cascading down */}
       <mesh position={[0, 4.2, 0]}>
         <cylinderGeometry args={[0.6, 0.2, 0.8, 12, 1, true]} />
-        <meshLambertMaterial 
-          color={waterColor} 
-          transparent 
-          opacity={0.4}
-          side={THREE.DoubleSide}
-          emissive={waterEmissive}
-          emissiveIntensity={isNight ? 0.2 : 0}
-        />
+        <meshLambertMaterial color={waterColor} transparent opacity={0.4} side={THREE.DoubleSide} emissive={waterEmissive} emissiveIntensity={isNight ? 0.2 : 0} />
       </mesh>
-      
-      {/* Secondary falling streams into lower basin */}
       {[0, Math.PI / 2, Math.PI, Math.PI * 1.5].map((angle, i) => (
-        <mesh 
-          key={`stream-${i}`} 
-          position={[
-            Math.cos(angle) * 1.2, 
-            2.8, 
-            Math.sin(angle) * 1.2
-          ]}
-          rotation={[0.3 * Math.cos(angle), 0, 0.3 * Math.sin(angle)]}
-        >
+        <mesh key={`stream-${i}`} position={[Math.cos(angle) * 1.2, 2.8, Math.sin(angle) * 1.2]} rotation={[0.3 * Math.cos(angle), 0, 0.3 * Math.sin(angle)]}>
           <coneGeometry args={[0.08, 1.2, 6]} />
-          <meshLambertMaterial 
-            color={waterColor} 
-            transparent 
-            opacity={0.5}
-            emissive={waterEmissive}
-            emissiveIntensity={isNight ? 0.25 : 0.05}
-          />
+          <meshLambertMaterial color={waterColor} transparent opacity={0.5} emissive={waterEmissive} emissiveIntensity={isNight ? 0.25 : 0.05} />
         </mesh>
       ))}
-      
-      {/* Ripple rings on water surface */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.65, 0]}>
         <ringGeometry args={[0.5, 0.7, 16]} />
-        <meshLambertMaterial 
-          color="#8AD8F8" 
-          transparent 
-          opacity={0.3}
-        />
+        <meshLambertMaterial color="#8AD8F8" transparent opacity={0.3} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.64, 0]}>
         <ringGeometry args={[1.2, 1.4, 16]} />
-        <meshLambertMaterial 
-          color="#8AD8F8" 
-          transparent 
-          opacity={0.2}
-        />
+        <meshLambertMaterial color="#8AD8F8" transparent opacity={0.2} />
       </mesh>
     </group>
   );
 }
 
-// ROUNDABOUT with Fountain in center
+// Roundabout with Fountain
 function Roundabout({ isNight }: { isNight: boolean }) {
   return (
     <group position={[0, 0, 0]}>
-      {/* Circular road */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, 0]}>
         <ringGeometry args={[8, 16, 32]} />
         <meshLambertMaterial color={COLORS.road} />
       </mesh>
-      {/* Inner grass circle */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <circleGeometry args={[8, 32]} />
         <meshLambertMaterial color="#5A9A5A" />
       </mesh>
-      {/* Stone edge */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.08, 0]}>
         <ringGeometry args={[7.5, 8, 32]} />
         <meshLambertMaterial color={COLORS.stone} />
       </mesh>
-      {/* Fountain base */}
       <mesh position={[0, 0.4, 0]}>
         <cylinderGeometry args={[4.5, 5, 0.8, 16]} />
         <meshLambertMaterial color={COLORS.stone} />
       </mesh>
-      {/* Fountain water pool */}
       <mesh position={[0, 0.45, 0]}>
         <cylinderGeometry args={[4, 4, 0.4, 16]} />
         <meshLambertMaterial color={COLORS.water} emissive={isNight ? "#2A5A8A" : "#000000"} emissiveIntensity={isNight ? 0.3 : 0} />
       </mesh>
-      {/* Fountain pillar */}
       <mesh position={[0, 2, 0]}>
         <cylinderGeometry args={[0.7, 0.9, 3.2, 10]} />
         <meshLambertMaterial color={COLORS.stone} />
       </mesh>
-      {/* Fountain top basin */}
       <mesh position={[0, 3.8, 0]}>
         <cylinderGeometry args={[1.5, 1, 0.6, 10]} />
         <meshLambertMaterial color={COLORS.stone} />
       </mesh>
-      {/* Top water */}
       <mesh position={[0, 3.9, 0]}>
         <cylinderGeometry args={[1.2, 1.2, 0.3, 10]} />
         <meshLambertMaterial color={COLORS.water} />
       </mesh>
-      
-      {/* Animated water streams */}
       <FountainWater isNight={isNight} />
     </group>
   );
 }
 
-// Lane Marking
-function LaneMarking({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
-  return (
-    <mesh rotation={[-Math.PI / 2, rotation, 0]} position={position}>
-      <planeGeometry args={[0.4, 3.5]} />
-      <meshBasicMaterial color="#FFFFFF" />
-    </mesh>
-  );
-}
-
-// Ghost Hunt Ghosts Component
+// Ghost Hunt Ghosts
 function GhostHuntGhosts({ isNight }: { isNight: boolean }) {
   const { ghosts, phase, isActive } = useGhostHuntStore();
-  
   if (!isActive || phase === 'inactive' || phase === 'briefing') return null;
-  
   return (
     <>
       {ghosts.map((ghost) => (
-        <GhostCharacter
-          key={ghost.id}
-          id={ghost.id}
-          position={ghost.position}
-          type={ghost.type}
-          isRevealed={ghost.isRevealed}
-          isCaptured={ghost.isCaptured}
-          isNight={isNight}
-        />
+        <GhostCharacter key={ghost.id} id={ghost.id} position={ghost.position} type={ghost.type} isRevealed={ghost.isRevealed} isCaptured={ghost.isCaptured} isNight={isNight} />
       ))}
     </>
   );
@@ -871,14 +879,13 @@ function MirrorWorldLadders() {
   ];
   const ladderHeight = 8.6;
   const railOffset = 0.35;
-  const rungCount = 8; // Reduced from 10 for performance
+  const rungCount = 8;
   const rungSpacing = ladderHeight / (rungCount + 1);
 
   return (
     <group>
       {ladderSets.map((ladder, ladderIndex) => (
         <group key={`mirror-ladder-${ladderIndex}`} position={ladder.position} rotation={[0, ladder.rotation, 0]}>
-          {/* Rails - use lower segment count */}
           <mesh position={[-railOffset, ladderHeight / 2, 0]}>
             <cylinderGeometry args={[0.07, 0.07, ladderHeight, 6]} />
             <meshStandardMaterial color="#5A30A3" emissive="#2A1244" emissiveIntensity={0.7} />
@@ -887,34 +894,26 @@ function MirrorWorldLadders() {
             <cylinderGeometry args={[0.07, 0.07, ladderHeight, 6]} />
             <meshStandardMaterial color="#5A30A3" emissive="#2A1244" emissiveIntensity={0.7} />
           </mesh>
-          {/* Portal - emissive provides glow, no point light needed */}
           <mesh position={[0, 1.4, 0.5]}>
             <planeGeometry args={[1.1, 2.2]} />
             <meshStandardMaterial color="#A78BFA" emissive="#7C3AED" emissiveIntensity={1.4} />
           </mesh>
-          {/* REMOVED point light for performance */}
           {Array.from({ length: rungCount }).map((_, rungIndex) => (
-            <mesh
-              key={`mirror-rung-${ladderIndex}-${rungIndex}`}
-              position={[0, rungSpacing * (rungIndex + 1), 0]}
-            >
+            <mesh key={`mirror-rung-${ladderIndex}-${rungIndex}`} position={[0, rungSpacing * (rungIndex + 1), 0]}>
               <boxGeometry args={[railOffset * 2.2, 0.08, 0.12]} />
               <meshStandardMaterial color="#8B5CF6" emissive="#4C1D95" emissiveIntensity={0.9} />
             </mesh>
           ))}
-          {/* Top ornament - reduced segments */}
           <mesh position={[0, ladderHeight + 0.8, 0]}>
             <cylinderGeometry args={[0.25, 0.35, 1.6, 6]} />
             <meshStandardMaterial color="#B992FF" emissive="#8B5CF6" emissiveIntensity={1.2} />
           </mesh>
-          {/* REMOVED point light for performance */}
         </group>
       ))}
     </group>
   );
 }
 
-// Dynamically update camera up vector for mirror world (avoids Canvas key remount)
 function CameraUpController({ mirrorWorldActive }: { mirrorWorldActive: boolean }) {
   const { camera } = useThree();
   useEffect(() => {
@@ -937,7 +936,6 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
     scene.background = null;
   }, [scene]);
 
-  // Create a map for quick lookup of shop brandings by position
   const brandingsByPosition = useMemo(() => {
     const map = new Map<string, ShopBranding>();
     shopBrandings.forEach(b => {
@@ -947,7 +945,6 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
     return map;
   }, [shopBrandings]);
 
-  // Helper to check if there's branding data at a position
   const getBrandingAtPosition = (x: number, z: number): ShopBranding | undefined => {
     return brandingsByPosition.get(`${x},${z}`);
   };
@@ -961,10 +958,9 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       <GradientSky isNight={isNight} />
       {!isNight && cloudPositions.map((c, i) => <Cloud key={i} position={[c.x, c.y, c.z]} scale={c.scale} />)}
 
-      {/* Fog for depth & atmosphere */}
       <fog attach="fog" args={[isNight ? '#0A1428' : '#B8D8F0', 30, 160]} />
 
-      {/* Lighting */}
+      {/* Lighting — unchanged */}
       <ambientLight intensity={isNight ? 1.0 : 0.6} />
       <hemisphereLight color={isNight ? "#8090B0" : "#87CEEB"} groundColor={isNight ? "#4A5A6A" : "#5A8A5A"} intensity={isNight ? 1.0 : 0.5} />
       <directionalLight
@@ -989,58 +985,47 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
         <meshStandardMaterial color={isNight ? "#2A4A2A" : COLORS.grass} roughness={0.9} metalness={0} />
       </mesh>
 
-      {/* === MAIN BOULEVARD (North-South) === */}
-      {/* North section */}
+      {/* === MAIN BOULEVARD === */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 32]}>
         <planeGeometry args={[14, 50]} />
         <meshLambertMaterial color={COLORS.road} />
       </mesh>
-      {/* South section */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -38]}>
         <planeGeometry args={[14, 55]} />
         <meshLambertMaterial color={COLORS.road} />
       </mesh>
-      {/* Lane markings - north */}
-      {Array.from({ length: 10 }).map((_, i) => <LaneMarking key={`n-${i}`} position={[0, 0.02, 52 - i * 5]} />)}
-      {/* Lane markings - south */}
-      {Array.from({ length: 12 }).map((_, i) => <LaneMarking key={`s-${i}`} position={[0, 0.02, -18 - i * 5]} />)}
       {/* Sidewalks */}
       <mesh position={[-10, 0.12, 32]} receiveShadow><boxGeometry args={[6, 0.24, 50]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
       <mesh position={[10, 0.12, 32]} receiveShadow><boxGeometry args={[6, 0.24, 50]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
       <mesh position={[-10, 0.12, -38]} receiveShadow><boxGeometry args={[6, 0.24, 55]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
       <mesh position={[10, 0.12, -38]} receiveShadow><boxGeometry args={[6, 0.24, 55]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
 
-      {/* === CROSS STREET (East-West) === */}
-      {/* East section */}
+      {/* === CROSS STREET === */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[48, 0.01, 0]}>
         <planeGeometry args={[60, 14]} />
         <meshLambertMaterial color={COLORS.road} />
       </mesh>
-      {/* West section */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-48, 0.01, 0]}>
         <planeGeometry args={[60, 14]} />
         <meshLambertMaterial color={COLORS.road} />
       </mesh>
-      {/* Lane markings */}
-      {Array.from({ length: 12 }).map((_, i) => <LaneMarking key={`e-${i}`} position={[20 + i * 5, 0.02, 0]} rotation={Math.PI / 2} />)}
-      {Array.from({ length: 12 }).map((_, i) => <LaneMarking key={`w-${i}`} position={[-20 - i * 5, 0.02, 0]} rotation={Math.PI / 2} />)}
-      {/* Sidewalks */}
       <mesh position={[48, 0.12, 10]} receiveShadow><boxGeometry args={[60, 0.24, 6]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
       <mesh position={[48, 0.12, -10]} receiveShadow><boxGeometry args={[60, 0.24, 6]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
       <mesh position={[-48, 0.12, 10]} receiveShadow><boxGeometry args={[60, 0.24, 6]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
       <mesh position={[-48, 0.12, -10]} receiveShadow><boxGeometry args={[60, 0.24, 6]} /><meshStandardMaterial color={COLORS.sidewalk} roughness={0.85} /></mesh>
+
+      {/* === INSTANCED LANE MARKINGS (−44 draw calls) === */}
+      <InstancedLaneMarkings />
 
       {/* === ROUNDABOUT === */}
       <Roundabout isNight={isNight} />
 
       {mirrorWorldActive && <MirrorWorldLadders />}
 
-      {/* === SHOPS - Render BrandedShop if branding data exists, otherwise regular Shop === */}
+      {/* === SHOPS === */}
       {mainBoulevardShops.map((shop, i) => {
         const branding = getBrandingAtPosition(shop.x, shop.z);
         if (branding) {
-          // During active mission (escape phase only), only target shop is clickable
-          // During inactive or completed mission, ALL shops are clickable
           const isEscapePhase = allowMissionEntities && missionPhase === 'escape';
           const isClickable = !isEscapePhase || branding.shopId === targetShop?.shopId;
           return (
@@ -1057,8 +1042,6 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {crossStreetShops.map((shop, i) => {
         const branding = getBrandingAtPosition(shop.x, shop.z);
         if (branding) {
-          // During active mission (escape phase only), only target shop is clickable
-          // During inactive or completed mission, ALL shops are clickable
           const isEscapePhase = allowMissionEntities && missionPhase === 'escape';
           const isClickable = !isEscapePhase || branding.shopId === targetShop?.shopId;
           return (
@@ -1073,14 +1056,17 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
         return <Shop key={`cross-${i}`} position={[shop.x, 0, shop.z]} color={shop.color} rotation={shop.rotation} isNight={isNight} />;
       })}
 
-      {/* === TALL BUILDINGS === */}
+      {/* === TALL BUILDINGS (bodies only, windows instanced below) === */}
       {tallBuildings.map((b, i) => <TallBuilding key={`tall-${i}`} position={[b.x, 0, b.z]} height={b.height} color={b.color} isNight={isNight} />)}
 
-      {/* === TREES === */}
-      {treePositions.map((t, i) => <Tree key={`tree-${i}`} position={[t.x, 0, t.z]} />)}
+      {/* === INSTANCED TALL BUILDING WINDOWS (−~398 draw calls) === */}
+      <InstancedTallBuildingWindows isNight={isNight} />
 
-      {/* === LAMPS === */}
-      {lampPositions.map((l, i) => <Lamp key={`lamp-${i}`} position={[l.x, 0, l.z]} isNight={isNight} />)}
+      {/* === INSTANCED TREES (−81 draw calls) === */}
+      <InstancedTrees />
+
+      {/* === INSTANCED LAMPS (−46 draw calls) === */}
+      <InstancedLamps isNight={isNight} />
 
       {/* === BENCHES === */}
       {benchPositions.map((b, i) => <Bench key={`bench-${i}`} position={[b.x, 0, b.z]} rotation={b.rotation} />)}
@@ -1088,7 +1074,7 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       {/* === LAKES === */}
       {lakes.map((lake, i) => <Lake key={`lake-${i}`} position={[lake.x, 0, lake.z]} scaleX={lake.scaleX} scaleZ={lake.scaleZ} />)}
 
-      {/* === DISTRICT GATES (at street ends) === */}
+      {/* === DISTRICT GATES === */}
       {districtGates.map((gate, i) => <DistrictGate key={`gate-${i}`} position={[gate.x, 0, gate.z]} rotation={gate.rotation} name={gate.name} color={gate.color} />)}
 
       {/* === BILLBOARDS === */}
@@ -1098,79 +1084,36 @@ function SceneInner({ timeOfDay, cameraView, joystickInput, cameraRotation, shop
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[45, 0.02, 42]}><planeGeometry args={[16, 16]} /><meshLambertMaterial color="#6ABF6A" /></mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-45, 0.02, 42]}><planeGeometry args={[16, 16]} /><meshLambertMaterial color="#6ABF6A" /></mesh>
 
-      {/* === COLLECTIBLES (only during missions) === */}
+      {/* === COLLECTIBLES === */}
       {allowMissionEntities && coinPositions.map((coin) => (
-        <CollectibleItem
-          key={coin.id}
-          id={coin.id}
-          position={[coin.x, 0.5, coin.z]}
-          type={coin.type}
-          isNight={isNight}
-          onCollect={handleCollectItem}
-        />
+        <CollectibleItem key={coin.id} id={coin.id} position={[coin.x, 0.5, coin.z]} type={coin.type} isNight={isNight} onCollect={handleCollectItem} />
       ))}
 
-      {/* === ZOMBIES (Mission) === */}
+      {/* === ZOMBIES === */}
       {allowMissionEntities && zombies.map((zombie) => (
-        <ZombieCharacter
-          key={zombie.id}
-          id={zombie.id}
-          position={zombie.position}
-          speed={zombie.speed}
-          isNight={isNight}
-          isPaused={zombiesPaused}
-          isSlowed={slowedZombieIds.has(zombie.id)}
-          isFrozen={frozenZombieIds.has(zombie.id)}
-          behaviorType={zombie.behaviorType}
-          onTouchPlayer={(id) => onZombieTouchPlayer?.()}
-        />
+        <ZombieCharacter key={zombie.id} id={zombie.id} position={zombie.position} speed={zombie.speed} isNight={isNight} isPaused={zombiesPaused} isSlowed={slowedZombieIds.has(zombie.id)} isFrozen={frozenZombieIds.has(zombie.id)} behaviorType={zombie.behaviorType} onTouchPlayer={(id) => onZombieTouchPlayer?.()} />
       ))}
 
-      {/* === FIRE PIT TRAPS (Mission) === */}
+      {/* === FIRE PIT TRAPS === */}
       {allowMissionEntities && traps.filter(t => t.type === 'firepit').map((trap) => (
-        <FirePitTrap
-          key={trap.id}
-          id={trap.id}
-          position={trap.position}
-          isActive={trap.isActive}
-          onPlayerHit={(id) => onTrapHitPlayer?.()}
-        />
+        <FirePitTrap key={trap.id} id={trap.id} position={trap.position} isActive={trap.isActive} onPlayerHit={(id) => onTrapHitPlayer?.()} />
       ))}
       
-      {/* === SWINGING AXE TRAPS (Mission) === */}
+      {/* === SWINGING AXE TRAPS === */}
       {allowMissionEntities && traps.filter(t => t.type === 'axe').map((trap) => (
-        <SwingingAxeTrap
-          key={trap.id}
-          id={trap.id}
-          position={trap.position}
-          rotation={trap.rotation}
-          isActive={trap.isActive}
-          onPlayerHit={(id) => onTrapHitPlayer?.()}
-        />
+        <SwingingAxeTrap key={trap.id} id={trap.id} position={trap.position} rotation={trap.rotation} isActive={trap.isActive} onPlayerHit={(id) => onTrapHitPlayer?.()} />
       ))}
       
-      {/* === THORNS TRAPS (Mission) === */}
+      {/* === THORNS TRAPS === */}
       {allowMissionEntities && traps.filter(t => t.type === 'thorns').map((trap) => (
-        <ThornsTrap
-          key={trap.id}
-          id={trap.id}
-          position={trap.position}
-          isActive={trap.isActive}
-          onPlayerHit={(id) => onTrapHitPlayer?.()}
-        />
+        <ThornsTrap key={trap.id} id={trap.id} position={trap.position} isActive={trap.isActive} onPlayerHit={(id) => onTrapHitPlayer?.()} />
       ))}
 
-      {/* === GHOSTS (Ghost Hunt Mission) === */}
+      {/* === GHOSTS === */}
       {allowGhosts && <GhostHuntGhosts isNight={isNight} />}
 
-      {/* === PLAYER CHARACTER === */}
-      <PlayerController 
-        isNight={isNight} 
-        speed={0.2} 
-        joystickInput={joystickInput} 
-        viewMode={cameraView}
-        cameraRotation={cameraRotation}
-      />
+      {/* === PLAYER === */}
+      <PlayerController isNight={isNight} speed={0.2} joystickInput={joystickInput} viewMode={cameraView} cameraRotation={cameraRotation} />
     </>
   );
 }
