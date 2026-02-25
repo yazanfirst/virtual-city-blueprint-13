@@ -155,25 +155,67 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
         </mesh>
       )}
       
-      {/* Roof */}
-      <mesh position={[0, 6.2, 0]}>
-        <boxGeometry args={[8.4, 0.4, 8.4]} />
+      {/* Sidewalk platform */}
+      <mesh position={[0, 0.075, 5]}>
+        <boxGeometry args={[9, 0.15, 2.5]} />
+        <meshLambertMaterial color={isNight ? "#666666" : "#888888"} />
+      </mesh>
+
+      {/* Peaked roof */}
+      <mesh position={[0, 6.1, 0]}>
+        <boxGeometry args={[8.6, 0.15, 8.6]} />
         <meshLambertMaterial color={isNight ? "#2A2A3A" : roofColor} />
       </mesh>
+      <mesh position={[-2.1, 6.55, 0]} rotation={[0, 0, 0.38]}>
+        <boxGeometry args={[4.5, 0.12, 8.2]} />
+        <meshLambertMaterial color={isNight ? "#2A2A3A" : roofColor} />
+      </mesh>
+      <mesh position={[2.1, 6.55, 0]} rotation={[0, 0, -0.38]}>
+        <boxGeometry args={[4.5, 0.12, 8.2]} />
+        <meshLambertMaterial color={isNight ? "#2A2A3A" : roofColor} />
+      </mesh>
+      <mesh position={[0, 6.95, 0]}>
+        <boxGeometry args={[0.3, 0.1, 8.4]} />
+        <meshLambertMaterial color={isNight ? "#333344" : darker} />
+      </mesh>
       
-      {/* FRONT FACE - Windows with glow at night */}
+      {/* FRONT FACE - Windows with glow at night + frames + sills */}
       {[-2, 2].map((wx, i) => (
-        <mesh key={`win-${i}`} position={[wx, 4.2, 4.05]}>
-          <boxGeometry args={[1.5, 1.5, 0.1]} />
-          <meshLambertMaterial 
-            color="#5A6A7A" 
-            emissive={isNight ? accentHex : "#000000"} 
-            emissiveIntensity={isNight ? 0.6 : 0} 
-          />
-        </mesh>
+        <group key={`win-${i}`}>
+          <mesh position={[wx, 4.2, 4.05]}>
+            <boxGeometry args={[1.5, 1.5, 0.1]} />
+            <meshLambertMaterial 
+              color="#5A6A7A" 
+              emissive={isNight ? accentHex : "#000000"} 
+              emissiveIntensity={isNight ? 0.6 : 0} 
+            />
+          </mesh>
+          {/* Window frame */}
+          <mesh position={[wx, 5.0, 4.08]}>
+            <boxGeometry args={[1.66, 0.08, 0.08]} />
+            <meshLambertMaterial color={darker} />
+          </mesh>
+          <mesh position={[wx, 3.4, 4.08]}>
+            <boxGeometry args={[1.66, 0.08, 0.08]} />
+            <meshLambertMaterial color={darker} />
+          </mesh>
+          <mesh position={[wx - 0.79, 4.2, 4.08]}>
+            <boxGeometry args={[0.08, 1.5, 0.08]} />
+            <meshLambertMaterial color={darker} />
+          </mesh>
+          <mesh position={[wx + 0.79, 4.2, 4.08]}>
+            <boxGeometry args={[0.08, 1.5, 0.08]} />
+            <meshLambertMaterial color={darker} />
+          </mesh>
+          {/* Window sill */}
+          <mesh position={[wx, 3.35, 4.15]}>
+            <boxGeometry args={[1.7, 0.1, 0.15]} />
+            <meshLambertMaterial color={darker} />
+          </mesh>
+        </group>
       ))}
       
-      {/* FRONT FACE - Storefront window */}
+      {/* FRONT FACE - Storefront window + frame + sill */}
       <mesh position={[0.8, 1.8, 4.05]}>
         <boxGeometry args={[4, 2.8, 0.1]} />
         <meshLambertMaterial 
@@ -182,17 +224,81 @@ const BrandedShop = ({ branding, isNight, onClick }: BrandedShopProps) => {
           emissiveIntensity={isNight ? 0.5 : 0} 
         />
       </mesh>
+      {/* Storefront frame */}
+      <mesh position={[0.8, 3.25, 4.08]}>
+        <boxGeometry args={[4.16, 0.08, 0.08]} />
+        <meshLambertMaterial color={darker} />
+      </mesh>
+      <mesh position={[0.8, 0.35, 4.08]}>
+        <boxGeometry args={[4.16, 0.08, 0.08]} />
+        <meshLambertMaterial color={darker} />
+      </mesh>
+      <mesh position={[-1.24, 1.8, 4.08]}>
+        <boxGeometry args={[0.08, 2.8, 0.08]} />
+        <meshLambertMaterial color={darker} />
+      </mesh>
+      <mesh position={[2.84, 1.8, 4.08]}>
+        <boxGeometry args={[0.08, 2.8, 0.08]} />
+        <meshLambertMaterial color={darker} />
+      </mesh>
+      {/* Storefront sill */}
+      <mesh position={[0.8, 0.3, 4.15]}>
+        <boxGeometry args={[4.2, 0.1, 0.15]} />
+        <meshLambertMaterial color={darker} />
+      </mesh>
       
-      {/* FRONT FACE - Door */}
-      <mesh position={[-2.8, 1.5, 4.05]}>
+      {/* FRONT FACE - Recessed door with frame */}
+      <mesh position={[-2.8, 1.5, 3.85]}>
         <boxGeometry args={[1.5, 3, 0.1]} />
         <meshLambertMaterial color="#4A3A2A" />
       </mesh>
+      {/* Door frame */}
+      <mesh position={[-2.05, 1.5, 4.05]}>
+        <boxGeometry args={[0.08, 3.1, 0.12]} />
+        <meshLambertMaterial color="#3A2A1A" />
+      </mesh>
+      <mesh position={[-3.55, 1.5, 4.05]}>
+        <boxGeometry args={[0.08, 3.1, 0.12]} />
+        <meshLambertMaterial color="#3A2A1A" />
+      </mesh>
+      <mesh position={[-2.8, 3.05, 4.05]}>
+        <boxGeometry args={[1.58, 0.08, 0.12]} />
+        <meshLambertMaterial color="#3A2A1A" />
+      </mesh>
+      {/* Door handle */}
+      <mesh position={[-2.25, 1.5, 3.95]}>
+        <sphereGeometry args={[0.06, 8, 8]} />
+        <meshLambertMaterial color="#C0C0C0" />
+      </mesh>
       
-      {/* Awning */}
+      {/* Thicker awning with fascia */}
       <mesh position={[0, 3.5, 4.8]} rotation={[-0.2, 0, 0]}>
-        <boxGeometry args={[7, 0.1, 1.5]} />
+        <boxGeometry args={[7, 0.25, 1.5]} />
         <meshLambertMaterial color={hasShop ? accentHex : darker} />
+      </mesh>
+      <mesh position={[0, 3.35, 5.5]} rotation={[-0.2, 0, 0]}>
+        <boxGeometry args={[7, 0.3, 0.06]} />
+        <meshLambertMaterial color={hasShop ? darker : "#555555"} />
+      </mesh>
+
+      {/* Front corner pillars */}
+      <mesh position={[3.8, 3, 4.2]}>
+        <cylinderGeometry args={[0.12, 0.12, 6, 8]} />
+        <meshLambertMaterial color={isNight ? "#2A2A3A" : roofColor} />
+      </mesh>
+      <mesh position={[-3.8, 3, 4.2]}>
+        <cylinderGeometry args={[0.12, 0.12, 6, 8]} />
+        <meshLambertMaterial color={isNight ? "#2A2A3A" : roofColor} />
+      </mesh>
+
+      {/* Side wall accent lines */}
+      <mesh position={[4.05, 3.5, 0]}>
+        <boxGeometry args={[0.05, 0.1, 8]} />
+        <meshLambertMaterial color={darker} />
+      </mesh>
+      <mesh position={[-4.05, 3.5, 0]}>
+        <boxGeometry args={[0.05, 0.1, 8]} />
+        <meshLambertMaterial color={darker} />
       </mesh>
       
       {/* Signboard - Clean professional style */}
