@@ -451,9 +451,9 @@ function InstancedTrees() {
 
   return (
     <>
-      <instancedMesh ref={trunkRef} args={[trunkGeo, trunkMat, count]} castShadow />
-      <instancedMesh ref={canopy1Ref} args={[canopy1Geo, canopy1Mat, count]} castShadow />
-      <instancedMesh ref={canopy2Ref} args={[canopy2Geo, canopy2Mat, count]} castShadow />
+      <instancedMesh ref={trunkRef} args={[trunkGeo, trunkMat, count]} castShadow frustumCulled={false} />
+      <instancedMesh ref={canopy1Ref} args={[canopy1Geo, canopy1Mat, count]} castShadow frustumCulled={false} />
+      <instancedMesh ref={canopy2Ref} args={[canopy2Geo, canopy2Mat, count]} castShadow frustumCulled={false} />
     </>
   );
 }
@@ -491,8 +491,8 @@ function InstancedLamps({ isNight }: { isNight: boolean }) {
 
   return (
     <>
-      <instancedMesh ref={poleRef} args={[poleGeo, poleMat, count]} />
-      <instancedMesh ref={bulbRef} args={[bulbGeo, bulbMat, count]} />
+      <instancedMesh ref={poleRef} args={[poleGeo, poleMat, count]} frustumCulled={false} />
+      <instancedMesh ref={bulbRef} args={[bulbGeo, bulbMat, count]} frustumCulled={false} />
     </>
   );
 }
@@ -548,8 +548,8 @@ function InstancedLaneMarkings() {
 
   return (
     <>
-      <instancedMesh ref={vertRef} args={[laneGeo, laneMat, vertPositions.length]} />
-      <instancedMesh ref={horizRef} args={[laneGeo, laneMat, horizPositions.length]} />
+      <instancedMesh ref={vertRef} args={[laneGeo, laneMat, vertPositions.length]} frustumCulled={false} />
+      <instancedMesh ref={horizRef} args={[laneGeo, laneMat, horizPositions.length]} frustumCulled={false} />
     </>
   );
 }
@@ -605,8 +605,8 @@ function InstancedTallBuildingWindows({ isNight }: { isNight: boolean }) {
 
   return (
     <>
-      <instancedMesh ref={frontRef} args={[frontWinGeo, winMat, frontPositions.length]} />
-      <instancedMesh ref={sideRef} args={[sideWinGeo, winMat, sidePositions.length]} />
+      <instancedMesh ref={frontRef} args={[frontWinGeo, winMat, frontPositions.length]} frustumCulled={false} />
+      <instancedMesh ref={sideRef} args={[sideWinGeo, winMat, sidePositions.length]} frustumCulled={false} />
     </>
   );
 }
