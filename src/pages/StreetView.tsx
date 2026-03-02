@@ -269,8 +269,13 @@ const StreetView = () => {
       if (mission.isActive && !mission.zombiesPaused) {
         mission.pauseZombies();
       }
+    } else {
+      // Resume zombies when ALL popups close during escape phase
+      if (mission.isActive && mission.phase === 'escape' && mission.zombiesPaused) {
+        mission.resumeZombies();
+      }
     }
-  }, [isAnyPopupOpen, mission.isActive]);
+  }, [isAnyPopupOpen, mission.isActive, mission.phase, mission.zombiesPaused]);
 
   useEffect(() => {
     if (isAnyMissionActive) {
