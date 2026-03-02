@@ -115,7 +115,7 @@ const CYLINDER_COLLIDERS = [
 ];
 
 // Building collision boxes and props with rectangular footprints
-const COLLISION_BOXES = [
+export const COLLISION_BOXES = [
   // Main Boulevard East shops (x=18)
   ...[-52, -40, -28, -16, 16, 28, 40].map(z => ({ minX: 14, maxX: 22, minZ: z - 4, maxZ: z + 4 })),
   // Main Boulevard West shops (x=-18)

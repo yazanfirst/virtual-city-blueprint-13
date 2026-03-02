@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { usePlayerStore } from '@/stores/playerStore';
 import { useGhostHuntStore, GhostType } from '@/stores/ghostHuntStore';
+import { COLLISION_BOXES } from './PlayerController';
 
 interface GhostCharacterProps {
   id: string;
@@ -197,6 +198,16 @@ export default function GhostCharacter({
     // Keep within bounds
     newX = Math.max(-70, Math.min(70, newX));
     newZ = Math.max(-65, Math.min(55, newZ));
+    
+    // Prevent ghost from entering buildings
+    const insideBuilding = COLLISION_BOXES.some(box =>
+      newX > box.minX && newX < box.maxX &&
+      newZ > box.minZ && newZ < box.maxZ
+    );
+    if (insideBuilding) {
+      newX = gx;
+      newZ = gz;
+    }
     
     // Update position in store
     if (newX !== gx || newZ !== gz) {
