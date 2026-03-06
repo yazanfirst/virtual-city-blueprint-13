@@ -61,7 +61,8 @@ interface MirrorWorldState {
   resetProgress: () => void;
 }
 
-const ANCHOR_POSITIONS: [number, number, number][] = [
+// Fallback rooftop positions when no shop data is available
+const FALLBACK_ROOFTOP_POSITIONS: [number, number, number][] = [
   [18, 8, 40],
   [-18, 8, 28],
   [47, 8, 18],
