@@ -134,7 +134,7 @@ export default function RealityAnchor({
       const movementZ = Math.abs(playerPosition[2] - lastPlayerPos.current[2]);
       lastPlayerPos.current = [...playerPosition];
 
-      if (distance < PROMPT_DISTANCE && movementX < MOVEMENT_THRESHOLD && movementZ < MOVEMENT_THRESHOLD) {
+      if (distanceXZ < PROMPT_DISTANCE && sameLevel && movementX < MOVEMENT_THRESHOLD && movementZ < MOVEMENT_THRESHOLD) {
         stationaryTimeRef.current = Math.min(SACRIFICE_HOLD, stationaryTimeRef.current + delta);
       } else {
         stationaryTimeRef.current = 0;
