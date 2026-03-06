@@ -219,7 +219,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
   failReason: null,
   isPaused: false,
 
-  startMission: (activeShopXZKeys) => {
+  startMission: (shopPositions) => {
     clearTimeoutSafely(protectionTimeout);
     clearTimeoutSafely(hitTimeout);
     const playerPosition = usePlayerStore.getState().position;
