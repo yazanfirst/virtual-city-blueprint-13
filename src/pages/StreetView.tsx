@@ -1253,6 +1253,7 @@ const StreetView = () => {
                       }}
                       disableActivation={isMissionBlocking && !mirrorWorld.isActive}
                       isCompact
+                      shopBrandings={shopBrandings}
                     />
                   )}
                 </div>

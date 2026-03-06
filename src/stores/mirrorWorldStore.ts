@@ -143,7 +143,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
   failReason: null,
   isPaused: false,
 
-  startMission: () => {
+  startMission: (activeShopXZKeys) => {
     clearTimeoutSafely(protectionTimeout);
     clearTimeoutSafely(hitTimeout);
     const playerPosition = usePlayerStore.getState().position;
@@ -173,7 +173,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       collisionDistance: levelConfig.collisionDistance,
       chaseAnchorSpeed: levelConfig.chaseAnchorSpeed,
       anchorTimeBonus: levelConfig.anchorBonus,
-      anchors: createAnchors(),
+      anchors: createAnchors(activeShopXZKeys),
       collectedCount: 0,
       requiredAnchors: levelConfig.requiredAnchors,
       playerLives: levelConfig.lives,

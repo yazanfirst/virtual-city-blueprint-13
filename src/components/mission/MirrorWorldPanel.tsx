@@ -32,7 +32,14 @@ export default function MirrorWorldPanel({
   const [showDetails, setShowDetails] = useState(false);
 
   const handleActivate = () => {
-    startMission();
+    // Build set of X,Z keys for active shops to place anchors at ground level
+    const activeShopXZKeys = new Set<string>();
+    for (const sb of shopBrandings) {
+      if (sb.hasShop && !sb.isSuspended) {
+        activeShopXZKeys.add(`${sb.position.x},${sb.position.z}`);
+      }
+    }
+    startMission(activeShopXZKeys);
     onActivate();
   };
 
