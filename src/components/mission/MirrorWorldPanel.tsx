@@ -3,17 +3,20 @@ import { Sparkles, Play, Clock, ShieldAlert, ChevronDown, ChevronUp } from 'luci
 import { Button } from '@/components/ui/button';
 import { useMirrorWorldStore } from '@/stores/mirrorWorldStore';
 import MissionLevelDetails from './MissionLevelDetails';
+import { ShopBranding } from '@/hooks/use3DShops';
 
 interface MirrorWorldPanelProps {
   onActivate: () => void;
   isCompact?: boolean;
   disableActivation?: boolean;
+  shopBrandings?: ShopBranding[];
 }
 
 export default function MirrorWorldPanel({
   onActivate,
   isCompact = false,
   disableActivation = false,
+  shopBrandings = [],
 }: MirrorWorldPanelProps) {
   const {
     phase,
@@ -29,7 +32,14 @@ export default function MirrorWorldPanel({
   const [showDetails, setShowDetails] = useState(false);
 
   const handleActivate = () => {
-    startMission();
+    // Build set of X,Z keys for active shops to place anchors at ground level
+    const activeShopXZKeys = new Set<string>();
+    for (const sb of shopBrandings) {
+      if (sb.hasShop && !sb.isSuspended) {
+        activeShopXZKeys.add(`${sb.position.x},${sb.position.z}`);
+      }
+    }
+    startMission(activeShopXZKeys);
     onActivate();
   };
 
