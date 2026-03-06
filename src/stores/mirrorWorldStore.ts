@@ -42,7 +42,7 @@ interface MirrorWorldState {
   toastMessage: string | null;
   failReason: FailReason | null;
   isPaused: boolean;
-  startMission: (activeShopXZKeys?: Set<string>) => void;
+  startMission: (shopPositions?: ShopPositionInfo[]) => void;
   completeBriefing: () => void;
   updateTimer: (delta: number) => void;
   collectAnchor: (anchorId: string) => void;
