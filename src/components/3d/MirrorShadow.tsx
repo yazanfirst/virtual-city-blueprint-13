@@ -7,6 +7,18 @@ import LowPolyCharacter from './LowPolyCharacter';
 
 const BOUNDS = 70;
 
+// Same ladder positions as MirrorWorldUI
+const LADDER_POSITIONS = [
+  { base: [13.6, 0, 40] as [number, number, number], top: [18, 8.2, 40] as [number, number, number] },
+  { base: [-13.6, 0, 28] as [number, number, number], top: [-18, 8.2, 28] as [number, number, number] },
+  { base: [47, 0, 13.6] as [number, number, number], top: [47, 8.2, 18] as [number, number, number] },
+  { base: [-35, 0, -13.6] as [number, number, number], top: [-35, 8.2, -18] as [number, number, number] },
+  { base: [13.6, 0, -40] as [number, number, number], top: [18, 8.2, -40] as [number, number, number] },
+];
+
+const CLIMB_SPEED = 5.5; // units per second for vertical climb
+const LADDER_APPROACH_DIST = 4; // how close shadow needs to be to start climbing
+
 interface SingleShadowProps {
   index: number;
   initialPosition: [number, number, number];
@@ -18,6 +30,9 @@ function SingleShadow({ index, initialPosition }: SingleShadowProps) {
   const playerVelocity = useRef({ x: 0, z: 0 });
   const [isWalking, setIsWalking] = useState(false);
   const [currentPos, setCurrentPos] = useState<[number, number, number]>(initialPosition);
+  const isClimbing = useRef(false);
+  const targetY = useRef(initialPosition[1]);
+  const climbPulse = useRef(0);
 
   const playerPosition = usePlayerStore((state) => state.position);
   const {
@@ -32,7 +47,6 @@ function SingleShadow({ index, initialPosition }: SingleShadowProps) {
 
   // Mirror direction varies per shadow for variety
   const mirrorMultiplier = useMemo(() => {
-    // Each shadow mirrors differently for unpredictable movement
     const patterns = [
       { x: -1, z: -1 },   // Primary: mirrors both axes
       { x: 1, z: -1 },    // Second: mirrors only Z
@@ -60,6 +74,102 @@ function SingleShadow({ index, initialPosition }: SingleShadowProps) {
     }
     lastPlayerPos.current = [...playerPosition];
 
+    const playerOnRoof = playerPosition[1] >= 7.5;
+    const shadowOnGround = currentPos[1] < 2;
+    const shadowOnRoof = currentPos[1] >= 7.5;
+
+    // Determine if shadow should climb or descend
+    if (playerOnRoof && shadowOnGround) {
+      // Find nearest ladder base
+      let nearestLadder = LADDER_POSITIONS[0];
+      let nearestDist = Infinity;
+      for (const ladder of LADDER_POSITIONS) {
+        const ldx = ladder.base[0] - currentPos[0];
+        const ldz = ladder.base[2] - currentPos[2];
+        const dist = Math.sqrt(ldx * ldx + ldz * ldz);
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestLadder = ladder;
+        }
+      }
+
+      if (nearestDist < LADDER_APPROACH_DIST) {
+        // Close enough to ladder — start climbing
+        isClimbing.current = true;
+        targetY.current = nearestLadder.top[1];
+      } else {
+        // Move toward nearest ladder base (override mirror movement)
+        const toX = nearestLadder.base[0] - currentPos[0];
+        const toZ = nearestLadder.base[2] - currentPos[2];
+        const len = Math.sqrt(toX * toX + toZ * toZ);
+        if (len > 0.1) {
+          const moveSpeed = shadowSpeed * 60 * delta;
+          const nextX = THREE.MathUtils.clamp(currentPos[0] + (toX / len) * moveSpeed, -BOUNDS, BOUNDS);
+          const nextZ = THREE.MathUtils.clamp(currentPos[2] + (toZ / len) * moveSpeed, -BOUNDS, BOUNDS);
+          const newPos: [number, number, number] = [nextX, currentPos[1], nextZ];
+          setCurrentPos(newPos);
+          updateShadowPosition(index, newPos);
+          if (meshRef.current) meshRef.current.position.set(nextX, currentPos[1], nextZ);
+        }
+        // Check collision even while approaching
+        const distToPlayer = Math.sqrt(
+          (playerPosition[0] - currentPos[0]) ** 2 +
+          (playerPosition[1] - currentPos[1]) ** 2 +
+          (playerPosition[2] - currentPos[2]) ** 2
+        );
+        if (distToPlayer < collisionDistance && !isProtected) hitByShadow();
+        return;
+      }
+    } else if (!playerOnRoof && shadowOnRoof) {
+      // Player dropped down — shadow should descend
+      isClimbing.current = true;
+      // Find nearest ladder top to descend from
+      let nearestLadder = LADDER_POSITIONS[0];
+      let nearestDist = Infinity;
+      for (const ladder of LADDER_POSITIONS) {
+        const ldx = ladder.top[0] - currentPos[0];
+        const ldz = ladder.top[2] - currentPos[2];
+        const dist = Math.sqrt(ldx * ldx + ldz * ldz);
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestLadder = ladder;
+        }
+      }
+      targetY.current = 1;
+    }
+
+    // Handle climbing animation
+    if (isClimbing.current) {
+      climbPulse.current += delta * 8;
+      const currentY = currentPos[1];
+      const diff = targetY.current - currentY;
+      if (Math.abs(diff) < 0.2) {
+        // Finished climbing
+        isClimbing.current = false;
+        const newPos: [number, number, number] = [currentPos[0], targetY.current, currentPos[2]];
+        setCurrentPos(newPos);
+        updateShadowPosition(index, newPos);
+        if (meshRef.current) meshRef.current.position.set(newPos[0], newPos[1], newPos[2]);
+      } else {
+        // Lerp Y position
+        const step = Math.sign(diff) * CLIMB_SPEED * delta;
+        const nextY = Math.abs(step) > Math.abs(diff) ? targetY.current : currentY + step;
+        const newPos: [number, number, number] = [currentPos[0], nextY, currentPos[2]];
+        setCurrentPos(newPos);
+        updateShadowPosition(index, newPos);
+        if (meshRef.current) meshRef.current.position.set(newPos[0], nextY, newPos[2]);
+      }
+      // Check collision during climb
+      const distToPlayer = Math.sqrt(
+        (playerPosition[0] - currentPos[0]) ** 2 +
+        (playerPosition[1] - currentPos[1]) ** 2 +
+        (playerPosition[2] - currentPos[2]) ** 2
+      );
+      if (distToPlayer < collisionDistance && !isProtected) hitByShadow();
+      return;
+    }
+
+    // Normal mirrored movement
     const mirroredX = dx * mirrorMultiplier.x;
     const mirroredZ = dz * mirrorMultiplier.z;
 
@@ -83,8 +193,9 @@ function SingleShadow({ index, initialPosition }: SingleShadowProps) {
     }
 
     const distX = playerPosition[0] - nextX;
+    const distY = playerPosition[1] - currentPos[1];
     const distZ = playerPosition[2] - nextZ;
-    const distanceToPlayer = Math.sqrt(distX * distX + distZ * distZ);
+    const distanceToPlayer = Math.sqrt(distX * distX + distY * distY + distZ * distZ);
 
     if (distanceToPlayer < collisionDistance && !isProtected) {
       hitByShadow();
@@ -92,14 +203,17 @@ function SingleShadow({ index, initialPosition }: SingleShadowProps) {
   });
 
   const rotation = useMemo(() => {
-    const dx = playerPosition[0] - currentPos[0];
-    const dz = playerPosition[2] - currentPos[2];
-    return Math.atan2(dx, dz);
+    const rdx = playerPosition[0] - currentPos[0];
+    const rdz = playerPosition[2] - currentPos[2];
+    return Math.atan2(rdx, rdz);
   }, [playerPosition, currentPos]);
 
   // Slightly different colors per shadow for visual distinction
   const shadowColors = ['#2D0A3E', '#1A0533', '#3D1050'];
   const emissiveColors = ['#FF0066', '#CC0055', '#FF3388'];
+
+  // Climbing pulse effect — aura pulses faster while climbing
+  const auraOpacity = isClimbing.current ? 0.3 + Math.sin(climbPulse.current) * 0.15 : 0.3;
 
   return (
     <group ref={meshRef} position={currentPos}>
@@ -116,10 +230,10 @@ function SingleShadow({ index, initialPosition }: SingleShadowProps) {
         <meshStandardMaterial 
           color="#1A0B24" 
           transparent 
-          opacity={0.3} 
+          opacity={auraOpacity} 
           side={THREE.BackSide} 
           emissive={emissiveColors[index % emissiveColors.length]} 
-          emissiveIntensity={0.4} 
+          emissiveIntensity={isClimbing.current ? 0.7 : 0.4} 
         />
       </mesh>
     </group>
