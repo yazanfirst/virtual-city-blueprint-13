@@ -104,6 +104,7 @@ const shuffle = <T,>(arr: T[]): T[] => {
 interface ShopPositionInfo {
   x: number;
   z: number;
+  rotation: number;
   hasActiveShop: boolean;
 }
 
