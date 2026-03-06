@@ -249,7 +249,7 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       collisionDistance: levelConfig.collisionDistance,
       chaseAnchorSpeed: levelConfig.chaseAnchorSpeed,
       anchorTimeBonus: levelConfig.anchorBonus,
-      anchors: createAnchors(activeShopXZKeys),
+      anchors: createAnchors(shopPositions),
       collectedCount: 0,
       requiredAnchors: levelConfig.requiredAnchors,
       playerLives: levelConfig.lives,
