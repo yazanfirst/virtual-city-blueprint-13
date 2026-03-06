@@ -147,10 +147,13 @@ const createAnchors = (shopPositions?: ShopPositionInfo[]): RealityAnchor[] => {
 
   const selectedPositions: [number, number, number][] = [];
 
-  // Ground-level anchors inside active shops
+  // Ground-level anchors near active shops (offset 3 units in front so they're not inside the building)
   for (let i = 0; i < fromShopsCount; i++) {
     const s = shuffledActive[i];
-    selectedPositions.push([s.x, 1.5, s.z]);
+    // Offset toward center (0,0) so anchor is in front of the shop, not inside it
+    const dirX = s.x === 0 ? 0 : s.x > 0 ? -3 : 3;
+    const dirZ = s.z === 0 ? 0 : s.z > 0 ? -3 : 3;
+    selectedPositions.push([s.x + dirX, 1.5, s.z + dirZ]);
   }
 
   // Rooftop anchors on inactive spots

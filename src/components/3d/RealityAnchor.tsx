@@ -153,7 +153,12 @@ export default function RealityAnchor({
       }
     }
 
-    if (distance < COLLECT_DISTANCE) {
+    // Only auto-collect if on the same Y level and type allows it
+    if (distance < COLLECT_DISTANCE && sameLevel) {
+      // Sacrifice: must disable shield first
+      if (type === 'sacrifice' && shieldActive) return;
+      // Riddle: must press correct key (handled via keydown listener)
+      if (type === 'riddle') return;
       collectAnchor(id);
     }
   });
