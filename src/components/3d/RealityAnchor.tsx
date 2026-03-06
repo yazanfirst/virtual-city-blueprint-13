@@ -92,9 +92,13 @@ export default function RealityAnchor({
     meshRef.current.position.y = position[1] + Math.sin(time * 2 + floatPhase) * 0.2;
 
     const dx = playerPosition[0] - position[0];
+    const dy = playerPosition[1] - position[1];
     const dz = playerPosition[2] - position[2];
-    const distance = Math.sqrt(dx * dx + dz * dz);
-    const inPromptRange = distance < PROMPT_DISTANCE;
+    const distanceXZ = Math.sqrt(dx * dx + dz * dz);
+    const distance3D = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const sameLevel = Math.abs(dy) < 3.5; // must be on similar Y level
+    const distance = distanceXZ;
+    const inPromptRange = distance < PROMPT_DISTANCE && sameLevel;
 
     if (inPromptRange && promptMessage) {
       setPrompt(id, promptMessage, type === 'riddle' ? requiredKey ?? null : null);
@@ -130,7 +134,7 @@ export default function RealityAnchor({
       const movementZ = Math.abs(playerPosition[2] - lastPlayerPos.current[2]);
       lastPlayerPos.current = [...playerPosition];
 
-      if (distance < PROMPT_DISTANCE && movementX < MOVEMENT_THRESHOLD && movementZ < MOVEMENT_THRESHOLD) {
+      if (distanceXZ < PROMPT_DISTANCE && sameLevel && movementX < MOVEMENT_THRESHOLD && movementZ < MOVEMENT_THRESHOLD) {
         stationaryTimeRef.current = Math.min(SACRIFICE_HOLD, stationaryTimeRef.current + delta);
       } else {
         stationaryTimeRef.current = 0;
@@ -149,7 +153,12 @@ export default function RealityAnchor({
       }
     }
 
-    if (distance < COLLECT_DISTANCE) {
+    // Only auto-collect if on the same Y level and type allows it
+    if (distance < COLLECT_DISTANCE && sameLevel) {
+      // Sacrifice: must disable shield first
+      if (type === 'sacrifice' && shieldActive) return;
+      // Riddle: must press correct key (handled via keydown listener)
+      if (type === 'riddle') return;
       collectAnchor(id);
     }
   });
