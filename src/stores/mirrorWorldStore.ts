@@ -91,27 +91,102 @@ let protectionTimeout: ReturnType<typeof setTimeout> | null = null;
 let hitTimeout: ReturnType<typeof setTimeout> | null = null;
 let toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const createAnchors = (activeShopXZKeys?: Set<string>): RealityAnchor[] =>
-  ANCHOR_POSITIONS.map((position, index) => {
-    const types: AnchorType[] = ['pulse', 'chase', 'guardian', 'riddle', 'sacrifice'];
+// Fisher-Yates shuffle
+const shuffle = <T,>(arr: T[]): T[] => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+interface ShopPositionInfo {
+  x: number;
+  z: number;
+  hasActiveShop: boolean;
+}
+
+const createAnchors = (shopPositions?: ShopPositionInfo[]): RealityAnchor[] => {
+  const types: AnchorType[] = ['pulse', 'chase', 'guardian', 'riddle', 'sacrifice'];
+  const requiredCount = 5;
+
+  if (!shopPositions || shopPositions.length === 0) {
+    // Fallback: use hardcoded rooftop positions, shuffled
+    const shuffled = shuffle(FALLBACK_ROOFTOP_POSITIONS);
+    return shuffled.slice(0, requiredCount).map((pos, index) => {
+      const type = types[index % types.length];
+      return {
+        id: `mirror-anchor-${index + 1}`,
+        position: pos,
+        isCollected: false,
+        type,
+        isVisible: type === 'pulse' ? true : undefined,
+        requiredKey: type === 'riddle' ? ['E', 'Q', 'Space'][index % 3] : undefined,
+        shieldActive: type === 'sacrifice' ? true : undefined,
+      };
+    });
+  }
+
+  // Separate active shops and inactive/empty spots
+  const activeShops = shopPositions.filter(s => s.hasActiveShop);
+  const inactiveSpots = shopPositions.filter(s => !s.hasActiveShop);
+
+  // Shuffle both pools
+  const shuffledActive = shuffle(activeShops);
+  const shuffledInactive = shuffle(inactiveSpots);
+
+  // Distribute: pick up to ~half from active shops (ground), rest from rooftops
+  const fromShopsCount = Math.min(
+    Math.max(1, Math.ceil(requiredCount / 2)),
+    shuffledActive.length
+  );
+  const fromRoofCount = Math.min(requiredCount - fromShopsCount, shuffledInactive.length);
+  // If we don't have enough, fill from the other pool
+  const extraNeeded = requiredCount - fromShopsCount - fromRoofCount;
+
+  const selectedPositions: [number, number, number][] = [];
+
+  // Ground-level anchors inside active shops
+  for (let i = 0; i < fromShopsCount; i++) {
+    const s = shuffledActive[i];
+    selectedPositions.push([s.x, 1.5, s.z]);
+  }
+
+  // Rooftop anchors on inactive spots
+  for (let i = 0; i < fromRoofCount; i++) {
+    const s = shuffledInactive[i];
+    selectedPositions.push([s.x, 8, s.z]);
+  }
+
+  // Fill extra from whichever pool has remaining
+  if (extraNeeded > 0) {
+    const remainingActive = shuffledActive.slice(fromShopsCount);
+    const remainingInactive = shuffledInactive.slice(fromRoofCount);
+    const extras = [...remainingActive, ...remainingInactive];
+    for (let i = 0; i < extraNeeded && i < extras.length; i++) {
+      const s = extras[i];
+      const isActive = activeShops.includes(s);
+      selectedPositions.push([s.x, isActive ? 1.5 : 8, s.z]);
+    }
+  }
+
+  // Shuffle final order so ground/roof anchors aren't predictably ordered
+  const shuffledFinal = shuffle(selectedPositions);
+
+  return shuffledFinal.slice(0, requiredCount).map((pos, index) => {
     const type = types[index % types.length];
-    const requiredKey = type === 'riddle' ? ['E', 'Q', 'Space'][index % 3] : undefined;
-    // If there's an active shop at this X/Z, place anchor at ground level inside the shop
-    const xzKey = `${position[0]},${position[2]}`;
-    const hasActiveShop = activeShopXZKeys?.has(xzKey) ?? false;
-    const adjustedPosition: [number, number, number] = hasActiveShop
-      ? [position[0], 1.5, position[2]]  // ground level — inside shop area
-      : position;                          // rooftop (Y=8)
     return {
       id: `mirror-anchor-${index + 1}`,
-      position: adjustedPosition,
+      position: pos,
       isCollected: false,
       type,
       isVisible: type === 'pulse' ? true : undefined,
-      requiredKey,
+      requiredKey: type === 'riddle' ? ['E', 'Q', 'Space'][index % 3] : undefined,
       shieldActive: type === 'sacrifice' ? true : undefined,
     };
   });
+};
 
 const clearTimeoutSafely = (timeout: ReturnType<typeof setTimeout> | null) => {
   if (timeout) {
