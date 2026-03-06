@@ -36,6 +36,7 @@ export default function MirrorWorldPanel({
     const shopPositions = shopBrandings.map(sb => ({
       x: sb.position.x,
       z: sb.position.z,
+      rotation: sb.position.rotation,
       hasActiveShop: sb.hasShop && !sb.isSuspended,
     }));
     startMission(shopPositions);
