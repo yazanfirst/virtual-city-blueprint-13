@@ -90,14 +90,20 @@ let protectionTimeout: ReturnType<typeof setTimeout> | null = null;
 let hitTimeout: ReturnType<typeof setTimeout> | null = null;
 let toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const createAnchors = (): RealityAnchor[] =>
+const createAnchors = (activeShopXZKeys?: Set<string>): RealityAnchor[] =>
   ANCHOR_POSITIONS.map((position, index) => {
     const types: AnchorType[] = ['pulse', 'chase', 'guardian', 'riddle', 'sacrifice'];
     const type = types[index % types.length];
     const requiredKey = type === 'riddle' ? ['E', 'Q', 'Space'][index % 3] : undefined;
+    // If there's an active shop at this X/Z, place anchor at ground level inside the shop
+    const xzKey = `${position[0]},${position[2]}`;
+    const hasActiveShop = activeShopXZKeys?.has(xzKey) ?? false;
+    const adjustedPosition: [number, number, number] = hasActiveShop
+      ? [position[0], 1.5, position[2]]  // ground level — inside shop area
+      : position;                          // rooftop (Y=8)
     return {
       id: `mirror-anchor-${index + 1}`,
-      position,
+      position: adjustedPosition,
       isCollected: false,
       type,
       isVisible: type === 'pulse' ? true : undefined,
