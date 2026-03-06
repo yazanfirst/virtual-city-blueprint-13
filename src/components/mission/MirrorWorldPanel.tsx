@@ -3,17 +3,20 @@ import { Sparkles, Play, Clock, ShieldAlert, ChevronDown, ChevronUp } from 'luci
 import { Button } from '@/components/ui/button';
 import { useMirrorWorldStore } from '@/stores/mirrorWorldStore';
 import MissionLevelDetails from './MissionLevelDetails';
+import { ShopBranding } from '@/hooks/use3DShops';
 
 interface MirrorWorldPanelProps {
   onActivate: () => void;
   isCompact?: boolean;
   disableActivation?: boolean;
+  shopBrandings?: ShopBranding[];
 }
 
 export default function MirrorWorldPanel({
   onActivate,
   isCompact = false,
   disableActivation = false,
+  shopBrandings = [],
 }: MirrorWorldPanelProps) {
   const {
     phase,
