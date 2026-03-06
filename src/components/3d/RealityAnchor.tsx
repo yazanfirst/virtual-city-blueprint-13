@@ -92,9 +92,13 @@ export default function RealityAnchor({
     meshRef.current.position.y = position[1] + Math.sin(time * 2 + floatPhase) * 0.2;
 
     const dx = playerPosition[0] - position[0];
+    const dy = playerPosition[1] - position[1];
     const dz = playerPosition[2] - position[2];
-    const distance = Math.sqrt(dx * dx + dz * dz);
-    const inPromptRange = distance < PROMPT_DISTANCE;
+    const distanceXZ = Math.sqrt(dx * dx + dz * dz);
+    const distance3D = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const sameLevel = Math.abs(dy) < 3.5; // must be on similar Y level
+    const distance = distanceXZ;
+    const inPromptRange = distance < PROMPT_DISTANCE && sameLevel;
 
     if (inPromptRange && promptMessage) {
       setPrompt(id, promptMessage, type === 'riddle' ? requiredKey ?? null : null);
