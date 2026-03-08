@@ -151,7 +151,7 @@ export default function MirrorWorldUI() {
         </div>
         {showHint && (
           <div className="max-w-[240px] sm:max-w-xs text-center bg-purple-950/80 border border-purple-500/40 text-purple-100 text-[10px] sm:text-xs px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg backdrop-blur-md">
-            Follow the purple dots on the map — anchors are inside active shops or on rooftops. Use Climb near ladders to reach rooftop anchors.
+            Some anchors are inside active shops — enter to collect. Others are on rooftops — climb ladders to reach them.
           </div>
         )}
         {canClimb && (
