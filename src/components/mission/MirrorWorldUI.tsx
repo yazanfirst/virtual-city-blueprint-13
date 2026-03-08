@@ -14,8 +14,6 @@ export default function MirrorWorldUI() {
     requiredAnchors,
     shadowPositions,
     anchors,
-    promptMessage,
-    promptKey,
     toastMessage,
     updateTimer,
   } = useMirrorWorldStore();
