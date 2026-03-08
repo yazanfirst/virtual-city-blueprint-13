@@ -252,10 +252,13 @@ export default function MirrorWorldUI() {
               <div
                 key={anchor.id}
                 className={cn(
-                  'absolute h-1.5 w-1.5 rounded-full border',
+                  'absolute border',
                   anchor.isCollected
                     ? 'bg-muted-foreground/50 border-muted-foreground/60'
-                    : 'bg-purple-200 border-purple-400 shadow-[0_0_6px_rgba(168,85,247,0.7)]'
+                    : anchor.location === 'shop'
+                    ? 'bg-amber-300 border-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.7)]'
+                    : 'bg-purple-200 border-purple-400 shadow-[0_0_6px_rgba(168,85,247,0.7)]',
+                  anchor.location === 'shop' ? 'h-1.5 w-1.5 rounded-sm' : 'h-1.5 w-1.5 rounded-full'
                 )}
                 style={{ left: `${anchor.left}%`, top: `${anchor.top}%`, transform: 'translate(-50%, -50%)' }}
               />
@@ -280,14 +283,18 @@ export default function MirrorWorldUI() {
               style={{ left: `${mapPlayer.left}%`, top: `${mapPlayer.top}%`, transform: 'translate(-50%, -50%)' }}
             />
           </div>
-          <div className="mt-1.5 flex items-center gap-2 text-[0.6rem] sm:text-[0.7rem] text-muted-foreground">
+          <div className="mt-1.5 flex items-center gap-2 text-[0.6rem] sm:text-[0.7rem] text-muted-foreground flex-wrap">
             <span className="flex items-center gap-0.5">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-300" />
               You
             </span>
             <span className="flex items-center gap-0.5">
+              <span className="inline-block h-1.5 w-1.5 rounded-sm bg-amber-300" />
+              Shop
+            </span>
+            <span className="flex items-center gap-0.5">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-purple-200" />
-              Anchor
+              Roof
             </span>
           </div>
         </div>
