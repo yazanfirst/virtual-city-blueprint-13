@@ -32,12 +32,12 @@ export default function MirrorWorldPanel({
   const [showDetails, setShowDetails] = useState(false);
 
   const handleActivate = () => {
-    // Build shop position info for anchor placement
     const shopPositions = shopBrandings.map(sb => ({
       x: sb.position.x,
       z: sb.position.z,
       rotation: sb.position.rotation,
       hasActiveShop: sb.hasShop && !sb.isSuspended,
+      shopId: sb.shopId,
     }));
     startMission(shopPositions);
     onActivate();

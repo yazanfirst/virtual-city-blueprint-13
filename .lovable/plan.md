@@ -1,46 +1,20 @@
 
 
-## Plan: Fix Mirror World Anchors — Simple, Random, Two Locations
+## Fix: Add `frustumCulled={false}` to All Instanced Meshes
 
-### What You Want (confirmed)
-1. **Active shops** → anchor inside the shop interior (enter shop to collect)
-2. **Inactive/empty spots** → anchor on rooftop (climb ladder to collect)
-3. **All anchors collect the same way** — walk near = collected
-4. **Random every playthrough** — shuffled distribution each game start
-5. **Works for ALL difficulty levels**
+### Problem
+Instanced meshes (trees, lamps, lane markings, windows) use Three.js default frustum culling, which computes the bounding sphere from the base geometry near the origin — not from the actual spread of instances across the map. This causes entire batches to disappear while their collision boxes remain active.
 
 ### Changes
 
-#### 1. `src/stores/mirrorWorldStore.ts` — Simplify anchor data model
-- Remove `AnchorType` union (`pulse`, `chase`, `guardian`, `riddle`, `sacrifice`)
-- Remove `isVisible`, `requiredKey`, `shieldActive` fields
-- Add `location: 'shop' | 'rooftop'` and `shopId?: string` to `RealityAnchor`
-- `createAnchors()`: shuffle all shop positions, assign active shops → `location: 'shop'` (Y=1.5, with shopId), inactive → `location: 'rooftop'` (Y=8). Random every call.
-- Remove `updateAnchorState`, `chaseAnchorSpeed`, `promptMessage`/`promptKey`/`promptAnchorId` (no longer needed)
-- Keep `updateAnchorPosition` removal too (no chase behavior)
+**File: `src/components/3d/CityScene.tsx`**
 
-#### 2. `src/components/3d/RealityAnchor.tsx` — Single simple anchor
-- Remove all 5 type-specific behaviors and visuals
-- One look: glowing purple crystal (icosahedron) + light beam + point light
-- One behavior: float, rotate, walk near → `collectAnchor(id)`
-- Keep vertical distance check (`sameLevel = Math.abs(dy) < 3.5`) so rooftop can't be grabbed from ground
-- Props simplified: `id`, `position`, `isCollected` only
+Add `frustumCulled={false}` to all 9 `<instancedMesh>` elements:
 
-#### 3. `src/components/3d/CityScene.tsx` — Only render rooftop anchors outside
-- Filter: only render `<RealityAnchor>` for anchors with `location === 'rooftop'`
-- Shop anchors are NOT rendered in the city scene (they appear inside shop interiors)
+- **Lines 454-456** — InstancedTrees (trunk, canopy1, canopy2): 3 meshes
+- **Lines 494-495** — InstancedLamps (pole, bulb): 2 meshes
+- **Lines 551-552** — InstancedLaneMarkings (vert, horiz): 2 meshes
+- **Lines 608-609** — InstancedTallBuildingWindows (front, side): 2 meshes
 
-#### 4. `src/components/3d/ShopInteriorRoom.tsx` — Render anchor inside shop
-- Import `useMirrorWorldStore` and `RealityAnchor`
-- When mirror world is active (`phase === 'hunting'`), check if any uncollected anchor has `shopId` matching current shop's ID
-- If match found, render `<RealityAnchor>` at center of room floor (position `[0, 1.5, 0]`)
-- Player walks near it inside shop → collected same as rooftop
-
-#### 5. `src/components/mission/MirrorWorldUI.tsx` — Update mini-map + hint
-- Different dot styles: shop anchors = small square, rooftop anchors = circle
-- Add to legend: "Shop" + "Roof" labels
-- Update hint text: "Some anchors are inside active shops — enter to collect. Others are on rooftops — climb ladders to reach them."
-
-#### 6. `src/components/mission/MirrorWorldPanel.tsx` — Pass shop IDs
-- Include shop `id` in `ShopPositionInfo` so anchors can reference which shop they belong to
+No other files changed. No visual changes. Negligible performance impact since these are already batched into single draw calls.
 

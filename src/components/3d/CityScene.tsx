@@ -316,16 +316,14 @@ export default function CityScene({
           {showMirrorWorld && (
             <>
               <MirrorShadow />
-              {mirrorWorld.anchors.map((anchor) => (
+              {mirrorWorld.anchors
+                .filter((anchor) => anchor.location === 'rooftop')
+                .map((anchor) => (
                 <RealityAnchor
                   key={anchor.id}
                   id={anchor.id}
                   position={anchor.position}
                   isCollected={anchor.isCollected}
-                  type={anchor.type}
-                  isVisible={anchor.isVisible}
-                  requiredKey={anchor.requiredKey}
-                  shieldActive={anchor.shieldActive}
                 />
               ))}
             </>
