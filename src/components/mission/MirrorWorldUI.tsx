@@ -204,13 +204,6 @@ export default function MirrorWorldUI() {
           </div>
         </div>
       )}
-      {!toastMessage && promptMessage && (
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-center" style={{ zIndex: 160 }}>
-          <div className="mx-4 max-w-lg rounded-2xl border-2 border-purple-300/90 bg-purple-800/95 px-6 py-4 text-center text-lg font-bold text-white shadow-2xl shadow-purple-500/50">
-            {promptMessage}
-          </div>
-        </div>
-      )}
 
       {/* Left side stats - compact on mobile */}
       <div className="absolute top-24 sm:top-28 left-1 sm:left-2 flex flex-col gap-1.5 sm:gap-2 pointer-events-none" style={{ zIndex: 150 }}>
