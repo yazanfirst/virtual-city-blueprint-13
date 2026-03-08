@@ -10,6 +10,7 @@ import { formatPrice } from "@/lib/currency";
 import { useProfile } from "@/hooks/useProfile";
 import ShopOffersSection from "@/components/3d/ShopOffersSection";
 import { useGhostHuntStore } from "@/stores/ghostHuntStore";
+import { useMirrorWorldStore } from "@/stores/mirrorWorldStore";
 import { trackLinkClick } from "@/hooks/useTrackLinkClick";
 import { useShopRating, useRateShop } from "@/hooks/useShopRatings";
 import { useAuth } from "@/hooks/useAuth";
