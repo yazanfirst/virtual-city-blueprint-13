@@ -544,6 +544,9 @@ const InteriorScene = ({
           onCollectRecharge={onCollectRecharge}
         />
       )}
+
+      {/* Mirror World anchor inside shop */}
+      <MirrorWorldShopAnchor shopId={shop.shopId} />
     </group>
   );
 };
