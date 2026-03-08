@@ -98,7 +98,7 @@ export default function MirrorWorldUI() {
         const clampedZ = Math.max(-MAP_BOUNDS, Math.min(MAP_BOUNDS, z));
         const left = ((clampedX + MAP_BOUNDS) / (MAP_BOUNDS * 2)) * 100;
         const top = (1 - (clampedZ + MAP_BOUNDS) / (MAP_BOUNDS * 2)) * 100;
-        return { id: anchor.id, left, top, isCollected: anchor.isCollected, type: anchor.type };
+        return { id: anchor.id, left, top, isCollected: anchor.isCollected, location: anchor.location };
       }),
     [anchors]
   );
