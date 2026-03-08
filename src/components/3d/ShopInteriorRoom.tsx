@@ -314,6 +314,58 @@ const OrnateFrame = ({
   );
 };
 
+// Renders a reality anchor inside the shop if mirror world is active and this shop has one
+const MirrorWorldShopAnchor = ({ shopId }: { shopId?: string }) => {
+  const phase = useMirrorWorldStore((s) => s.phase);
+  const anchors = useMirrorWorldStore((s) => s.anchors);
+  const collectAnchor = useMirrorWorldStore((s) => s.collectAnchor);
+
+  const anchor = useMemo(() => {
+    if (phase !== 'hunting' || !shopId) return null;
+    return anchors.find((a) => a.location === 'shop' && a.shopId === shopId && !a.isCollected) ?? null;
+  }, [phase, shopId, anchors]);
+
+  const meshRef = useRef<THREE.Mesh>(null);
+  const [floatPhase] = useState(() => Math.random() * Math.PI * 2);
+
+  useFrame((state) => {
+    if (!meshRef.current || !anchor) return;
+    const time = state.clock.elapsedTime;
+    meshRef.current.rotation.y += 0.03;
+    meshRef.current.position.y = 1.5 + Math.sin(time * 3 + floatPhase) * 0.3;
+  });
+
+  // Auto-collect when player enters (they're already inside the shop)
+  useEffect(() => {
+    if (!anchor) return;
+    // Small delay so the player sees the anchor before it's collected
+    const timer = setTimeout(() => collectAnchor(anchor.id), 1200);
+    return () => clearTimeout(timer);
+  }, [anchor, collectAnchor]);
+
+  if (!anchor) return null;
+
+  return (
+    <group position={[0, 1.5, 0]}>
+      <mesh ref={meshRef}>
+        <icosahedronGeometry args={[0.6]} />
+        <meshStandardMaterial
+          color="#a855f7"
+          emissive="#a855f7"
+          emissiveIntensity={1.5}
+          metalness={0.6}
+          roughness={0.2}
+        />
+      </mesh>
+      <pointLight position={[0, 0.5, 0]} intensity={2} distance={8} color="#a855f7" />
+      <mesh position={[0, 2, 0]}>
+        <cylinderGeometry args={[0.08, 0.15, 3, 8]} />
+        <meshBasicMaterial color="#c084fc" transparent opacity={0.3} />
+      </mesh>
+    </group>
+  );
+};
+
 const InteriorScene = ({
   shop,
   items,
