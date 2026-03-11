@@ -68,10 +68,39 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
     }
   }, [phase, onComplete, onFailed]);
   
+  const playerPosition = usePlayerStore((s) => s.position);
+  const cameraRotation = usePlayerStore((s) => s.cameraRotation);
+  
   // Get strongest EMF reading
   const strongestEMF = ghosts
     .filter(g => !g.isCaptured)
     .reduce((max, g) => Math.max(max, g.emfStrength), 0);
+  
+  // Find nearest uncaptured ghost for directional arrow
+  const nearestGhost = useMemo(() => {
+    const uncaptured = ghosts.filter(g => !g.isCaptured);
+    if (uncaptured.length === 0) return null;
+    let nearest = uncaptured[0];
+    let minDist = Infinity;
+    const [px, , pz] = playerPosition;
+    for (const g of uncaptured) {
+      const dx = g.position[0] - px;
+      const dz = g.position[2] - pz;
+      const d = Math.sqrt(dx * dx + dz * dz);
+      if (d < minDist) { minDist = d; nearest = g; }
+    }
+    return nearest;
+  }, [ghosts, playerPosition]);
+  
+  // Calculate arrow rotation pointing toward nearest ghost
+  const ghostArrowAngle = useMemo(() => {
+    if (!nearestGhost) return 0;
+    const [px, , pz] = playerPosition;
+    const [gx, , gz] = nearestGhost.position;
+    const angleToGhost = Math.atan2(gx - px, gz - pz);
+    // Subtract camera azimuth so arrow is relative to screen
+    return (angleToGhost - cameraRotation.azimuth) * (180 / Math.PI);
+  }, [nearestGhost, playerPosition, cameraRotation]);
   
   // EMF level classification
   const getEMFLevel = (strength: number): { level: number; label: string; color: string } => {
