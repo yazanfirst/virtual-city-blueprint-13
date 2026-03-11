@@ -281,7 +281,10 @@ export default function GhostCharacter({
         </>
       )}
       
-      {/* REMOVED point light for performance - emissive material provides glow effect instead */}
+      {/* Point light when revealed to make ghost unmissable */}
+      {isRevealed && (
+        <pointLight color={config.emissive} intensity={2} distance={8} />
+      )}
     </group>
   );
 }

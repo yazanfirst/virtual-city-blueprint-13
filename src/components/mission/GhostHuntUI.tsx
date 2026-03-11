@@ -368,6 +368,19 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
               </div>
             </div>
           </div>
+          
+          {/* Directional arrow when EMF is strong */}
+          {showDirectionArrow && (
+            <div className="mt-2 flex flex-col items-center">
+              <span className="text-[8px] sm:text-[10px] uppercase text-orange-300 font-bold mb-1">Direction</span>
+              <div
+                className="transition-transform duration-200"
+                style={{ transform: `rotate(${ghostArrowAngle}deg)` }}
+              >
+                <Navigation className="h-6 w-6 sm:h-8 sm:w-8 text-orange-400 fill-orange-400/30" />
+              </div>
+            </div>
+          )}
         </div>
       )}
       
