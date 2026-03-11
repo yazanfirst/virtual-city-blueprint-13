@@ -13,7 +13,7 @@ const MobileControls = ({ onJoystickMove, onCameraMove, onJump }: MobileControls
   const knobRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const jumpButtonRef = useRef<HTMLButtonElement>(null);
-  const jumpFeedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const jumpFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Track active touches by ID
   const joystickTouchIdRef = useRef<number | null>(null);
