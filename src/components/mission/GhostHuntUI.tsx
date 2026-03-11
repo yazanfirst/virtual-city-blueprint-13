@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Radio, Flashlight, Ghost, Clock, Heart, Zap, AlertTriangle, Crosshair, Navigation } from 'lucide-react';
 import { useGhostHuntStore } from '@/stores/ghostHuntStore';
 import { usePlayerStore } from '@/stores/playerStore';
