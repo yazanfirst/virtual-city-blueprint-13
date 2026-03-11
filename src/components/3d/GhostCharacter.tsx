@@ -251,9 +251,9 @@ export default function GhostCharacter({
           <meshStandardMaterial
             color={config.color}
             emissive={config.emissive}
-            emissiveIntensity={isRevealed ? 0.5 : 0}
+            emissiveIntensity={isRevealed ? 1.0 : 0}
             transparent
-            opacity={isRevealed ? 0.6 - i * 0.2 : 0}
+            opacity={isRevealed ? 0.8 - i * 0.2 : 0}
           />
         </mesh>
       ))}
