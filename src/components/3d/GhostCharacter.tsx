@@ -218,9 +218,13 @@ export default function GhostCharacter({
     const floatY = Math.sin(timeRef.current * 2) * 0.2;
     groupRef.current.position.set(gx, gy + floatY, gz);
     
-    // Rotation for ghostly effect
+    // Rotation for ghostly effect + pulsing scale when revealed
     if (meshRef.current) {
       meshRef.current.rotation.y = timeRef.current * 0.5;
+      if (isRevealed) {
+        const pulse = 1 + Math.sin(timeRef.current * 4) * 0.15;
+        meshRef.current.scale.setScalar(pulse);
+      }
     }
   });
   
