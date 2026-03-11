@@ -854,6 +854,30 @@ function Roundabout({ isNight }: { isNight: boolean }) {
   );
 }
 
+// Flashlight beam visual
+function FlashlightBeam() {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const { equipment } = useGhostHuntStore();
+  const playerPosition = usePlayerStore((s) => s.position);
+  const cameraRotation = usePlayerStore((s) => s.cameraRotation);
+  
+  useFrame(() => {
+    if (!meshRef.current) return;
+    meshRef.current.visible = equipment.flashlightActive;
+    if (!equipment.flashlightActive) return;
+    const [px, py, pz] = playerPosition;
+    meshRef.current.position.set(px, py + 1, pz);
+    meshRef.current.rotation.set(0, cameraRotation.azimuth, 0);
+  });
+  
+  return (
+    <mesh ref={meshRef} visible={false}>
+      <coneGeometry args={[6, 12, 8, 1, true]} />
+      <meshBasicMaterial color="#FFEE88" transparent opacity={0.12} side={THREE.DoubleSide} depthWrite={false} />
+    </mesh>
+  );
+}
+
 // Ghost Hunt Ghosts
 function GhostHuntGhosts({ isNight }: { isNight: boolean }) {
   const { ghosts, phase, isActive } = useGhostHuntStore();
@@ -863,6 +887,7 @@ function GhostHuntGhosts({ isNight }: { isNight: boolean }) {
       {ghosts.map((ghost) => (
         <GhostCharacter key={ghost.id} id={ghost.id} position={ghost.position} type={ghost.type} isRevealed={ghost.isRevealed} isCaptured={ghost.isCaptured} isNight={isNight} />
       ))}
+      <FlashlightBeam />
     </>
   );
 }

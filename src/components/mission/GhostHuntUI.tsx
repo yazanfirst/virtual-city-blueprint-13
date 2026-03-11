@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { Radio, Flashlight, Ghost, Clock, Heart, Zap, AlertTriangle, Crosshair } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { Radio, Flashlight, Ghost, Clock, Heart, Zap, AlertTriangle, Crosshair, Navigation } from 'lucide-react';
 import { useGhostHuntStore } from '@/stores/ghostHuntStore';
+import { usePlayerStore } from '@/stores/playerStore';
 import { cn } from '@/lib/utils';
 
 interface GhostHuntUIProps {
@@ -67,10 +68,39 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
     }
   }, [phase, onComplete, onFailed]);
   
+  const playerPosition = usePlayerStore((s) => s.position);
+  const cameraRotation = usePlayerStore((s) => s.cameraRotation);
+  
   // Get strongest EMF reading
   const strongestEMF = ghosts
     .filter(g => !g.isCaptured)
     .reduce((max, g) => Math.max(max, g.emfStrength), 0);
+  
+  // Find nearest uncaptured ghost for directional arrow
+  const nearestGhost = useMemo(() => {
+    const uncaptured = ghosts.filter(g => !g.isCaptured);
+    if (uncaptured.length === 0) return null;
+    let nearest = uncaptured[0];
+    let minDist = Infinity;
+    const [px, , pz] = playerPosition;
+    for (const g of uncaptured) {
+      const dx = g.position[0] - px;
+      const dz = g.position[2] - pz;
+      const d = Math.sqrt(dx * dx + dz * dz);
+      if (d < minDist) { minDist = d; nearest = g; }
+    }
+    return nearest;
+  }, [ghosts, playerPosition]);
+  
+  // Calculate arrow rotation pointing toward nearest ghost
+  const ghostArrowAngle = useMemo(() => {
+    if (!nearestGhost) return 0;
+    const [px, , pz] = playerPosition;
+    const [gx, , gz] = nearestGhost.position;
+    const angleToGhost = Math.atan2(gx - px, gz - pz);
+    // Subtract camera azimuth so arrow is relative to screen
+    return (angleToGhost - cameraRotation.azimuth) * (180 / Math.PI);
+  }, [nearestGhost, playerPosition, cameraRotation]);
   
   // EMF level classification
   const getEMFLevel = (strength: number): { level: number; label: string; color: string } => {
@@ -83,6 +113,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
   };
   
   const emfReading = getEMFLevel(strongestEMF);
+  const showDirectionArrow = equipment.emfActive && emfReading.level >= 3;
   
   // Format time
   const formatTime = (seconds: number): string => {
@@ -337,6 +368,19 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
               </div>
             </div>
           </div>
+          
+          {/* Directional arrow when EMF is strong */}
+          {showDirectionArrow && (
+            <div className="mt-2 flex flex-col items-center">
+              <span className="text-[8px] sm:text-[10px] uppercase text-orange-300 font-bold mb-1">Direction</span>
+              <div
+                className="transition-transform duration-200"
+                style={{ transform: `rotate(${ghostArrowAngle}deg)` }}
+              >
+                <Navigation className="h-6 w-6 sm:h-8 sm:w-8 text-orange-400 fill-orange-400/30" />
+              </div>
+            </div>
+          )}
         </div>
       )}
       

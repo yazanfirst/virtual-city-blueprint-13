@@ -351,7 +351,7 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
       },
     });
     
-    // Turn off after flash
+    // Turn off after flash (800ms for better visibility)
     setTimeout(() => {
       set(s => ({
         equipment: {
@@ -359,7 +359,7 @@ export const useGhostHuntStore = create<GhostHuntState>((set, get) => ({
           flashlightActive: false,
         },
       }));
-    }, 500);
+    }, 800);
   },
   
   fireGhostTrap: () => {

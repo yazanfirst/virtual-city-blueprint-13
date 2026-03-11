@@ -3,8 +3,8 @@ import { useGhostHuntStore } from '@/stores/ghostHuntStore';
 import { usePlayerStore } from '@/stores/playerStore';
 
 // Constants for flashlight detection
-const FLASHLIGHT_RANGE = 12;  // How far the flashlight reaches
-const FLASHLIGHT_ANGLE = Math.PI / 3;  // 60 degree cone
+const FLASHLIGHT_RANGE = 15;  // How far the flashlight reaches
+const FLASHLIGHT_ANGLE = Math.PI / 2;  // 90 degree cone (wider for easier use)
 
 /**
  * Hook to handle flashlight revealing ghosts
