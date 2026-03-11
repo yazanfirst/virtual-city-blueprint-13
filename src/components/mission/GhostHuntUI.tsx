@@ -113,6 +113,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
   };
   
   const emfReading = getEMFLevel(strongestEMF);
+  const showDirectionArrow = equipment.emfActive && emfReading.level >= 3;
   
   // Format time
   const formatTime = (seconds: number): string => {
