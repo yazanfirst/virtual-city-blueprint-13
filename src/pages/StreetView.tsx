@@ -107,7 +107,7 @@ const StreetView = () => {
   const [lastReward, setLastReward] = useState<{ coins: number; xp: number }>({ coins: 0, xp: 0 });
   
   // Player state
-  const { position: playerPosition, resetToSafeSpawn, resetPlayer, enterShop: playerEnterShop, exitShop: playerExitShop } = usePlayerStore();
+  const { position: playerPosition, resetToSafeSpawn, resetPlayer, enterShop: playerEnterShop, exitShop: playerExitShop, setFrozen } = usePlayerStore();
   
   // Mission state
   const mission = useMissionStore();
@@ -234,6 +234,8 @@ const StreetView = () => {
     showJumpScare ||
     showGhostHuntFailed ||
     showGhostHuntComplete ||
+    showZombieComplete ||
+    showMissionPause ||
     ghostHunt.phase === 'briefing' ||
     mirrorWorld.phase === 'briefing' ||
     mirrorWorld.phase === 'completed' ||
@@ -256,14 +258,24 @@ const StreetView = () => {
   );
   const hideSidePanels = isMobile && ((ghostHunt.isActive && ghostHunt.phase !== 'inactive') || (mirrorWorld.isActive && mirrorWorld.phase !== 'inactive'));
   
+  // Freeze player movement when any popup is open
+  useEffect(() => {
+    setFrozen(Boolean(isAnyPopupOpen));
+  }, [isAnyPopupOpen, setFrozen]);
+
   useEffect(() => {
     if (isAnyPopupOpen) {
       // Pause zombies when any popup is showing
       if (mission.isActive && !mission.zombiesPaused) {
         mission.pauseZombies();
       }
+    } else {
+      // Resume zombies when ALL popups close during escape phase
+      if (mission.isActive && mission.phase === 'escape' && mission.zombiesPaused) {
+        mission.resumeZombies();
+      }
     }
-  }, [isAnyPopupOpen, mission.isActive]);
+  }, [isAnyPopupOpen, mission.isActive, mission.phase, mission.zombiesPaused]);
 
   useEffect(() => {
     if (isAnyMissionActive) {
@@ -1241,6 +1253,7 @@ const StreetView = () => {
                       }}
                       disableActivation={isMissionBlocking && !mirrorWorld.isActive}
                       isCompact
+                      shopBrandings={shopBrandings}
                     />
                   )}
                 </div>

@@ -26,10 +26,10 @@ export default function MirrorWorldBriefing() {
           <div className="bg-purple-950/50 rounded-lg p-3 border border-purple-500/30">
             <h3 className="text-purple-200 font-bold text-xs uppercase mb-2">Mission:</h3>
             <ul className="space-y-1 text-xs">
-              <li>• Collect {requiredAnchors} Reality Anchors on the rooftops</li>
+              <li>• Collect {requiredAnchors} Reality Anchors — inside active shops or on rooftops</li>
               <li>• Escape before time collapses (75 seconds)</li>
-              <li>• Shadow mirrors your movement in the opposite direction</li>
-              <li>• Use the Climb button near glowing ladders to reach rooftops</li>
+              <li>• Shadow mirrors your movement — and can climb ladders!</li>
+              <li>• Use the Climb button near ladders to reach rooftop anchors</li>
               <li>• Touch anchors to collect them</li>
             </ul>
           </div>

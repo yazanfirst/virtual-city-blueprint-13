@@ -14,10 +14,12 @@ type PlayerState = {
   cameraRotation: { azimuth: number; polar: number };
   jumpCounter: number;
   isInsideShop: boolean;
+  isFrozen: boolean;
   savedOutsideState: SavedOutsideState | null;
   setPosition: (position: [number, number, number]) => void;
   setCameraRotation: (rotation: { azimuth: number; polar: number }) => void;
   incrementJump: () => void;
+  setFrozen: (frozen: boolean) => void;
   resetToSafeSpawn: () => void;
   resetPlayer: () => void;
   enterShop: () => void;
@@ -29,8 +31,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   cameraRotation: { azimuth: 0, polar: Math.PI / 4 },
   jumpCounter: 0,
   isInsideShop: false,
+  isFrozen: false,
   savedOutsideState: null,
   incrementJump: () => set((state) => ({ jumpCounter: state.jumpCounter + 1 })),
+  setFrozen: (frozen) => set({ isFrozen: frozen }),
 
   setPosition: (position) => set({ position }),
   setCameraRotation: (cameraRotation) => set({ cameraRotation }),
@@ -40,6 +44,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     cameraRotation: { azimuth: 0, polar: Math.PI / 4 },
     jumpCounter: 0,
     isInsideShop: false,
+    isFrozen: false,
     savedOutsideState: null,
   }),
   

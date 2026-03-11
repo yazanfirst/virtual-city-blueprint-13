@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { usePlayerStore } from '@/stores/playerStore';
 import { useGhostHuntStore, GhostType } from '@/stores/ghostHuntStore';
+import { COLLISION_BOXES } from './PlayerController';
 
 interface GhostCharacterProps {
   id: string;
@@ -90,9 +91,9 @@ export default function GhostCharacter({
     return new THREE.MeshStandardMaterial({
       color: config.color,
       emissive: config.emissive,
-      emissiveIntensity: isRevealed ? 0.8 : 0,
+      emissiveIntensity: isRevealed ? 1.2 : 0,
       transparent: true,
-      opacity: isRevealed ? 0.85 : 0,
+      opacity: isRevealed ? 1.0 : 0,
       side: THREE.DoubleSide,
     });
   }, [config, isRevealed]);
@@ -100,8 +101,8 @@ export default function GhostCharacter({
   // Update material opacity when revealed state changes
   useEffect(() => {
     if (material) {
-      material.opacity = isRevealed ? 0.85 : 0;
-      material.emissiveIntensity = isRevealed ? 0.8 : 0;
+      material.opacity = isRevealed ? 1.0 : 0;
+      material.emissiveIntensity = isRevealed ? 1.2 : 0;
       material.needsUpdate = true;
     }
   }, [isRevealed, material]);
@@ -198,6 +199,16 @@ export default function GhostCharacter({
     newX = Math.max(-70, Math.min(70, newX));
     newZ = Math.max(-65, Math.min(55, newZ));
     
+    // Prevent ghost from entering buildings
+    const insideBuilding = COLLISION_BOXES.some(box =>
+      newX > box.minX && newX < box.maxX &&
+      newZ > box.minZ && newZ < box.maxZ
+    );
+    if (insideBuilding) {
+      newX = gx;
+      newZ = gz;
+    }
+    
     // Update position in store
     if (newX !== gx || newZ !== gz) {
       moveGhost(id, [newX, gy, newZ]);
@@ -207,9 +218,13 @@ export default function GhostCharacter({
     const floatY = Math.sin(timeRef.current * 2) * 0.2;
     groupRef.current.position.set(gx, gy + floatY, gz);
     
-    // Rotation for ghostly effect
+    // Rotation for ghostly effect + pulsing scale when revealed
     if (meshRef.current) {
       meshRef.current.rotation.y = timeRef.current * 0.5;
+      if (isRevealed) {
+        const pulse = 1 + Math.sin(timeRef.current * 4) * 0.15;
+        meshRef.current.scale.setScalar(pulse);
+      }
     }
   });
   
@@ -236,9 +251,9 @@ export default function GhostCharacter({
           <meshStandardMaterial
             color={config.color}
             emissive={config.emissive}
-            emissiveIntensity={isRevealed ? 0.5 : 0}
+            emissiveIntensity={isRevealed ? 1.0 : 0}
             transparent
-            opacity={isRevealed ? 0.6 - i * 0.2 : 0}
+            opacity={isRevealed ? 0.8 - i * 0.2 : 0}
           />
         </mesh>
       ))}
@@ -266,7 +281,10 @@ export default function GhostCharacter({
         </>
       )}
       
-      {/* REMOVED point light for performance - emissive material provides glow effect instead */}
+      {/* Point light when revealed to make ghost unmissable */}
+      {isRevealed && (
+        <pointLight color={config.emissive} intensity={2} distance={8} />
+      )}
     </group>
   );
 }

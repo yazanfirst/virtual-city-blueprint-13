@@ -14,8 +14,6 @@ export default function MirrorWorldUI() {
     requiredAnchors,
     shadowPositions,
     anchors,
-    promptMessage,
-    promptKey,
     toastMessage,
     updateTimer,
   } = useMirrorWorldStore();
@@ -100,7 +98,7 @@ export default function MirrorWorldUI() {
         const clampedZ = Math.max(-MAP_BOUNDS, Math.min(MAP_BOUNDS, z));
         const left = ((clampedX + MAP_BOUNDS) / (MAP_BOUNDS * 2)) * 100;
         const top = (1 - (clampedZ + MAP_BOUNDS) / (MAP_BOUNDS * 2)) * 100;
-        return { id: anchor.id, left, top, isCollected: anchor.isCollected, type: anchor.type };
+        return { id: anchor.id, left, top, isCollected: anchor.isCollected, location: anchor.location };
       }),
     [anchors]
   );
@@ -153,7 +151,7 @@ export default function MirrorWorldUI() {
         </div>
         {showHint && (
           <div className="max-w-[240px] sm:max-w-xs text-center bg-purple-950/80 border border-purple-500/40 text-purple-100 text-[10px] sm:text-xs px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg backdrop-blur-md">
-            Follow the purple dots on the map to rooftop anchors. Look for glowing ladder panels and use Climb, then touch anchors to collect them.
+            Some anchors are inside active shops — enter to collect. Others are on rooftops — climb ladders to reach them.
           </div>
         )}
         {canClimb && (
@@ -206,13 +204,6 @@ export default function MirrorWorldUI() {
           </div>
         </div>
       )}
-      {!toastMessage && promptMessage && (
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-center" style={{ zIndex: 160 }}>
-          <div className="mx-4 max-w-lg rounded-2xl border-2 border-purple-300/90 bg-purple-800/95 px-6 py-4 text-center text-lg font-bold text-white shadow-2xl shadow-purple-500/50">
-            {promptMessage}
-          </div>
-        </div>
-      )}
 
       {/* Left side stats - compact on mobile */}
       <div className="absolute top-24 sm:top-28 left-1 sm:left-2 flex flex-col gap-1.5 sm:gap-2 pointer-events-none" style={{ zIndex: 150 }}>
@@ -261,10 +252,13 @@ export default function MirrorWorldUI() {
               <div
                 key={anchor.id}
                 className={cn(
-                  'absolute h-1.5 w-1.5 rounded-full border',
+                  'absolute border',
                   anchor.isCollected
                     ? 'bg-muted-foreground/50 border-muted-foreground/60'
-                    : 'bg-purple-200 border-purple-400 shadow-[0_0_6px_rgba(168,85,247,0.7)]'
+                    : anchor.location === 'shop'
+                    ? 'bg-amber-300 border-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.7)]'
+                    : 'bg-purple-200 border-purple-400 shadow-[0_0_6px_rgba(168,85,247,0.7)]',
+                  anchor.location === 'shop' ? 'h-1.5 w-1.5 rounded-sm' : 'h-1.5 w-1.5 rounded-full'
                 )}
                 style={{ left: `${anchor.left}%`, top: `${anchor.top}%`, transform: 'translate(-50%, -50%)' }}
               />
@@ -289,14 +283,18 @@ export default function MirrorWorldUI() {
               style={{ left: `${mapPlayer.left}%`, top: `${mapPlayer.top}%`, transform: 'translate(-50%, -50%)' }}
             />
           </div>
-          <div className="mt-1.5 flex items-center gap-2 text-[0.6rem] sm:text-[0.7rem] text-muted-foreground">
+          <div className="mt-1.5 flex items-center gap-2 text-[0.6rem] sm:text-[0.7rem] text-muted-foreground flex-wrap">
             <span className="flex items-center gap-0.5">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-300" />
               You
             </span>
             <span className="flex items-center gap-0.5">
+              <span className="inline-block h-1.5 w-1.5 rounded-sm bg-amber-300" />
+              Shop
+            </span>
+            <span className="flex items-center gap-0.5">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-purple-200" />
-              Anchor
+              Roof
             </span>
           </div>
         </div>

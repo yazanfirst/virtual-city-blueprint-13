@@ -1,50 +1,20 @@
 
-## Fix: Reset Game State on Sign Out
+
+## Fix: Add `frustumCulled={false}` to All Instanced Meshes
 
 ### Problem
-When a user signs out, their game data (Level, Coins, XP) remains in the Zustand store memory. The next visitor (or the same person before signing in again) sees the previous user's progress in the Player Panel. This is because `signOut()` in `useAuth.tsx` only clears authentication state but never calls `resetGame()` on the game store or `resetPlayer()` on the player store.
+Instanced meshes (trees, lamps, lane markings, windows) use Three.js default frustum culling, which computes the bounding sphere from the base geometry near the origin — not from the actual spread of instances across the map. This causes entire batches to disappear while their collision boxes remain active.
 
-### Solution
-Reset all Zustand stores when the user signs out or when the auth state changes to "signed out". There are two places to fix:
+### Changes
 
-**1. `src/hooks/usePlayerProgress.ts`** -- Reset game store on logout
+**File: `src/components/3d/CityScene.tsx`**
 
-The hook already detects logout (`if (!user)`) but only resets `loadedRef`. It needs to also call `resetGame()` to clear coins/XP/level back to defaults (100 coins, 0 XP, Level 1).
+Add `frustumCulled={false}` to all 9 `<instancedMesh>` elements:
 
-```
-useEffect(() => {
-  if (!user) {
-    loadedRef.current = false;
-    useGameStore.getState().resetGame();    // <-- add this
-    usePlayerStore.getState().resetPlayer(); // <-- add this
-  }
-}, [user]);
-```
+- **Lines 454-456** — InstancedTrees (trunk, canopy1, canopy2): 3 meshes
+- **Lines 494-495** — InstancedLamps (pole, bulb): 2 meshes
+- **Lines 551-552** — InstancedLaneMarkings (vert, horiz): 2 meshes
+- **Lines 608-609** — InstancedTallBuildingWindows (front, side): 2 meshes
 
-**2. `src/hooks/useAuth.tsx`** -- Belt-and-suspenders reset in signOut
+No other files changed. No visual changes. Negligible performance impact since these are already batched into single draw calls.
 
-As a safety net, also reset the stores directly in the `signOut` function so that even if the hook hasn't re-rendered yet, the data is cleared immediately:
-
-```typescript
-import { useGameStore } from '@/stores/gameStore';
-import { usePlayerStore } from '@/stores/playerStore';
-
-const signOut = async () => {
-  await supabase.auth.signOut();
-  setUser(null);
-  setSession(null);
-  setUserRole(null);
-  useGameStore.getState().resetGame();
-  usePlayerStore.getState().resetPlayer();
-};
-```
-
-### Technical Details
-- `resetGame()` sets coins=100, xp=0, level=1, and clears visited shops and collected coins
-- `resetPlayer()` resets position, camera, jump counter, and shop interior state
-- Both stores already have these reset functions -- they just are never called on sign out
-- No database changes needed -- this is purely a client-side state cleanup issue
-
-### Files to Edit
-- `src/hooks/useAuth.tsx` -- import stores and call reset in `signOut()`
-- `src/hooks/usePlayerProgress.ts` -- call `resetGame()` and `resetPlayer()` in the logout effect

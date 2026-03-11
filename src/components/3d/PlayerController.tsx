@@ -115,7 +115,7 @@ const CYLINDER_COLLIDERS = [
 ];
 
 // Building collision boxes and props with rectangular footprints
-const COLLISION_BOXES = [
+export const COLLISION_BOXES = [
   // Main Boulevard East shops (x=18)
   ...[-52, -40, -28, -16, 16, 28, 40].map(z => ({ minX: 14, maxX: 22, minZ: z - 4, maxZ: z + 4 })),
   // Main Boulevard West shops (x=-18)
@@ -168,7 +168,7 @@ const PlayerController = ({
   const [characterRotation, setCharacterRotation] = useState(0);
   const [isJumping, setIsJumping] = useState(false);
   // Use store for position to persist across game mode changes
-  const { position, setPosition, jumpCounter, incrementJump } = usePlayerStore();
+  const { position, setPosition, jumpCounter, incrementJump, isFrozen } = usePlayerStore();
   const mirrorWorldActive = useMirrorWorldStore((state) => state.isActive && state.phase === 'hunting');
   const positionRef = useRef(new THREE.Vector3(...position));
   const lastJumpCounterRef = useRef(jumpCounter);
@@ -176,6 +176,10 @@ const PlayerController = ({
   const wasOnRoofRef = useRef(false);
 
   const { camera } = useThree();
+  // Smooth camera lerp refs
+  const smoothCamPos = useRef(new THREE.Vector3());
+  const smoothCamTarget = useRef(new THREE.Vector3());
+  const cameraInitialized = useRef(false);
 
   // Keep position in sync if store updates externally
   useEffect(() => {
@@ -183,8 +187,8 @@ const PlayerController = ({
   }, [position]);
 
   // Camera settings - PUBG style
-  const cameraDistance = viewMode === "firstPerson" ? 0 : 10;
-  const cameraHeight = viewMode === "firstPerson" ? 2.5 : 4;
+  const cameraDistance = viewMode === "firstPerson" ? 0 : 6;
+  const cameraHeight = viewMode === "firstPerson" ? 2.5 : 2.5;
 
   const getSurfaceHeight = useCallback((x: number, z: number): { height: number; requiresJump: boolean } => {
     let surface = { height: 0.25, requiresJump: false };
@@ -352,6 +356,44 @@ const PlayerController = ({
   // Movement and camera logic
   useFrame(() => {
     if (!groupRef.current) return;
+
+    // Freeze player when any popup/modal is open
+    if (isFrozen) {
+      groupRef.current.position.copy(positionRef.current);
+      // Still track camera so view doesn't break
+      const playerPos = positionRef.current;
+      if (viewMode === "firstPerson") {
+        const eyeHeight = 2.5;
+        camera.position.set(playerPos.x, playerPos.y + eyeHeight, playerPos.z);
+        const verticalAngle = cameraRotation.polar - Math.PI / 2;
+        const lookDistance = 20;
+        camera.lookAt(
+          playerPos.x - Math.sin(cameraRotation.azimuth) * lookDistance * Math.cos(verticalAngle),
+          playerPos.y + eyeHeight + Math.sin(verticalAngle) * lookDistance,
+          playerPos.z - Math.cos(cameraRotation.azimuth) * lookDistance * Math.cos(verticalAngle)
+        );
+      } else {
+        const verticalAngle = cameraRotation.polar;
+        const horizontalDist = cameraDistance * Math.cos(verticalAngle * 0.5);
+        const verticalDist = cameraHeight + cameraDistance * Math.sin(verticalAngle);
+        const camPos = new THREE.Vector3(
+          playerPos.x + Math.sin(cameraRotation.azimuth) * horizontalDist,
+          playerPos.y + verticalDist,
+          playerPos.z + Math.cos(cameraRotation.azimuth) * horizontalDist
+        );
+        const lookAt = new THREE.Vector3(playerPos.x, playerPos.y + 1.5, playerPos.z);
+        if (!cameraInitialized.current) {
+          smoothCamPos.current.copy(camPos);
+          smoothCamTarget.current.copy(lookAt);
+          cameraInitialized.current = true;
+        }
+        smoothCamPos.current.lerp(camPos, 0.08);
+        smoothCamTarget.current.lerp(lookAt, 0.08);
+        camera.position.copy(smoothCamPos.current);
+        camera.lookAt(smoothCamTarget.current);
+      }
+      return;
+    }
 
     const direction = new THREE.Vector3();
 
@@ -548,9 +590,22 @@ const PlayerController = ({
         camZ = playerPos.z + offsetZ;
       }
 
-      camera.position.set(camX, camY, camZ);
-      // Look at player upper body, not feet
-      camera.lookAt(playerPos.x, playerPos.y + 1.8, playerPos.z);
+      // Smooth lerp for cinematic camera motion
+      const targetCamPos = new THREE.Vector3(camX, camY, camZ);
+      const targetLookAt = new THREE.Vector3(playerPos.x, playerPos.y + 1.5, playerPos.z);
+      
+      if (!cameraInitialized.current) {
+        smoothCamPos.current.copy(targetCamPos);
+        smoothCamTarget.current.copy(targetLookAt);
+        cameraInitialized.current = true;
+      }
+      
+      const lerpSpeed = 0.08;
+      smoothCamPos.current.lerp(targetCamPos, lerpSpeed);
+      smoothCamTarget.current.lerp(targetLookAt, lerpSpeed);
+      
+      camera.position.copy(smoothCamPos.current);
+      camera.lookAt(smoothCamTarget.current);
     }
   });
 

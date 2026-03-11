@@ -4,16 +4,12 @@ import { getMirrorWorldLevelConfig } from '@/lib/missionLevels';
 
 export type MirrorWorldPhase = 'inactive' | 'briefing' | 'hunting' | 'completed' | 'failed';
 
-export type AnchorType = 'pulse' | 'chase' | 'guardian' | 'riddle' | 'sacrifice';
-
 export interface RealityAnchor {
   id: string;
   position: [number, number, number];
   isCollected: boolean;
-  type: AnchorType;
-  isVisible?: boolean;
-  requiredKey?: string;
-  shieldActive?: boolean;
+  location: 'shop' | 'rooftop';
+  shopId?: string;
 }
 
 type FailReason = 'time' | 'caught';
@@ -26,7 +22,6 @@ interface MirrorWorldState {
   shadowCount: number;
   shadowSpeed: number;
   collisionDistance: number;
-  chaseAnchorSpeed: number;
   anchorTimeBonus: number;
   anchors: RealityAnchor[];
   collectedCount: number;
@@ -36,21 +31,14 @@ interface MirrorWorldState {
   difficultyLevel: number;
   unlockedLevel: number;
   maxLevel: number;
-  promptMessage: string | null;
-  promptKey: string | null;
-  promptAnchorId: string | null;
   toastMessage: string | null;
   failReason: FailReason | null;
   isPaused: boolean;
-  startMission: () => void;
+  startMission: (shopPositions?: ShopPositionInfo[]) => void;
   completeBriefing: () => void;
   updateTimer: (delta: number) => void;
   collectAnchor: (anchorId: string) => void;
   updateShadowPosition: (index: number, pos: [number, number, number]) => void;
-  updateAnchorPosition: (anchorId: string, position: [number, number, number]) => void;
-  updateAnchorState: (anchorId: string, updates: Partial<RealityAnchor>) => void;
-  setPrompt: (anchorId: string, message: string, key?: string | null) => void;
-  clearPrompt: (anchorId?: string) => void;
   hitByShadow: () => void;
   completeMission: () => void;
   failMission: (reason: FailReason) => void;
@@ -61,7 +49,8 @@ interface MirrorWorldState {
   resetProgress: () => void;
 }
 
-const ANCHOR_POSITIONS: [number, number, number][] = [
+// Fallback rooftop positions when no shop data is available
+const FALLBACK_ROOFTOP_POSITIONS: [number, number, number][] = [
   [18, 8, 40],
   [-18, 8, 28],
   [47, 8, 18],
@@ -74,42 +63,116 @@ const START_LIVES = 2;
 const START_TIME = 100;
 const ANCHOR_TIME_BONUS = 8;
 const DEFAULT_COLLISION_DISTANCE = 2;
-const DEFAULT_CHASE_SPEED = 0.35;
 const MAX_MIRROR_LEVEL = 5;
 const PROTECTION_DURATION = 3000;
 const HIT_INVINCIBILITY = 2000;
 
 // Distributed spawn offsets for multiple shadows (relative to player)
 const SHADOW_SPAWN_OFFSETS: [number, number, number][] = [
-  [-6, 1, -6],   // Primary shadow (SW)
-  [8, 1, 6],    // Second shadow (NE) 
-  [-8, 1, 8],   // Third shadow (NW)
+  [-6, 1, -6],
+  [8, 1, 6],
+  [-8, 1, 8],
 ];
 
 let protectionTimeout: ReturnType<typeof setTimeout> | null = null;
 let hitTimeout: ReturnType<typeof setTimeout> | null = null;
 let toastTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const createAnchors = (): RealityAnchor[] =>
-  ANCHOR_POSITIONS.map((position, index) => {
-    const types: AnchorType[] = ['pulse', 'chase', 'guardian', 'riddle', 'sacrifice'];
-    const type = types[index % types.length];
-    const requiredKey = type === 'riddle' ? ['E', 'Q', 'Space'][index % 3] : undefined;
-    return {
+// Fisher-Yates shuffle
+const shuffle = <T,>(arr: T[]): T[] => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+export interface ShopPositionInfo {
+  x: number;
+  z: number;
+  rotation: number;
+  hasActiveShop: boolean;
+  shopId?: string;
+}
+
+const createAnchors = (requiredCount: number, shopPositions?: ShopPositionInfo[]): RealityAnchor[] => {
+  if (!shopPositions || shopPositions.length === 0) {
+    const shuffled = shuffle(FALLBACK_ROOFTOP_POSITIONS);
+    return shuffled.slice(0, requiredCount).map((pos, index) => ({
       id: `mirror-anchor-${index + 1}`,
-      position,
+      position: pos,
       isCollected: false,
-      type,
-      isVisible: type === 'pulse' ? true : undefined,
-      requiredKey,
-      shieldActive: type === 'sacrifice' ? true : undefined,
-    };
-  });
+      location: 'rooftop' as const,
+    }));
+  }
+
+  // Separate active shops (with shopId) and inactive/empty spots
+  const activeShops = shopPositions.filter(s => s.hasActiveShop && s.shopId);
+  const inactiveSpots = shopPositions.filter(s => !s.hasActiveShop);
+
+  // Shuffle both pools
+  const shuffledActive = shuffle(activeShops);
+  const shuffledInactive = shuffle(inactiveSpots);
+
+  // Distribute: ~half to active shops, rest to rooftops
+  const fromShopsCount = Math.min(
+    Math.max(1, Math.ceil(requiredCount / 2)),
+    shuffledActive.length
+  );
+  const fromRoofCount = Math.min(requiredCount - fromShopsCount, shuffledInactive.length);
+  const extraNeeded = requiredCount - fromShopsCount - fromRoofCount;
+
+  const anchors: RealityAnchor[] = [];
+
+  // Shop anchors — position stored as shop exterior position for minimap,
+  // but they render INSIDE the shop interior (ShopInteriorRoom handles that)
+  for (let i = 0; i < fromShopsCount; i++) {
+    const s = shuffledActive[i];
+    anchors.push({
+      id: `mirror-anchor-${anchors.length + 1}`,
+      position: [s.x, 1.5, s.z],
+      isCollected: false,
+      location: 'shop',
+      shopId: s.shopId,
+    });
+  }
+
+  // Rooftop anchors on inactive spots
+  for (let i = 0; i < fromRoofCount; i++) {
+    const s = shuffledInactive[i];
+    anchors.push({
+      id: `mirror-anchor-${anchors.length + 1}`,
+      position: [s.x, 8, s.z],
+      isCollected: false,
+      location: 'rooftop',
+    });
+  }
+
+  // Fill extra from whichever pool has remaining
+  if (extraNeeded > 0) {
+    const remainingActive = shuffledActive.slice(fromShopsCount);
+    const remainingInactive = shuffledInactive.slice(fromRoofCount);
+    const extras = [...remainingActive, ...remainingInactive];
+    for (let i = 0; i < extraNeeded && i < extras.length; i++) {
+      const s = extras[i];
+      const isActive = activeShops.includes(s);
+      anchors.push({
+        id: `mirror-anchor-${anchors.length + 1}`,
+        position: [s.x, isActive ? 1.5 : 8, s.z],
+        isCollected: false,
+        location: isActive ? 'shop' : 'rooftop',
+        shopId: isActive ? s.shopId : undefined,
+      });
+    }
+  }
+
+  // Shuffle final order
+  return shuffle(anchors).slice(0, requiredCount);
+};
 
 const clearTimeoutSafely = (timeout: ReturnType<typeof setTimeout> | null) => {
-  if (timeout) {
-    clearTimeout(timeout);
-  }
+  if (timeout) clearTimeout(timeout);
 };
 
 export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
@@ -120,9 +183,8 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
   shadowCount: 1,
   shadowSpeed: BASE_SHADOW_SPEED,
   collisionDistance: DEFAULT_COLLISION_DISTANCE,
-  chaseAnchorSpeed: DEFAULT_CHASE_SPEED,
   anchorTimeBonus: ANCHOR_TIME_BONUS,
-  anchors: createAnchors(),
+  anchors: [],
   collectedCount: 0,
   requiredAnchors: 5,
   playerLives: START_LIVES,
@@ -130,14 +192,11 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
   difficultyLevel: 1,
   unlockedLevel: 1,
   maxLevel: MAX_MIRROR_LEVEL,
-  promptMessage: null,
-  promptKey: null,
-  promptAnchorId: null,
   toastMessage: null,
   failReason: null,
   isPaused: false,
 
-  startMission: () => {
+  startMission: (shopPositions) => {
     clearTimeoutSafely(protectionTimeout);
     clearTimeoutSafely(hitTimeout);
     const playerPosition = usePlayerStore.getState().position;
@@ -146,7 +205,6 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       set({ isProtected: false });
     }, PROTECTION_DURATION);
 
-    // Create distributed shadow spawn positions
     const initialShadowPositions: [number, number, number][] = [];
     for (let i = 0; i < levelConfig.shadowCount; i++) {
       const offset = SHADOW_SPAWN_OFFSETS[i] || SHADOW_SPAWN_OFFSETS[0];
@@ -165,16 +223,12 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       shadowCount: levelConfig.shadowCount,
       shadowSpeed: levelConfig.shadowSpeed,
       collisionDistance: levelConfig.collisionDistance,
-      chaseAnchorSpeed: levelConfig.chaseAnchorSpeed,
       anchorTimeBonus: levelConfig.anchorBonus,
-      anchors: createAnchors(),
+      anchors: createAnchors(levelConfig.requiredAnchors, shopPositions),
       collectedCount: 0,
       requiredAnchors: levelConfig.requiredAnchors,
       playerLives: levelConfig.lives,
       isProtected: true,
-      promptMessage: null,
-      promptKey: null,
-      promptAnchorId: null,
       toastMessage: null,
       failReason: null,
       isPaused: false,
@@ -198,9 +252,8 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
     const { anchors, collectedCount, requiredAnchors, anchorTimeBonus } = get();
     const targetAnchor = anchors.find((anchor) => anchor.id === anchorId);
     if (!targetAnchor || targetAnchor.isCollected) return;
-    if (toastTimeout) {
-      clearTimeout(toastTimeout);
-    }
+    if (toastTimeout) clearTimeout(toastTimeout);
+
     const nextAnchors = anchors.map((anchor) =>
       anchor.id === anchorId ? { ...anchor, isCollected: true } : anchor
     );
@@ -212,14 +265,9 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
         anchors: nextAnchors,
         collectedCount: nextCollectedCount,
         timeRemaining: nextTime,
-        promptAnchorId: null,
-        promptMessage: null,
-        promptKey: null,
         toastMessage: `Reality Anchor collected! +${anchorTimeBonus}s`,
       });
-      toastTimeout = setTimeout(() => {
-        set({ toastMessage: null });
-      }, 2000);
+      toastTimeout = setTimeout(() => set({ toastMessage: null }), 2000);
       get().completeMission();
       return;
     }
@@ -228,14 +276,9 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       anchors: nextAnchors,
       collectedCount: nextCollectedCount,
       timeRemaining: nextTime,
-      promptAnchorId: null,
-      promptMessage: null,
-      promptKey: null,
-        toastMessage: `Reality Anchor collected! +${anchorTimeBonus}s`,
+      toastMessage: `Reality Anchor collected! +${anchorTimeBonus}s`,
     });
-    toastTimeout = setTimeout(() => {
-      set({ toastMessage: null });
-    }, 2000);
+    toastTimeout = setTimeout(() => set({ toastMessage: null }), 2000);
   },
 
   updateShadowPosition: (index, pos) =>
@@ -243,33 +286,6 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       const newPositions = [...state.shadowPositions];
       newPositions[index] = pos;
       return { shadowPositions: newPositions };
-    }),
-
-  updateAnchorPosition: (anchorId, position) =>
-    set((state) => ({
-      anchors: state.anchors.map((anchor) =>
-        anchor.id === anchorId ? { ...anchor, position } : anchor
-      ),
-    })),
-
-  updateAnchorState: (anchorId, updates) =>
-    set((state) => ({
-      anchors: state.anchors.map((anchor) =>
-        anchor.id === anchorId ? { ...anchor, ...updates } : anchor
-      ),
-    })),
-
-  setPrompt: (anchorId, message, key = null) => {
-    const state = get();
-    // Avoid unnecessary state updates when prompt is already set to the same values
-    if (state.promptAnchorId === anchorId && state.promptMessage === message && state.promptKey === key) return;
-    set({ promptAnchorId: anchorId, promptMessage: message, promptKey: key });
-  },
-
-  clearPrompt: (anchorId) =>
-    set((state) => {
-      if (anchorId && state.promptAnchorId !== anchorId) return state;
-      return { promptAnchorId: null, promptMessage: null, promptKey: null };
     }),
 
   hitByShadow: () => {
@@ -280,23 +296,13 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       get().failMission('caught');
       return;
     }
-
     clearTimeoutSafely(hitTimeout);
-    hitTimeout = setTimeout(() => {
-      set({ isProtected: false });
-    }, HIT_INVINCIBILITY);
-
-    set({
-      playerLives: nextLives,
-      isProtected: true,
-    });
+    hitTimeout = setTimeout(() => set({ isProtected: false }), HIT_INVINCIBILITY);
+    set({ playerLives: nextLives, isProtected: true });
   },
 
   completeMission: () => {
-    set({
-      phase: 'completed',
-      isActive: true,
-    });
+    set({ phase: 'completed', isActive: true });
     get().unlockNextLevel();
   },
 
@@ -315,34 +321,32 @@ export const useMirrorWorldStore = create<MirrorWorldState>((set, get) => ({
       shadowCount: levelConfig.shadowCount,
       shadowSpeed: levelConfig.shadowSpeed,
       collisionDistance: levelConfig.collisionDistance,
-      chaseAnchorSpeed: levelConfig.chaseAnchorSpeed,
       anchorTimeBonus: levelConfig.anchorBonus,
-      anchors: createAnchors(),
+      anchors: [],
       collectedCount: 0,
       requiredAnchors: levelConfig.requiredAnchors,
       playerLives: levelConfig.lives,
       isProtected: false,
-      promptMessage: null,
-      promptKey: null,
-      promptAnchorId: null,
       toastMessage: null,
       failReason: null,
       isPaused: false,
     });
   },
+
   setPaused: (paused) => set({ isPaused: paused }),
+
   unlockNextLevel: () => {
     const state = get();
     if (state.unlockedLevel >= state.maxLevel) return;
     if (state.difficultyLevel !== state.unlockedLevel) return;
     set({ unlockedLevel: state.unlockedLevel + 1 });
   },
+
   setDifficultyLevel: (level) => {
     const state = get();
     const nextLevel = Math.max(1, Math.min(level, state.unlockedLevel));
     set({ difficultyLevel: nextLevel });
   },
-  resetProgress: () => {
-    set({ difficultyLevel: 1, unlockedLevel: 1 });
-  },
+
+  resetProgress: () => set({ difficultyLevel: 1, unlockedLevel: 1 }),
 }));
