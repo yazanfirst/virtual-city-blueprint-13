@@ -91,9 +91,9 @@ export default function GhostCharacter({
     return new THREE.MeshStandardMaterial({
       color: config.color,
       emissive: config.emissive,
-      emissiveIntensity: isRevealed ? 0.8 : 0,
+      emissiveIntensity: isRevealed ? 1.2 : 0,
       transparent: true,
-      opacity: isRevealed ? 0.85 : 0,
+      opacity: isRevealed ? 1.0 : 0,
       side: THREE.DoubleSide,
     });
   }, [config, isRevealed]);
@@ -101,8 +101,8 @@ export default function GhostCharacter({
   // Update material opacity when revealed state changes
   useEffect(() => {
     if (material) {
-      material.opacity = isRevealed ? 0.85 : 0;
-      material.emissiveIntensity = isRevealed ? 0.8 : 0;
+      material.opacity = isRevealed ? 1.0 : 0;
+      material.emissiveIntensity = isRevealed ? 1.2 : 0;
       material.needsUpdate = true;
     }
   }, [isRevealed, material]);
