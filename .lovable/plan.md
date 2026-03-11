@@ -1,24 +1,20 @@
 
 
-## Fix: Remove Incorrect Math.PI Offset from Direction Arrow
+## Fix: Add `frustumCulled={false}` to All Instanced Meshes
 
 ### Problem
-The screenshot clearly shows a ghost **directly in front** of the player, but the arrow points **down-left** (roughly opposite). The `- Math.PI` offset added in the previous fix is inverting the arrow direction.
+Instanced meshes (trees, lamps, lane markings, windows) use Three.js default frustum culling, which computes the bounding sphere from the base geometry near the origin — not from the actual spread of instances across the map. This causes entire batches to disappear while their collision boxes remain active.
 
-### Root Cause
-In this camera setup, `cameraRotation.azimuth` already represents the direction the player faces on screen. Subtracting `Math.PI` adds an unnecessary 180° flip.
+### Changes
 
-### Change
+**File: `src/components/3d/CityScene.tsx`**
 
-**`src/components/mission/GhostHuntUI.tsx` line 102** — Remove `- Math.PI`:
+Add `frustumCulled={false}` to all 9 `<instancedMesh>` elements:
 
-```ts
-// Before:
-return (angleToGhost - cameraRotation.azimuth - Math.PI) * (180 / Math.PI);
+- **Lines 454-456** — InstancedTrees (trunk, canopy1, canopy2): 3 meshes
+- **Lines 494-495** — InstancedLamps (pole, bulb): 2 meshes
+- **Lines 551-552** — InstancedLaneMarkings (vert, horiz): 2 meshes
+- **Lines 608-609** — InstancedTallBuildingWindows (front, side): 2 meshes
 
-// After:
-return (angleToGhost - cameraRotation.azimuth) * (180 / Math.PI);
-```
-
-Single line change. The arrow will now correctly point toward the ghost relative to your screen.
+No other files changed. No visual changes. Negligible performance impact since these are already batched into single draw calls.
 
