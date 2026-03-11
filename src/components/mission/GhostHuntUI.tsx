@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Radio, Flashlight, Ghost, Clock, Heart, Zap, AlertTriangle, Crosshair } from 'lucide-react';
+import { Radio, Flashlight, Ghost, Clock, Heart, Zap, AlertTriangle, Crosshair, Navigation } from 'lucide-react';
 import { useGhostHuntStore } from '@/stores/ghostHuntStore';
+import { usePlayerStore } from '@/stores/playerStore';
 import { cn } from '@/lib/utils';
 
 interface GhostHuntUIProps {
