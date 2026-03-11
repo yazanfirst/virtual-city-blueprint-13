@@ -99,7 +99,7 @@ export default function GhostHuntUI({ onComplete, onFailed }: GhostHuntUIProps) 
     const [gx, , gz] = nearestGhost.position;
     const angleToGhost = Math.atan2(gx - px, gz - pz);
     // Subtract camera azimuth so arrow is relative to screen
-    return (angleToGhost - cameraRotation.azimuth) * (180 / Math.PI);
+    return (angleToGhost - cameraRotation.azimuth - Math.PI) * (180 / Math.PI);
   }, [nearestGhost, playerPosition, cameraRotation]);
   
   // EMF level classification
